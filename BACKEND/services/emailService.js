@@ -328,7 +328,14 @@ export async function notificarTareaOperario({
 // 4. ESTADÍSTICAS DE ENVÍO (GET)
 // ─────────────────────────────────────────────────────────────────────────────
 export async function obtenerEstadisticas(fecha = null) {
-  const startDate = fecha || new Date().toISOString().split('T')[0];
+  // Fix: antes se usaba new Date().toISOString(), que da la fecha en UTC.
+  // Eso hacía que, según la hora del día, el endpoint calculara "hoy" con
+  // un día de diferencia respecto a la hora local de Colombia, y por lo
+  // tanto no encontrara los envíos del día real (todo salía en 0).
+  // 'en-CA' devuelve directamente el formato YYYY-MM-DD.
+  const startDate = fecha || new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Bogota',
+  });
 
   const response = await fetch(
     `https://api.sendgrid.com/v3/stats?start_date=${startDate}`,
