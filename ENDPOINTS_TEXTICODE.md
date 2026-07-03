@@ -5,6 +5,9 @@
 > **Auth Google Calendar:** Header `Authorization: Bearer <JWT>`  
 > **Content-Type:** `application/json`
 
+**Leyenda de métodos:**
+🔵 `GET` &nbsp;&nbsp; 🟢 `POST` &nbsp;&nbsp; 🟠 `PATCH` &nbsp;&nbsp; 🔴 `DELETE`
+
 ---
 
 ## 🚀 Instalación y configuración
@@ -80,21 +83,52 @@ El backend se conecta a **Supabase PostgreSQL** mediante la variable `DATABASE_U
 
 ---
 
-> ⚠️ **Nota:** Este documento solo incluye los endpoints que fueron ejecutados y revisados manualmente. El resto de endpoints existentes en el backend no está documentado aquí.
+> ⚠️ **Nota:** Este documento solo incluye los 19 endpoints que fueron ejecutados y revisados manualmente. El resto de endpoints existentes en el backend no está documentado aquí.
+
+---
+
+## 📋 Índice general de endpoints
+
+| API | Método | Endpoint |
+|---|---|---|
+| Autenticación | 🟢 `POST` | `http://localhost:3001/api/auth/login` |
+| Autenticación | 🟢 `POST` | `http://localhost:3001/api/auth/recuperar-contrasena` |
+| SendGrid | 🔵 `GET` | `http://localhost:3001/api/notificaciones/estadisticas` |
+| SendGrid | 🟢 `POST` | `http://localhost:3001/api/notificaciones/tarea` |
+| Google Calendar | 🔵 `GET` | `http://localhost:3001/api/google/auth-url` |
+| Google Calendar | 🔵 `GET` | `http://localhost:3001/api/google/status` |
+| Google Calendar | 🟢 `POST` | `http://localhost:3001/api/google/sync/delivery-events` |
+| Google Calendar | 🟠 `PATCH` | `http://localhost:3001/api/google/settings` |
+| Google Calendar | 🔴 `DELETE` | `http://localhost:3001/api/google/unlink` |
+| Carga de Trabajo | 🔵 `GET` | `http://localhost:3001/api/carga-trabajo` |
+| Carga de Trabajo | 🔵 `GET` | `http://localhost:3001/api/carga-trabajo/operarios/:id` |
+| Carga de Trabajo | 🟢 `POST` | `http://localhost:3001/api/carga-trabajo/reasignar` |
+| Carga de Trabajo | 🟢 `POST` | `http://localhost:3001/api/carga-trabajo/reasignar-multiple` |
+| Carga de Trabajo | 🟠 `PATCH` | `http://localhost:3001/api/carga-trabajo/umbrales` |
+| Carga de Trabajo | 🟠 `PATCH` | `http://localhost:3001/api/carga-trabajo/operarios/:id/estado` |
+| Eficiencia | 🔵 `GET` | `http://localhost:3001/api/eficiencia/operarios` |
+| Eficiencia | 🔵 `GET` | `http://localhost:3001/api/eficiencia/operarios/:id` |
+| Eficiencia | 🟢 `POST` | `http://localhost:3001/api/eficiencia/observaciones` |
+| Eficiencia | 🔴 `DELETE` | `http://localhost:3001/api/eficiencia/observaciones/:id` |
 
 ---
 
 ## 🌐 APIs Externas
 
-> Endpoints que dependen de servicios/autenticación externa al backend interno (login de usuarios y Google Calendar).
+> Endpoints que dependen de servicios/autenticación externa al backend interno (login de usuarios, envío de correos y Google Calendar).
 
 ### 🔐 Autenticación
 
 > Ruta base: `http://localhost:3001/api/auth`
 
-#### POST
+| Método | Endpoint | Descripción |
+|---|---|---|
+| 🟢 `POST` | `http://localhost:3001/api/auth/login` | Inicia sesión con correo y contraseña |
+| 🟢 `POST` | `http://localhost:3001/api/auth/recuperar-contrasena` | Envía correo de recuperación de contraseña |
 
-##### `POST http://localhost:3001/api/auth/login`
+---
+
+#### 🟢 `POST` &nbsp; `http://localhost:3001/api/auth/login`
 
 Inicia sesión con correo y contraseña.
 
@@ -121,7 +155,7 @@ Inicia sesión con correo y contraseña.
 
 ---
 
-##### `POST http://localhost:3001/api/auth/recuperar-contrasena`
+#### 🟢 `POST` &nbsp; `http://localhost:3001/api/auth/recuperar-contrasena`
 
 Envía un correo de recuperación de contraseña al email indicado.
 
@@ -142,14 +176,93 @@ Envía un correo de recuperación de contraseña al email indicado.
 
 ---
 
+### 📧 SendGrid
+
+> Ruta base: `http://localhost:3001/api/notificaciones`  
+> Auth: Header `x-api-key: texticode-2026`  
+> Servicio de envío de correos transaccionales (notificación de tareas y métricas de envío).
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| 🔵 `GET` | `http://localhost:3001/api/notificaciones/estadisticas` | Consulta métricas de envío de correos |
+| 🟢 `POST` | `http://localhost:3001/api/notificaciones/tarea` | Notifica a un operario una nueva tarea |
+
+---
+
+#### 🔵 `GET` &nbsp; `http://localhost:3001/api/notificaciones/estadisticas`
+
+Consulta las métricas de envío de correos (proxy sobre `/v3/stats` de SendGrid) para una fecha dada.
+
+**Query params:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `fecha` | `string` | Formato `YYYY-MM-DD`. Si se omite, usa la fecha actual (zona horaria `America/Bogota`). |
+
+**Respuesta exitosa:**
+```json
+{
+  "success": true,
+  "estadisticas": {
+    "fecha": "2026-07-02",
+    "enviados": 5,
+    "entregados": 5,
+    "abiertos": 4,
+    "clicks": 0,
+    "rebotes": 0,
+    "spam": 0
+  }
+}
+```
+
+> ⚠️ SendGrid agrega estas métricas por lotes, no en tiempo real: pueden tardar unos minutos en reflejar envíos recientes.
+
+---
+
+#### 🟢 `POST` &nbsp; `http://localhost:3001/api/notificaciones/tarea`
+
+Notifica a un operario que se le asignó una nueva tarea de producción.
+
+**Body:**
+```json
+{
+  "operarioEmail": "stevanwagner99@gmail.com",
+  "operarioNombre": "Stevan Wagner",
+  "tarea": "Confección de blusas",
+  "ordenId": 143,
+  "prioridad": "Alta",
+  "fechaLimite": "2026-06-30"
+}
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "success": true,
+  "enviado": true,
+  "destinatario": "stevanwagner99@gmail.com",
+  "tarea": "Confección de blusas"
+}
+```
+
+---
+
 ### 🔵 Google Calendar OAuth
 
 > Ruta base: `http://localhost:3001/api/google`  
 > Autenticación: JWT en header `Authorization: Bearer <token>` (excepto rutas públicas como `/auth-url`)
 
-#### GET
+| Método | Endpoint | Descripción |
+|---|---|---|
+| 🔵 `GET` | `http://localhost:3001/api/google/auth-url` | Genera la URL de autorización de Google OAuth2 |
+| 🔵 `GET` | `http://localhost:3001/api/google/status` | Consulta el estado de vinculación de la cuenta |
+| 🟢 `POST` | `http://localhost:3001/api/google/sync/delivery-events` | Sincroniza entregas con Google Calendar |
+| 🟠 `PATCH` | `http://localhost:3001/api/google/settings` | Actualiza preferencias de sincronización |
+| 🔴 `DELETE` | `http://localhost:3001/api/google/unlink` | Desvincula la cuenta de Google |
 
-##### `GET http://localhost:3001/api/google/auth-url?action=login`
+---
+
+#### 🔵 `GET` &nbsp; `http://localhost:3001/api/google/auth-url?action=login`
 
 Genera la URL de autorización de Google OAuth2.
 
@@ -169,6 +282,116 @@ Genera la URL de autorización de Google OAuth2.
 
 ---
 
+#### 🔵 `GET` &nbsp; `http://localhost:3001/api/google/status`
+
+Consulta el estado de la vinculación de la cuenta de Google Calendar del usuario autenticado.
+
+**Headers:**
+
+| Header | Valor |
+|--------|-------|
+| `Authorization` | `Bearer <JWT>` |
+
+**Respuesta exitosa:**
+```json
+{
+  "connected": true,
+  "profile": {
+    "email": "andreslanck@gmail.com",
+    "calendarId": "primary",
+    "syncEnabled": true,
+    "lastLoginGoogle": "2026-07-03T06:50:46.908Z",
+    "lastSyncAt": "2026-05-25T17:36:03.965Z",
+    "updatedAt": "2026-07-03T06:50:46.908Z",
+    "scopes": [
+      "openid",
+      "https://www.googleapis.com/auth/userinfo.email",
+      "https://www.googleapis.com/auth/userinfo.profile",
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/calendar.events"
+    ]
+  }
+}
+```
+
+---
+
+#### 🟢 `POST` &nbsp; `http://localhost:3001/api/google/sync/delivery-events`
+
+Sincroniza las entregas (órdenes) pendientes con eventos en Google Calendar del usuario autenticado.
+
+**Headers:**
+
+| Header | Valor |
+|--------|-------|
+| `Authorization` | `Bearer <JWT>` |
+
+**Body:** *(sin body — la sincronización toma las entregas pendientes directamente del backend)*
+
+**Respuesta exitosa:**
+```json
+{
+  "mensaje": "Entregas sincronizadas con Google Calendar.",
+  "total": 1,
+  "results": [
+    {
+      "id": "fighkqd3seal182ctae7q3jfo0",
+      "htmlLink": "https://www.google.com/calendar/event?eid=ZmlnaGtxZDNzZWFsMTgyY3RhZTdxM2pmbzAgYW5kcmVzbGFuY2tAZ21haWwuY29t",
+      "status": "updated",
+      "orderId": 139
+    }
+  ]
+}
+```
+
+---
+
+#### 🟠 `PATCH` &nbsp; `http://localhost:3001/api/google/settings`
+
+Actualiza las preferencias de sincronización de Google Calendar del usuario autenticado.
+
+**Headers:**
+
+| Header | Valor |
+|--------|-------|
+| `Authorization` | `Bearer <JWT>` |
+
+**Body:**
+```json
+{
+  "syncEnabled": true,
+  "calendarId": "primary"
+}
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "mensaje": "Preferencias de Google Calendar actualizadas."
+}
+```
+
+---
+
+#### 🔴 `DELETE` &nbsp; `http://localhost:3001/api/google/unlink`
+
+Desvincula la cuenta de Google Calendar del usuario autenticado.
+
+**Headers:**
+
+| Header | Valor |
+|--------|-------|
+| `Authorization` | `Bearer <JWT>` |
+
+**Respuesta exitosa:**
+```json
+{
+  "mensaje": "Cuenta de Google desvinculada correctamente."
+}
+```
+
+---
+
 ## 🏭 APIs Internas
 
 > Endpoints propios del backend, protegidos con `x-api-key: texticode-2026`.
@@ -177,9 +400,18 @@ Genera la URL de autorización de Google OAuth2.
 
 > Ruta base: `http://localhost:3001/api/carga-trabajo`
 
-#### GET
+| Método | Endpoint | Descripción |
+|---|---|---|
+| 🔵 `GET` | `http://localhost:3001/api/carga-trabajo` | Lista operarios activos con su carga de trabajo |
+| 🔵 `GET` | `http://localhost:3001/api/carga-trabajo/operarios/:id` | Detalle de carga de un operario específico |
+| 🟢 `POST` | `http://localhost:3001/api/carga-trabajo/reasignar` | Reasigna una orden a otro operario |
+| 🟢 `POST` | `http://localhost:3001/api/carga-trabajo/reasignar-multiple` | Reasigna múltiples órdenes |
+| 🟠 `PATCH` | `http://localhost:3001/api/carga-trabajo/umbrales` | Actualiza umbrales de sobrecarga/disponibilidad |
+| 🟠 `PATCH` | `http://localhost:3001/api/carga-trabajo/operarios/:id/estado` | Activa o desactiva un operario |
 
-##### `GET http://localhost:3001/api/carga-trabajo`
+---
+
+#### 🔵 `GET` &nbsp; `http://localhost:3001/api/carga-trabajo`
 
 Lista todos los operarios activos con su carga de trabajo actual.
 
@@ -215,7 +447,7 @@ Lista todos los operarios activos con su carga de trabajo actual.
 
 ---
 
-##### `GET http://localhost:3001/api/carga-trabajo/operarios/50`
+#### 🔵 `GET` &nbsp; `http://localhost:3001/api/carga-trabajo/operarios/50`
 
 Detalle de carga de trabajo de un operario específico con sus órdenes activas.
 
@@ -246,9 +478,7 @@ Detalle de carga de trabajo de un operario específico con sus órdenes activas.
 
 ---
 
-#### POST
-
-##### `POST http://localhost:3001/api/carga-trabajo/reasignar`
+#### 🟢 `POST` &nbsp; `http://localhost:3001/api/carga-trabajo/reasignar`
 
 Reasigna una orden activa a otro operario.
 
@@ -276,7 +506,7 @@ Reasigna una orden activa a otro operario.
 
 ---
 
-##### `POST http://localhost:3001/api/carga-trabajo/reasignar-multiple`
+#### 🟢 `POST` &nbsp; `http://localhost:3001/api/carga-trabajo/reasignar-multiple`
 
 Reasigna múltiples órdenes en una sola petición.
 
@@ -306,9 +536,7 @@ Reasigna múltiples órdenes en una sola petición.
 
 ---
 
-#### PATCH
-
-##### `PATCH http://localhost:3001/api/carga-trabajo/umbrales`
+#### 🟠 `PATCH` &nbsp; `http://localhost:3001/api/carga-trabajo/umbrales`
 
 Actualiza los umbrales que definen cuándo un operario está sobrecargado o disponible.
 
@@ -334,7 +562,7 @@ Actualiza los umbrales que definen cuándo un operario está sobrecargado o disp
 
 ---
 
-##### `PATCH http://localhost:3001/api/carga-trabajo/operarios/43/estado`
+#### 🟠 `PATCH` &nbsp; `http://localhost:3001/api/carga-trabajo/operarios/43/estado`
 
 Activa o desactiva un operario.
 
@@ -366,9 +594,16 @@ Activa o desactiva un operario.
 
 > Ruta base: `http://localhost:3001/api/eficiencia`
 
-#### GET
+| Método | Endpoint | Descripción |
+|---|---|---|
+| 🔵 `GET` | `http://localhost:3001/api/eficiencia/operarios` | Lista operarios activos con métricas de eficiencia |
+| 🔵 `GET` | `http://localhost:3001/api/eficiencia/operarios/:id` | Detalle de eficiencia de un operario |
+| 🟢 `POST` | `http://localhost:3001/api/eficiencia/observaciones` | Registra una observación de desempeño |
+| 🔴 `DELETE` | `http://localhost:3001/api/eficiencia/observaciones/:id` | Elimina una observación |
 
-##### `GET http://localhost:3001/api/eficiencia/operarios`
+---
+
+#### 🔵 `GET` &nbsp; `http://localhost:3001/api/eficiencia/operarios`
 
 Lista todos los operarios activos con sus métricas de eficiencia.
 
@@ -409,7 +644,7 @@ Lista todos los operarios activos con sus métricas de eficiencia.
 
 ---
 
-##### `GET http://localhost:3001/api/eficiencia/operarios/47`
+#### 🔵 `GET` &nbsp; `http://localhost:3001/api/eficiencia/operarios/47`
 
 Detalle completo de eficiencia de un operario con historial de órdenes y observaciones.
 
@@ -445,9 +680,7 @@ Detalle completo de eficiencia de un operario con historial de órdenes y observ
 
 ---
 
-#### POST
-
-##### `POST http://localhost:3001/api/eficiencia/observaciones`
+#### 🟢 `POST` &nbsp; `http://localhost:3001/api/eficiencia/observaciones`
 
 Registra una observación sobre el desempeño de un operario en una orden.
 
@@ -480,9 +713,7 @@ Registra una observación sobre el desempeño de un operario en una orden.
 
 ---
 
-#### DELETE
-
-##### `DELETE http://localhost:3001/api/eficiencia/observaciones/4`
+#### 🔴 `DELETE` &nbsp; `http://localhost:3001/api/eficiencia/observaciones/4`
 
 Elimina una observación por su ID.
 
