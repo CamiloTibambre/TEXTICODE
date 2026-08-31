@@ -16,6 +16,7 @@ import practicaRouter       from './routes/practica.routes.js'
 import eficienciaRouter     from './routes/eficiencia.js'
 import cargaTrabajoRoutes   from './routes/carga_trabajo.js'
 import googleCalendarRouter from './routes/googleCalendar.js'
+import calendarRouter from './routes/calendar.route.js'
 
 const app = express()
 
@@ -41,6 +42,7 @@ app.use('/api/practica',         practicaRouter)
 app.use('/api/eficiencia',       eficienciaRouter)
 app.use('/api/carga-trabajo',    cargaTrabajoRoutes)
 app.use('/api/google',           googleCalendarRouter)
+app.use('/api/calendar',         calendarRouter)
 
 app.get('/', (req, res) => {
   res.json({
@@ -77,6 +79,7 @@ app.get('/', (req, res) => {
 })
 
 const PORT = process.env.PORT || 3001
-app.listen(PORT, () => {
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
 })

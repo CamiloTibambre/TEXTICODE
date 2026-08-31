@@ -1,3 +1,4 @@
+import { exchangeMobileAuthCode, upsertGoogleTokens } from './googleCalendar.js'
 import express  from 'express'
 import crypto   from 'crypto'
 import sgMail   from '@sendgrid/mail'
@@ -90,6 +91,84 @@ router.post('/login', async (req, res) => {
 
   } catch (err) {
     console.error('Error en /login:', err)
+    return res.status(500).json({ error: 'Error interno del servidor.' })
+  }
+})
+
+// ─────────────────────────────────────────────────────────
+// POST /api/auth/google/mobile
+// Login desde la app móvil usando el idToken del SDK nativo de Google.
+// ─────────────────────────────────────────────────────────
+router.post('/google/mobile', async (req, res) => {
+  const { idToken, serverAuthCode } = req.body
+
+  if (!idToken) {
+    return res.status(400).json({ error: 'Falta idToken.' })
+  }
+
+  try {
+    // 1) Verificar el idToken directamente contra Google
+    const infoRes = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
+    )
+    const info = await infoRes.json()
+
+    if (!infoRes.ok || !info.email) {
+      return res.status(401).json({ error: 'Token de Google inválido.' })
+    }
+
+    // 2) Buscar el usuario de Texticode por correo (debe existir, lo crea el admin)
+    const { rows } = await db.query(
+      `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
+              u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol"
+       FROM usuario u
+       INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
+       WHERE LOWER(u."Correo") = LOWER($1)
+       LIMIT 1`,
+      [info.email]
+    )
+
+    if (!rows.length) {
+      return res.status(404).json({
+        error: 'No existe un usuario de Texticode con este correo de Google.',
+      })
+    }
+
+    const user = rows[0]
+    if (user.Estado === 'inactivo') {
+      return res.status(403).json({ error: 'Tu cuenta está inactiva. Contacta al administrador.' })
+    }
+
+    // 3) Si llegó serverAuthCode, vincula Calendar de una vez (no bloquea el login si falla)
+    if (serverAuthCode) {
+      try {
+        const tokenPayload = await exchangeMobileAuthCode(serverAuthCode)
+        await upsertGoogleTokens(user.Id_Usuario, { id: info.sub, email: info.email }, tokenPayload)
+      } catch (e) {
+        console.error('[auth/google/mobile] no se pudo vincular Calendar:', e.message)
+      }
+    }
+
+    const token = jwt.sign(
+      { id: user.Id_Usuario, rol: user.Id_Rol, usuario: user.Nombre_Usuario },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES }
+    )
+
+    return res.status(200).json({
+      token,
+      usuario: {
+        Id_Usuario:      user.Id_Usuario,
+        Nombre_Completo: user.Nombre_Completo,
+        Nombre_Usuario:  user.Nombre_Usuario,
+        Correo:          user.Correo,
+        Id_Rol:          user.Id_Rol,
+        Rol:             user.Rol,
+        Estado:          user.Estado,
+      },
+    })
+  } catch (err) {
+    console.error('[auth/google/mobile]', err.message)
     return res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
