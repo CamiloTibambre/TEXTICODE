@@ -20,7 +20,7 @@ const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/calendar.events',
 ]
 
-function requireGoogleConfig(res) {
+export function requireGoogleConfig(res) {
   if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
     res.status(500).json({
       error: 'Falta configurar GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en el backend.',
@@ -35,7 +35,7 @@ function getBearerToken(req) {
   return header.startsWith('Bearer ') ? header.slice(7) : null
 }
 
-function requireAuth(req, res, next) {
+export function requireAuth(req, res, next) {
   const token = getBearerToken(req)
   if (!token) return res.status(401).json({ error: 'Sesión requerida.' })
 
@@ -65,7 +65,7 @@ function normalizeGoogleToken(tokens = {}) {
   }
 }
 
-async function ensureGoogleSchema() {
+export async function ensureGoogleSchema() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS google_calendar_tokens (
       "Id_Usuario"         int          NOT NULL,
@@ -89,7 +89,9 @@ async function ensureGoogleSchema() {
   `)
 }
 
-async function exchangeCodeForTokens(code) {
+// Flujo WEB: intercambio de code por tokens, CON redirect_uri
+// (usado por router.get('/callback', ...) más abajo).
+export async function exchangeCodeForTokens(code) {
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -106,7 +108,25 @@ async function exchangeCodeForTokens(code) {
   return data
 }
 
-async function getGoogleProfile(accessToken) {
+// Flujo MÓVIL: intercambio del serverAuthCode que entrega el SDK nativo
+// de Android/iOS. A diferencia del flujo web, aquí NO se manda redirect_uri.
+export async function exchangeMobileAuthCode(code) {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id:     GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      grant_type:    'authorization_code',
+    }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error_description || data.error || 'No se pudo obtener tokens de Google (móvil).')
+  return data
+}
+
+export async function getGoogleProfile(accessToken) {
   const res = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: { Authorization: `Bearer ${accessToken}` },
   })
@@ -115,7 +135,7 @@ async function getGoogleProfile(accessToken) {
   return data
 }
 
-async function refreshAccessToken(row) {
+export async function refreshAccessToken(row) {
   if (!row.Refresh_Token) return row.Access_Token
   if (row.Expiry_Date && Number(row.Expiry_Date) > Date.now() + 60000) return row.Access_Token
 
@@ -148,7 +168,7 @@ async function refreshAccessToken(row) {
   return data.access_token
 }
 
-async function upsertGoogleTokens(userId, profile, tokenPayload) {
+export async function upsertGoogleTokens(userId, profile, tokenPayload) {
   await ensureGoogleSchema()
   const tokens = normalizeGoogleToken(tokenPayload)
 
@@ -182,7 +202,7 @@ function redirectWithError(res, message) {
   return res.redirect(url.toString())
 }
 
-async function getUserForAuth(id) {
+export async function getUserForAuth(id) {
   const { rows } = await db.query(
     `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
             u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol"
@@ -332,7 +352,7 @@ router.patch('/settings', requireAuth, async (req, res) => {
   res.json({ mensaje: 'Preferencias de Google Calendar actualizadas.' })
 })
 
-async function getConnectedGoogleRow(userId) {
+export async function getConnectedGoogleRow(userId) {
   await ensureGoogleSchema()
   const { rows } = await db.query(
     'SELECT * FROM google_calendar_tokens WHERE "Id_Usuario" = $1 LIMIT 1',
@@ -343,7 +363,7 @@ async function getConnectedGoogleRow(userId) {
   return rows[0]
 }
 
-async function getUserOrders(auth) {
+export async function getUserOrders(auth) {
   const user = await getUserForAuth(auth.id)
   if (!user) return []
 
@@ -427,7 +447,7 @@ function toGoogleEvent(order) {
   }
 }
 
-async function createOrUpdateCalendarEvent(accessToken, calendarId, order) {
+export async function createOrUpdateCalendarEvent(accessToken, calendarId, order) {
   const params = new URLSearchParams({
     privateExtendedProperty: `texticodeOrderId=${order.Id_Orden}`,
     maxResults: '1',
