@@ -1,6 +1,7 @@
 import express from 'express'
 import db from '../db.js'
 import verificarApiKey from '../apiKey.js'
+import { actualizarOrdenesRetrasadas } from './ordenes.js'
 
 const router = express.Router()
 
@@ -44,14 +45,14 @@ const SQL_PRENDAS_POR_DIA = `
 `
 
 // ─────────────────────────────────────────
-// Órdenes en retraso: todas las vencidas activas,
+// Órdenes en retraso: todas las vencidas activas o con estado 'Retrasada',
 // independientemente de si tienen observaciones.
 // ─────────────────────────────────────────
 const SQL_ORDENES_EN_RETRASO = `
   COUNT(
     CASE
-      WHEN CURRENT_DATE > op."Fecha_Limite"
-       AND op."Estado" IN ('En Proceso', 'Pausado')
+      WHEN op."Estado" = 'Retrasada'
+        OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso')
       THEN 1
     END
   )
@@ -66,6 +67,8 @@ router.get('/operarios/:id', async (req, res) => {
   if (isNaN(id)) {
     return res.status(400).json({ ok: false, mensaje: 'El id debe ser un número válido' })
   }
+
+  await actualizarOrdenesRetrasadas()
 
   const { rows } = await db.query(`
     SELECT
@@ -83,7 +86,7 @@ router.get('/operarios/:id', async (req, res) => {
 
       COUNT(CASE WHEN op."Estado" = 'Completada' THEN 1 END) AS ordenes_completadas,
       COUNT(CASE WHEN op."Estado" = 'En Proceso' THEN 1 END) AS ordenes_en_proceso,
-      COUNT(CASE WHEN op."Estado" = 'Pausado'    THEN 1 END) AS ordenes_pausadas,
+      COUNT(CASE WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso') THEN 1 END) AS ordenes_retrasadas,
 
       COUNT(
         CASE WHEN (
@@ -115,7 +118,7 @@ router.get('/operarios/:id', async (req, res) => {
       op."Id_Orden", op."Producto", op."Estado", op."Prioridad", op."Dificultad",
       op."Unidades_Realizadas", op."Unidades", op."Fecha_Limite",
       CASE
-        WHEN CURRENT_DATE > op."Fecha_Limite" AND op."Estado" IN ('En Proceso', 'Pausado')
+        WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso')
         THEN true ELSE false
       END AS vencida,
       CASE
@@ -155,6 +158,8 @@ router.get('/operarios/:id', async (req, res) => {
 router.get('/operarios', async (req, res) => {
   const { rendimiento, estado, limite } = req.query
 
+  await actualizarOrdenesRetrasadas()
+
   const { rows } = await db.query(`
     SELECT
       u."Id_Usuario",
@@ -169,7 +174,7 @@ router.get('/operarios', async (req, res) => {
 
       COUNT(CASE WHEN op."Estado" = 'Completada' THEN 1 END) AS ordenes_completadas,
       COUNT(CASE WHEN op."Estado" = 'En Proceso' THEN 1 END) AS ordenes_en_proceso,
-      COUNT(CASE WHEN op."Estado" = 'Pausado'    THEN 1 END) AS ordenes_pausadas,
+      COUNT(CASE WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso') THEN 1 END) AS ordenes_retrasadas,
 
       COUNT(
         CASE WHEN (
@@ -204,14 +209,14 @@ router.get('/operarios', async (req, res) => {
   }
 
   if (estado) {
-    const validos = ['Completada', 'En Proceso', 'Pausado']
+    const validos = ['Completada', 'En Proceso', 'Retrasada']
     if (!validos.includes(estado)) {
       return res.status(400).json({ ok: false, mensaje: `estado inválido. Usa: ${validos.join(', ')}` })
     }
     resultado = resultado.filter(r => {
       if (estado === 'Completada') return r.ordenes_completadas > 0
       if (estado === 'En Proceso') return r.ordenes_en_proceso > 0
-      if (estado === 'Pausado')    return r.ordenes_pausadas > 0
+      if (estado === 'Retrasada')  return (r.ordenes_retrasadas > 0 || r.ordenes_en_retraso > 0)
     })
   }
 

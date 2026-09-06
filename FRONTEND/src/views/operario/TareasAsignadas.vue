@@ -52,7 +52,7 @@
             <option value="">Todos los estados</option>
             <option value="en-proceso">En Proceso</option>
             <option value="completado">Completado</option>
-            <option value="pausado">Pausado</option>
+            <option value="retrasado">Retrasada</option>
           </select>
           <select class="filter-select" v-model="filtroPrioridad">
             <option value="">Todas las prioridades</option>
@@ -90,15 +90,15 @@
           </div>
         </div>
         <div class="stat-card" :style="{ transitionDelay: '140ms' }">
-          <div class="card-accent" style="background: #f59e0b"></div>
+          <div class="card-accent" style="background: #dc2626"></div>
           <div class="card-icon-bg">
             <svg fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor">
-              <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.5v7M15 8.5v7"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
             </svg>
           </div>
           <div class="card-body">
-            <div class="card-label">Pausadas</div>
-            <div class="card-value" style="color: #f59e0b">{{ displayPausadas }}</div>
+            <div class="card-label">Retrasadas</div>
+            <div class="card-value" style="color: #dc2626">{{ displayRetrasadas }}</div>
           </div>
         </div>
         <div class="stat-card" :style="{ transitionDelay: '210ms' }">
@@ -140,7 +140,7 @@
               v-for="(tarea, idx) in tareasFiltradas"
               :key="tarea.id"
               :class="{
-                'task-pausada':    tarea.estado === 'pausado',
+                'task-retrasada':  tarea.estado === 'retrasado',
                 'task-completada': tarea.estado === 'completado'
               }"
               :style="{ animationDelay: `${idx * 40}ms` }"
@@ -159,7 +159,7 @@
                         <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 12.5l2.5 2.5 4.5-4.5"/>
                       </svg>
                       <svg v-else width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
-                        <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M9 8.5v7M15 8.5v7"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
                       </svg>
                       {{ estadoLabel(tarea.estado) }}
                     </span>
@@ -167,11 +167,11 @@
                       {{ tarea.prioridad.charAt(0).toUpperCase() + tarea.prioridad.slice(1) }}
                     </span>
                   </div>
-                  <div v-if="tarea.estado === 'pausado'" class="pausa-banner">
+                  <div v-if="tarea.estado === 'retrasado'" class="retraso-banner">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
                     </svg>
-                    Tarea pausada temporalmente
+                    Orden con entrega retrasada
                   </div>
                 </div>
 
@@ -230,8 +230,8 @@
                     <div
                       class="progress-fill"
                       :class="{
-                        'fill-completo': tarea.progreso >= 100,
-                        'fill-pausado':  tarea.estado === 'pausado'
+                        'fill-completo':  tarea.progreso >= 100,
+                        'fill-retrasado': tarea.estado === 'retrasado'
                       }"
                       :style="{ width: tarea.progreso + '%' }"
                     ></div>
@@ -273,7 +273,7 @@ const titleChars      = 'Tareas Asignadas'.split('')
 
 const displayEnProceso   = ref(0)
 const displayCompletadas = ref(0)
-const displayPausadas    = ref(0)
+const displayRetrasadas = ref(0)
 const displayTotal       = ref(0)
 
 function animateCount(targetRef, target) {
@@ -313,17 +313,17 @@ onMounted(async () => {
       }
 
       return {
-        id:          o.Id_Orden,
-        nombre:      o.Descripcion,
-        producto:    o.Producto || o.Descripcion,
-        descripcion: o.Descripcion,
-        cliente:     o.Cliente        || '—',
-        material:    o.NombreMaterial || '—',
-        entrega:     o.Fecha_Limite?.split('T')[0] || '—',
-        cantidad, realizadas, estado, progreso,
-        prioridad: (o.Prioridad || 'Media').toLowerCase(),
-        vencida:   o.Fecha_Limite && new Date(o.Fecha_Limite) < new Date(),
-      }
+  id:          o.Id_Orden,
+  nombre:      o.Descripcion,
+  producto:    o.Producto || o.Descripcion,
+  descripcion: o.Descripcion,
+  cliente:     o.Cliente        || '—',
+  material:    o.NombreMaterial || '—',
+  entrega:     o.Fecha_Limite?.split('T')[0] || '—',
+  cantidad, realizadas, estado, progreso,
+  prioridad: (o.Prioridad || 'Media').toLowerCase(),
+  // vencida ya no se calcula aquí — se confía en o.Estado === 'Retrasada'
+}
     })
   } catch (err) {
     console.error('Error cargando tareas:', err)
@@ -333,17 +333,25 @@ onMounted(async () => {
       animVisible.value = true
       animateCount(displayEnProceso,   tareas.value.filter(t => t.estado === 'en-proceso').length)
       animateCount(displayCompletadas, tareas.value.filter(t => t.estado === 'completado').length)
-      animateCount(displayPausadas,    tareas.value.filter(t => t.estado === 'pausado').length)
+      animateCount(displayRetrasadas, tareas.value.filter(t => t.estado === 'retrasado').length)
       animateCount(displayTotal,       tareas.value.length)
     }, 80)
   }
 })
 
 function mapearEstado(estado) {
-  return { 'En Proceso': 'en-proceso', 'Completada': 'completado', 'Pausado': 'pausado' }[estado] || 'en-proceso'
+  return {
+    'En Proceso': 'en-proceso',
+    'Completada': 'completado',
+    'Retrasada': 'retrasado',
+  }[estado] || 'en-proceso'
 }
 
-const estadoLabel = (estado) => ({ 'en-proceso': 'En Proceso', 'completado': 'Completado', 'pausado': 'Pausado' })[estado] || estado
+const estadoLabel = (estado) => ({
+  'en-proceso': 'En Proceso',
+  'completado': 'Completado',
+  'retrasado': 'Retrasada',
+})[estado] || estado
 
 const tareasFiltradas = computed(() =>
   tareas.value.filter(t => {
@@ -423,14 +431,14 @@ const tareasFiltradas = computed(() =>
 .task-card:last-child { border-bottom: none; }
 .task-card:hover { background: #f9fafb; transform: translateX(3px); }
 @keyframes rowSlideIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
-.task-card.task-pausada   { background: linear-gradient(135deg, #fffbeb 0%, #ffffff 60%); }
+.task-card.task-retrasada { background: linear-gradient(135deg, #fef2f2 0%, #ffffff 60%); }
 .task-card.task-completada { background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 60%); }
 
 /* Banda lateral */
 .task-stripe { width: 5px; flex-shrink: 0; }
 .task-stripe.en-proceso { background: #2563eb; }
 .task-stripe.completado { background: #16a34a; }
-.task-stripe.pausado    { background: #f59e0b; }
+.task-stripe.retrasado  { background: #dc2626; }
 
 .task-body   { flex: 1; padding: 20px 22px; }
 .task-top    { margin-bottom: 10px; }
@@ -440,12 +448,12 @@ const tareasFiltradas = computed(() =>
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .badge.en-proceso { background: #dbeafe; color: #2563eb; }
 .badge.completado  { background: #dcfce7; color: #15803d; }
-.badge.pausado     { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.badge.retrasado   { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
 .badge.prioridad.alta  { background: #fee2e2; color: #991b1b; }
 .badge.prioridad.media { background: #fef3c7; color: #92400e; }
 .badge.prioridad.baja  { background: #f0fdf4; color: #166534; }
 
-.pausa-banner { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 5px 10px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 6px; font-size: 12px; font-weight: 600; color: #92400e; }
+.retraso-banner { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 5px 10px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; font-size: 12px; font-weight: 600; color: #b91c1c; }
 
 .task-name { font-size: 17px; font-weight: 700; color: #111827; margin-bottom: 4px; }
 .task-desc { font-size: 14px; color: #6b7280; margin-bottom: 18px; }
@@ -467,8 +475,8 @@ const tareasFiltradas = computed(() =>
 .progress-pct   { font-weight: 600; color: #374151; }
 .progress-bar   { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
 .progress-fill  { height: 100%; background: #1f3a52; border-radius: 999px; transition: width 0.6s ease; }
-.progress-fill.fill-completo { background: #16a34a; }
-.progress-fill.fill-pausado  { background: #f59e0b; }
+.progress-fill.fill-completo  { background: #16a34a; }
+.progress-fill.fill-retrasado { background: #dc2626; }
 
 /* LOADING */
 .loading-wrap { display: flex; flex-direction: column; align-items: center; padding: 60px; gap: 14px; color: #9ca3af; font-size: 14px; }

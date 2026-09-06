@@ -1,6 +1,7 @@
 import express from 'express'
 import db from '../db.js'
 import verificarApiKey from '../apiKey.js'
+import { actualizarOrdenesRetrasadas } from './ordenes.js'
 
 const router = express.Router()
 
@@ -12,6 +13,8 @@ const LIMITE_ORDENES_DISPONIBLE = 2
 // GET /api/carga-trabajo
 router.get('/', async (req, res) => {
   try {
+    await actualizarOrdenesRetrasadas()
+
     const { estado } = req.query
 
     const estadosValidos = ['sobrecargado', 'normal', 'disponible']
@@ -31,17 +34,16 @@ router.get('/', async (req, res) => {
         u."Telefono",
 
         COUNT(
-          CASE WHEN op."Estado" IN ('En Proceso', 'Pausado') THEN 1 END
+          CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') THEN 1 END
         ) AS ordenes_activas,
 
         COUNT(
-          CASE WHEN op."Estado" IN ('En Proceso', 'Pausado')
-               AND CURRENT_DATE > op."Fecha_Limite"
+          CASE WHEN (op."Estado" = 'Retrasada' OR (op."Estado" = 'En Proceso' AND CURRENT_DATE > op."Fecha_Limite"))
           THEN 1 END
         ) AS ordenes_vencidas,
 
         COUNT(
-          CASE WHEN op."Estado" IN ('En Proceso', 'Pausado')
+          CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada')
                AND op."Prioridad" = 'Alta'
           THEN 1 END
         ) AS ordenes_alta_prioridad
@@ -87,12 +89,14 @@ router.get('/', async (req, res) => {
 // GET /api/carga-trabajo/sugerencias
 router.get('/sugerencias', async (req, res) => {
   try {
+    await actualizarOrdenesRetrasadas()
+
     const { rows: operarios } = await db.query(`
       SELECT
         u."Id_Usuario",
         u."Nombre_Completo",
         COUNT(
-          CASE WHEN op."Estado" IN ('En Proceso', 'Pausado') THEN 1 END
+          CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') THEN 1 END
         ) AS ordenes_activas
       FROM usuario u
       INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
@@ -118,7 +122,7 @@ router.get('/sugerencias', async (req, res) => {
         SELECT
           "Id_Orden", "Producto", "Estado", "Prioridad", "Fecha_Limite",
           "Unidades", "Unidades_Realizadas",
-          CASE WHEN CURRENT_DATE > "Fecha_Limite" THEN true ELSE false END AS vencida,
+          CASE WHEN ("Estado" = 'Retrasada' OR CURRENT_DATE > "Fecha_Limite") THEN true ELSE false END AS vencida,
           CASE "Prioridad"
             WHEN 'Alta'  THEN 1
             WHEN 'Media' THEN 2
@@ -126,7 +130,7 @@ router.get('/sugerencias', async (req, res) => {
             ELSE 4
           END AS orden_prioridad
         FROM orden_produccion
-        WHERE "Id_Operario" = $1 AND "Estado" IN ('En Proceso', 'Pausado')
+        WHERE "Id_Operario" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')
         ORDER BY vencida DESC, orden_prioridad ASC, "Fecha_Limite" ASC
       `, [operario.Id_Usuario])
 
@@ -179,12 +183,14 @@ router.get('/operarios/:id', async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'El id debe ser un número válido' })
     }
 
+    await actualizarOrdenesRetrasadas()
+
     const { rows } = await db.query(`
       SELECT
         u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono",
-        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Pausado') THEN 1 END) AS ordenes_activas,
-        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Pausado') AND CURRENT_DATE > op."Fecha_Limite" THEN 1 END) AS ordenes_vencidas,
-        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Pausado') AND op."Prioridad" = 'Alta' THEN 1 END) AS ordenes_alta_prioridad
+        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') THEN 1 END) AS ordenes_activas,
+        COUNT(CASE WHEN (op."Estado" = 'Retrasada' OR (op."Estado" = 'En Proceso' AND CURRENT_DATE > op."Fecha_Limite")) THEN 1 END) AS ordenes_vencidas,
+        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') AND op."Prioridad" = 'Alta' THEN 1 END) AS ordenes_alta_prioridad
       FROM usuario u
       INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
       LEFT JOIN orden_produccion op ON op."Id_Operario" = u."Id_Usuario"
@@ -206,9 +212,9 @@ router.get('/operarios/:id', async (req, res) => {
       SELECT
         "Id_Orden", "Producto", "Estado", "Prioridad",
         "Unidades", "Unidades_Realizadas", "Fecha_Limite",
-        CASE WHEN CURRENT_DATE > "Fecha_Limite" AND "Estado" IN ('En Proceso', 'Pausado') THEN true ELSE false END AS vencida
+        CASE WHEN ("Estado" = 'Retrasada' OR CURRENT_DATE > "Fecha_Limite") THEN true ELSE false END AS vencida
       FROM orden_produccion
-      WHERE "Id_Operario" = $1 AND "Estado" IN ('En Proceso', 'Pausado')
+      WHERE "Id_Operario" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')
       ORDER BY CASE "Prioridad" WHEN 'Alta' THEN 1 WHEN 'Media' THEN 2 ELSE 3 END ASC, "Fecha_Limite" ASC
     `, [id])
 
@@ -234,7 +240,7 @@ router.post('/reasignar', async (req, res) => {
     const { rows: orden } = await db.query(`
       SELECT "Id_Orden", "Id_Operario", "Producto", "Estado"
       FROM orden_produccion
-      WHERE "Id_Orden" = $1 AND "Estado" IN ('En Proceso', 'Pausado')
+      WHERE "Id_Orden" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')
     `, [Id_Orden])
 
     if (orden.length === 0) {
@@ -295,7 +301,7 @@ router.post('/reasignar-multiple', async (req, res) => {
 
       try {
         const { rows: orden } = await db.query(
-          `SELECT "Id_Orden", "Producto" FROM orden_produccion WHERE "Id_Orden" = $1 AND "Estado" IN ('En Proceso', 'Pausado')`,
+          `SELECT "Id_Orden", "Producto" FROM orden_produccion WHERE "Id_Orden" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')`,
           [Id_Orden]
         )
         if (orden.length === 0) {

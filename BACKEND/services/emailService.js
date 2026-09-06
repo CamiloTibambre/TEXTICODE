@@ -17,6 +17,7 @@ const ESTADO_META = {
   'Pendiente':   { emoji: '⏳', color: '#f59e0b', label: 'Pendiente de inicio' },
   'En Proceso':  { emoji: '🔄', color: '#3b82f6', label: 'En producción'       },
   'Completada':  { emoji: '✅', color: '#10b981', label: 'Lista para entrega'   },
+  'Retrasada':   { emoji: '⚠️', color: '#dc2626', label: 'Retrasada'            },
   'Entregada':   { emoji: '📦', color: '#8b5cf6', label: 'Entregada exitosamente' },
   'Cancelada':   { emoji: '❌', color: '#ef4444', label: 'Cancelada'            },
 };

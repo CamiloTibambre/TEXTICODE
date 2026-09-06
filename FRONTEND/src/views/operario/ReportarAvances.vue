@@ -79,30 +79,13 @@
               v-for="o in ordenesActivas"
               :key="o.idReal"
               class="order-card"
-              :class="{ 'card-pausada': o.estado === 'pausado' }"
+              :class="{ 'card-retrasada': o.estado === 'retrasado' }"
             >
               <div class="oc-header" :class="o.estado">
                 <div class="oc-header-left">
                   <span class="oc-id">{{ o.id }}</span>
                   <span class="oc-badge" :class="o.estado">{{ estadoLabel(o.estado) }}</span>
                   <span class="oc-prio" :class="o.prioridad">{{ capitalize(o.prioridad) }}</span>
-                </div>
-                <div class="oc-actions">
-                  <button
-                    class="btn-pausa"
-                    :class="{ 'btn-reanudar': o.estado === 'pausado' }"
-                    :disabled="o.estado === 'completado'"
-                    @click="togglePausa(o)"
-                    :title="o.estado === 'pausado' ? 'Reanudar' : 'Pausar'"
-                  >
-                    <svg v-if="o.estado !== 'pausado'" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5"/>
-                    </svg>
-                    <svg v-else width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"/>
-                    </svg>
-                    {{ o.estado === 'pausado' ? 'Reanudar' : 'Pausar' }}
-                  </button>
                 </div>
               </div>
 
@@ -127,14 +110,14 @@
                 <div class="oc-progress">
                   <div class="oc-progress-row">
                     <span class="oc-progress-lbl">Progreso de fabricación</span>
-                    <span class="oc-progress-pct" :class="{ 'pct-verde': o.progreso >= 100, 'pct-naranja': o.estado === 'pausado' }">{{ o.progreso }}%</span>
+                    <span class="oc-progress-pct" :class="{ 'pct-verde': o.progreso >= 100, 'pct-rojo': o.estado === 'retrasado' }">{{ o.progreso }}%</span>
                   </div>
                   <div class="oc-bar">
                     <div
                       class="oc-bar-fill"
                       :class="{
                         'fill-completado': o.progreso >= 100,
-                        'fill-pausado':    o.estado === 'pausado'
+                        'fill-retrasado':  o.estado === 'retrasado'
                       }"
                       :style="{ width: o.progreso + '%' }"
                     ></div>
@@ -327,7 +310,7 @@ function estaVencida(fechaStr) {
 }
 
 function estadoLabel(estado) {
-  return { 'en-proceso': 'En Proceso', 'completado': 'Completado', 'pausado': 'Pausado' }[estado] || estado
+  return { 'en-proceso': 'En Proceso', 'completado': 'Completado', 'retrasado': 'Retrasada' }[estado] || estado
 }
 
 // ── Helper: obtener correo del cliente por Id ──────────────────
@@ -359,8 +342,8 @@ onMounted(async () => {
         const unidades    = t.Unidades ?? t.Cantidad ?? 1
         const cantidad    = t.Cantidad ?? 1
         const estado      = t.Estado === 'Completada' ? 'completado'
-                          : t.Estado === 'En Proceso' ? 'en-proceso'
-                          : 'pausado'
+                          : t.Estado === 'Retrasada' ? 'retrasado'
+                          : 'en-proceso'
 
         let progreso = 0
         if (estado === 'completado') {
@@ -419,59 +402,6 @@ function guardarHistorialLocal() {
   localStorage.setItem(historialStorageKey.value, JSON.stringify(historial.value))
 }
 
-// ── Toggle pausa ──
-async function togglePausa(o) {
-  const siguienteEstado = o.estado === 'pausado' ? 'En Proceso' : 'Pausado'
-
-  try {
-    const res  = await fetch(`${BASE}/ordenes/${o.idReal}`)
-    if (!res.ok) throw new Error(`GET orden falló: ${res.status}`)
-    const data = await res.json()
-
-    const payload = {
-      Id_Cliente:          data.Id_Cliente,
-      Id_Material:         data.Id_Material,
-      Id_Operario:         data.Id_Operario  || null,
-      Producto:            data.Producto     || null,
-      Descripcion:         data.Descripcion,
-      Cantidad:            data.Cantidad,
-      Prioridad:           data.Prioridad,
-      Fecha_Limite:        data.Fecha_Limite?.split('T')[0] || data.Fecha_Limite,
-      Estado:              siguienteEstado,
-      Unidades:            data.Unidades            ?? o.unidadesTotales,
-      Unidades_Realizadas: data.Unidades_Realizadas ?? o.unidadesHechas,
-    }
-
-    const putRes = await fetch(`${BASE}/ordenes/${o.idReal}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    if (!putRes.ok) throw new Error(`PUT falló: ${putRes.status}`)
-
-    o.estado = siguienteEstado === 'Pausado' ? 'pausado' : 'en-proceso'
-    showToast(siguienteEstado === 'Pausado' ? 'Orden pausada correctamente' : 'Orden reanudada correctamente', 'toast-success')
-
-    // ── SENDGRID: notificar al cliente que la orden fue pausada/reanudada ──
-    const cliente = await obtenerCorreoCliente(o.idCliente)
-    if (cliente?.correo) {
-      await notificarEstado(
-        {
-          id:            o.idReal,
-          clienteEmail:  cliente.correo,
-          clienteNombre: cliente.nombre,
-          productos:     o.producto,
-        },
-        siguienteEstado
-      )
-    }
-
-  } catch (err) {
-    console.error('Error pausando/reanudando:', err)
-    showToast('No se pudo actualizar el estado de la orden', 'toast-error')
-  }
-}
-
 // ── Enviar reporte ──
 async function enviarReporte() {
   if (!reporte.value.nuevas || reporte.value.nuevas <= 0) return
@@ -479,7 +409,9 @@ async function enviarReporte() {
   const o = ordenActual.value
   const nuevasHechas  = Math.min(o.unidadesHechas + reporte.value.nuevas, o.unidadesTotales)
   const nuevoProgreso = Math.min(100, Math.round((nuevasHechas / o.unidadesAsig) * 100))
-  const nuevoEstado   = nuevasHechas >= o.unidadesTotales ? 'Completada' : 'En Proceso'
+  const nuevoEstado   = nuevasHechas >= o.unidadesTotales
+    ? 'Completada'
+    : (o.estado === 'retrasado' ? 'Retrasada' : 'En Proceso')
 
   try {
     const res  = await fetch(`${BASE}/ordenes/${o.idReal}`)
@@ -510,6 +442,8 @@ async function enviarReporte() {
     o.unidadesHechas = nuevasHechas
     o.progreso       = nuevoProgreso
     if (nuevoEstado === 'Completada') o.estado = 'completado'
+    else if (nuevoEstado === 'Retrasada') o.estado = 'retrasado'
+    else o.estado = 'en-proceso'
 
     historial.value.push({
       id:       Date.now(),
@@ -610,11 +544,11 @@ function showToast(msg, type = 'toast-success') {
 .orders-grid.section-visible { opacity: 1; transform: translateY(0); }
 .order-card { background: white; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; }
 .order-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); transform: translateY(-2px); }
-.order-card.card-pausada { border-color: #fde68a; background: #fffef7; opacity: 0.9; }
+.order-card.card-retrasada { border-color: #fca5a5; background: #fff8f8; }
 
 .oc-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 12px; border-bottom: 1px solid #f3f4f6; }
 .oc-header.en-proceso { background: linear-gradient(90deg, #eff6ff, transparent); border-bottom-color: #dbeafe; }
-.oc-header.pausado    { background: linear-gradient(90deg, #fffbeb, transparent); border-bottom-color: #fde68a; }
+.oc-header.retrasado  { background: linear-gradient(90deg, #fef2f2, transparent); border-bottom-color: #fecaca; }
 .oc-header.completado { background: linear-gradient(90deg, #f0fdf4, transparent); border-bottom-color: #bbf7d0; }
 
 .oc-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -622,17 +556,11 @@ function showToast(msg, type = 'toast-success') {
 .oc-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
 .oc-badge.en-proceso { background: #dbeafe; color: #1d4ed8; }
 .oc-badge.completado  { background: #dcfce7; color: #15803d; }
-.oc-badge.pausado     { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.oc-badge.retrasado   { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
 .oc-prio { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 .oc-prio.alta  { background: #fee2e2; color: #991b1b; }
 .oc-prio.media { background: #fef3c7; color: #92400e; }
 .oc-prio.baja  { background: #f0fdf4; color: #166534; }
-
-.btn-pausa { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; font-size: 12px; font-weight: 600; color: #374151; cursor: pointer; transition: all 0.15s; }
-.btn-pausa:hover:not(:disabled) { background: #fef3c7; border-color: #fde68a; color: #b45309; }
-.btn-reanudar { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
-.btn-reanudar:hover:not(:disabled) { background: #dbeafe; }
-.btn-pausa:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .oc-body    { padding: 16px 18px; }
 .oc-nombre  { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 14px; }
@@ -651,11 +579,11 @@ function showToast(msg, type = 'toast-success') {
 .oc-progress-lbl { font-size: 12px; color: #6b7280; font-weight: 500; }
 .oc-progress-pct { font-size: 14px; font-weight: 700; color: #374151; }
 .pct-verde   { color: #16a34a !important; }
-.pct-naranja { color: #f59e0b !important; }
+.pct-rojo    { color: #dc2626 !important; }
 .oc-bar { width: 100%; height: 10px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
 .oc-bar-fill { height: 100%; background: #1f3a52; border-radius: 999px; transition: width 0.6s ease; }
 .oc-bar-fill.fill-completado { background: #16a34a; }
-.oc-bar-fill.fill-pausado    { background: #f59e0b; }
+.oc-bar-fill.fill-retrasado  { background: #dc2626; }
 .oc-bar-labels { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: #d1d5db; }
 
 .btn-reportar { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #1f3a52; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s; }
