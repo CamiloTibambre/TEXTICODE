@@ -46,7 +46,7 @@
               <option value="">Todos los estados</option>
               <option value="En Proceso">En Proceso</option>
               <option value="Completada">Completada</option>
-              <option value="Pausado">Pausado</option>
+              <option value="Retrasada">Retrasada</option>
             </select>
             <svg class="select-arrow" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
@@ -176,9 +176,9 @@
                   <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   En producción — faltan {{ o.cantidad - o.unidadesRealizadas }} prenda(s) por fabricar
                 </div>
-                <div v-else-if="o.estado === 'Pausado'" class="estado-banner pausado">
-                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5"/></svg>
-                  Orden pausada temporalmente
+                <div v-else-if="o.estado === 'Retrasada'" class="estado-banner retrasada">
+                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+                  Orden con entrega retrasada — producción en seguimiento prioritario
                 </div>
               </div>
             </div>
@@ -211,7 +211,7 @@ const barWidths    = ref({})
 const displayTotal     = ref(0)
 const displayProceso   = ref(0)
 const displayComp      = ref(0)
-const displayPausadas  = ref(0)
+const displayRetrasadas = ref(0)
 
 function animateCount(targetRef, target) {
   let val = 0
@@ -228,13 +228,13 @@ function animateCount(targetRef, target) {
 const ICON_ALL   = 'M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12'
 const ICON_PROC  = 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
 const ICON_CHECK = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
-const ICON_PAUSE = 'M15.75 5.25v13.5m-7.5-13.5v13.5'
+const ICON_ALERT = 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'
 
 const statsCards = computed(() => [
-  { label: 'Total Órdenes', display: displayTotal.value,    accent: '#1f3a52', icon: ICON_ALL   },
-  { label: 'En Proceso',    display: displayProceso.value,  accent: '#2563eb', icon: ICON_PROC  },
-  { label: 'Completadas',   display: displayComp.value,     accent: '#16a34a', icon: ICON_CHECK },
-  { label: 'Pausadas',      display: displayPausadas.value, accent: '#d97706', icon: ICON_PAUSE },
+  { label: 'Total Órdenes', display: displayTotal.value,      accent: '#1f3a52', icon: ICON_ALL   },
+  { label: 'En Proceso',    display: displayProceso.value,    accent: '#2563eb', icon: ICON_PROC  },
+  { label: 'Completadas',   display: displayComp.value,       accent: '#16a34a', icon: ICON_CHECK },
+  { label: 'Retrasadas',    display: displayRetrasadas.value, accent: '#dc2626', icon: ICON_ALERT },
 ])
 
 async function cargarOrdenes() {
@@ -265,8 +265,8 @@ async function cargarOrdenes() {
           : '—',
         estado:            o.Estado,
         prioridad:         o.Prioridad || 'Media',
-        badgeClass:    { 'En Proceso': 'badge-process', 'Completada': 'badge-done', 'Pausado': 'badge-pending' }[o.Estado] || 'badge-pending',
-        estadoClass:   { 'En Proceso': 'stripe-blue', 'Completada': 'stripe-green', 'Pausado': 'stripe-orange' }[o.Estado] || 'stripe-orange',
+        badgeClass:    { 'En Proceso': 'badge-process', 'Completada': 'badge-done', 'Retrasada': 'badge-delayed' }[o.Estado] || 'badge-delayed',
+        estadoClass:   { 'En Proceso': 'stripe-blue', 'Completada': 'stripe-green', 'Retrasada': 'stripe-red' }[o.Estado] || 'stripe-red',
         prioridadClass: { 'Alta': 'prio-alta', 'Media': 'prio-media', 'Baja': 'prio-baja' }[o.Prioridad] || 'prio-baja',
         fechaClass: o.Estado === 'Completada' ? 'fecha-ok' : '',
       }
@@ -283,7 +283,7 @@ async function cargarOrdenes() {
       animateCount(displayTotal,    pedidos.value.length)
       animateCount(displayProceso,  pedidos.value.filter(p => p.estado === 'En Proceso').length)
       animateCount(displayComp,     pedidos.value.filter(p => p.estado === 'Completada').length)
-      animateCount(displayPausadas, pedidos.value.filter(p => p.estado === 'Pausado').length)
+      animateCount(displayRetrasadas, pedidos.value.filter(p => p.estado === 'Retrasada').length)
       pedidos.value.forEach((p, i) => setTimeout(() => { barWidths.value[p.id] = p.progreso }, i * 70))
     }))
   }
@@ -367,7 +367,7 @@ const pedidosFiltrados = computed(() =>
 .order-stripe { width: 5px; flex-shrink: 0; }
 .stripe-blue  { background: #2563eb; }
 .stripe-green { background: #16a34a; }
-.stripe-orange { background: #d97706; }
+.stripe-red   { background: #dc2626; }
 .order-body { flex: 1; padding: 22px 24px; }
 .order-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .order-num-pill { font-size: 13px; font-weight: 700; color: #1f3a52; background: #f1f5f9; padding: 3px 10px; border-radius: 6px; font-family: 'Courier New', monospace; transition: background 0.15s, color 0.15s; }
@@ -375,7 +375,7 @@ const pedidosFiltrados = computed(() =>
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .badge-process { background: #dbeafe; color: #1d4ed8; }
 .badge-done    { background: #dcfce7; color: #15803d; }
-.badge-pending { background: #fef9c3; color: #92400e; }
+.badge-delayed { background: #fee2e2; color: #b91c1c; }
 .prio.prio-alta  { background: #fee2e2; color: #b91c1c; }
 .prio.prio-media { background: #fef3c7; color: #92400e; }
 .prio.prio-baja  { background: #f3f4f6; color: #6b7280; }
@@ -406,7 +406,7 @@ const pedidosFiltrados = computed(() =>
 .estado-banner { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-top: 4px; }
 .estado-banner.completada { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 .estado-banner.proceso    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-.estado-banner.pausado    { background: #fefce8; color: #b45309; border: 1px solid #fde68a; }
+.estado-banner.retrasada  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
 /* ── ESTADOS VACIOS / CARGA ── */
 .loading-wrap { display: flex; flex-direction: column; align-items: center; padding: 80px 0; gap: 16px; color: #9ca3af; font-size: 14px; position: relative; z-index: 1; }

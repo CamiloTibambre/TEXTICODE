@@ -180,7 +180,7 @@ const faqs = [
   { id: 5, pregunta: '¿Cómo veo el progreso?', respuesta: 'En "Pedidos y Entregas" verás el estado en tiempo real.' },
   { id: 6, pregunta: '¿Cuándo se genera mi comprobante?', respuesta: 'Al crear tu orden y se descarga cuando esté entregada.' },
   { id: 7, pregunta: '¿Puedo actualizar mis datos?', respuesta: 'Sí, desde "Cuenta Personal".' },
-  { id: 8, pregunta: '¿Qué significa orden pausada?', respuesta: 'Que la producción se detuvo temporalmente.' },
+  { id: 8, pregunta: '¿Qué significa orden retrasada?', respuesta: 'Que la orden superó su fecha límite de entrega y está en seguimiento prioritario para completarse lo antes posible.' },
 ]
 </script>
 

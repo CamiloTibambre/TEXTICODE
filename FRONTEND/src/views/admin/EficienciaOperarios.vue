@@ -187,8 +187,8 @@
                       <span class="metrica-valor azul">{{ operarioActivo.ordenes_en_proceso }}</span>
                     </div>
                     <div class="metrica-item">
-                      <span class="metrica-label">Pausadas</span>
-                      <span class="metrica-valor amarillo">{{ operarioActivo.ordenes_pausadas }}</span>
+                      <span class="metrica-label">Retrasadas</span>
+                      <span class="metrica-valor rojo">{{ operarioActivo.ordenes_retrasadas || operarioActivo.ordenes_en_retraso || 0 }}</span>
                     </div>
                   </div>
 
@@ -784,7 +784,7 @@ function normalizarOperario(op) {
     ordenes_en_retraso:         Number(op.ordenes_en_retraso)          || 0,
     ordenes_completadas:        Number(op.ordenes_completadas)         || 0,
     ordenes_en_proceso:         Number(op.ordenes_en_proceso)          || 0,
-    ordenes_pausadas:           Number(op.ordenes_pausadas)            || 0,
+    ordenes_retrasadas:         Number(op.ordenes_retrasadas || op.ordenes_en_retraso) || 0,
     ordenes_con_problema:       Number(op.ordenes_con_problema)        || 0,
   }
 }

@@ -77,8 +77,21 @@
             Órdenes de Producción
             <span class="count-badge">{{ ordenesFiltradas.length }}</span>
           </div>
-          <!-- FILTRO POR CLIENTE -->
+          <!-- FILTRO POR CLIENTE Y ESTADO -->
           <div class="table-header-right">
+            <div class="filtro-cliente-wrap">
+              <select v-model="filtroEstado" class="filtro-cliente-select">
+                <option value="">Todos los estados</option>
+                <option value="En Proceso">En Proceso</option>
+                <option value="Completada">Completada</option>
+                <option value="Retrasada">Retrasada</option>
+              </select>
+              <button v-if="filtroEstado" class="filtro-clear" @click="filtroEstado = ''" title="Limpiar filtro estado">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
             <div class="filtro-cliente-wrap">
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="filtro-icon">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
@@ -89,7 +102,7 @@
                   {{ c.Nombre_Completo }}
                 </option>
               </select>
-              <button v-if="filtroCliente" class="filtro-clear" @click="filtroCliente = ''" title="Limpiar filtro">
+              <button v-if="filtroCliente" class="filtro-clear" @click="filtroCliente = ''" title="Limpiar filtro cliente">
                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
@@ -102,7 +115,7 @@
           <svg width="44" height="44" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="#d1d5db">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z"/>
           </svg>
-          <p>{{ filtroCliente ? 'No hay órdenes para este cliente.' : 'No hay órdenes registradas aún.' }}</p>
+          <p>{{ (filtroCliente || filtroEstado) ? 'No hay órdenes con los filtros seleccionados.' : 'No hay órdenes registradas aún.' }}</p>
         </div>
 
         <table v-else>
@@ -323,7 +336,7 @@
               <select v-model="form.Estado" class="form-input">
                 <option value="En Proceso">En Proceso</option>
                 <option value="Completada">Completada</option>
-                <option value="Pausado">Pausado</option>
+                <option value="Retrasada">Retrasada</option>
               </select>
             </div>
 
@@ -492,12 +505,13 @@ const ordenes     = ref([])
 const clientes    = ref([])
 const materiales  = ref([])
 const operarios   = ref([])
-const statsDisplay = ref({ total: 0, proceso: 0, completadas: 0, pausadas: 0 })
+const statsDisplay = ref({ total: 0, proceso: 0, completadas: 0, retrasadas: 0 })
 
 const materialParaAgregar = ref('')
 const sortKey = ref('Id_Orden')
 const sortDir = ref(1)
 const filtroCliente = ref('')
+const filtroEstado  = ref('')
 const statTimers = new Map()
 
 // ── TOOLTIP MATERIALES ────────────────────────────────────────
@@ -616,13 +630,13 @@ onBeforeUnmount(() => {
 const ICON_LIST  = 'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z'
 const ICON_PROC  = 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99'
 const ICON_CHECK = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
-const ICON_PAUSE = 'M15.75 5.25v13.5m-7.5-13.5v13.5'
+const ICON_ALERT = 'M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z'
 
 const stats = computed(() => [
   { label: 'Total Órdenes', display: statsDisplay.value.total,       accentColor: '#1f3a52', iconPath: ICON_LIST  },
   { label: 'En Proceso',    display: statsDisplay.value.proceso,     accentColor: '#2563eb', iconPath: ICON_PROC  },
   { label: 'Completadas',   display: statsDisplay.value.completadas, accentColor: '#16a34a', iconPath: ICON_CHECK },
-  { label: 'Pausadas',      display: statsDisplay.value.pausadas,    accentColor: '#d97706', iconPath: ICON_PAUSE },
+  { label: 'Retrasadas',    display: statsDisplay.value.retrasadas,  accentColor: '#dc2626', iconPath: ICON_ALERT },
 ])
 
 function animateCount(key, target) {
@@ -643,17 +657,20 @@ function animateStats() {
   animateCount('total',       ordenes.value.length)
   animateCount('proceso',     ordenes.value.filter(o => o.Estado === 'En Proceso').length)
   animateCount('completadas', ordenes.value.filter(o => o.Estado === 'Completada').length)
-  animateCount('pausadas',    ordenes.value.filter(o => o.Estado === 'Pausado').length)
+  animateCount('retrasadas',  ordenes.value.filter(o => o.Estado === 'Retrasada').length)
 }
 
 // ── FILTRADO / ORDENAMIENTO ───────────────────────────────────
 const filterKey = ref(0)
-watch(filtroCliente, () => { filterKey.value++ })
+watch([filtroCliente, filtroEstado], () => { filterKey.value++ })
 
 const ordenesFiltradas = computed(() => {
   let lista = [...ordenes.value]
   if (filtroCliente.value) {
     lista = lista.filter(o => o.Id_Cliente == filtroCliente.value)
+  }
+  if (filtroEstado.value) {
+    lista = lista.filter(o => o.Estado === filtroEstado.value)
   }
   lista.sort((a, b) => {
     const va = a[sortKey.value], vb = b[sortKey.value]
@@ -694,7 +711,7 @@ function estaVencida(fecha) {
   return new Date(fecha) < new Date()
 }
 function claseEstado(e) {
-  return { 'En Proceso': 'estado-proceso', 'Completada': 'estado-completada', 'Pausado': 'estado-pausado' }[e] || ''
+  return { 'En Proceso': 'estado-proceso', 'Completada': 'estado-completada', 'Retrasada': 'estado-retrasada' }[e] || ''
 }
 function clasePrioridad(p) {
   return { 'Alta': 'prio-alta', 'Media': 'prio-media', 'Baja': 'prio-baja' }[p] || ''
@@ -1015,7 +1032,7 @@ tr:hover .order-num-pill { background: #e0ecff; color: #2563eb; }
 .badge-estado { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
 .estado-proceso    { background: #dbeafe; color: #1e40af; }
 .estado-completada { background: #dcfce7; color: #166534; }
-.estado-pausado    { background: #fef3c7; color: #92400e; }
+.estado-retrasada  { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 
 /* ── ACCIONES ── */
 .acciones { display: flex; gap: 6px; align-items: center; }

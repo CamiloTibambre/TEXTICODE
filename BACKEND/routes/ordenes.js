@@ -3,9 +3,27 @@ import pool from '../db.js'
 
 const router = Router()
 
+// Helper: sincroniza órdenes que hayan superado su fecha límite y sigan en 'En Proceso'
+export async function actualizarOrdenesRetrasadas() {
+  try {
+    await pool.query(`
+      UPDATE orden_produccion
+      SET "Estado" = 'Retrasada'
+      WHERE "Estado" = 'En Proceso'
+        AND "Fecha_Limite" < CURRENT_DATE
+    `)
+  } catch (err) {
+    console.error('Error actualizando órdenes retrasadas:', err.message)
+  }
+}
+
 // GET todas las órdenes
 router.get('/', async (req, res) => {
+  console.log('🔥 SE EJECUTÓ GET /ORDENES')
+
   try {
+    await actualizarOrdenesRetrasadas()
+
     const { rows } = await pool.query(`
       SELECT op.*,
              u."Nombre_Completo" AS "Cliente",
@@ -15,8 +33,12 @@ router.get('/', async (req, res) => {
       INNER JOIN material m ON op."Id_Material" = m."Id_Material"
       ORDER BY op."Fecha_Limite" ASC
     `)
+
+    console.log('ORDENES:', rows)
+
     res.json(rows)
   } catch (err) {
+    console.error('ERROR:', err)
     res.status(500).json({ error: err.message })
   }
 })
@@ -24,6 +46,8 @@ router.get('/', async (req, res) => {
 // GET órdenes asignadas a un operario
 router.get('/operario/:idOperario', async (req, res) => {
   try {
+    await actualizarOrdenesRetrasadas()
+
     const { rows } = await pool.query(`
       SELECT op.*,
              u."Nombre_Completo" AS "Cliente",
@@ -43,6 +67,8 @@ router.get('/operario/:idOperario', async (req, res) => {
 // GET órdenes de un cliente
 router.get('/cliente/:idCliente', async (req, res) => {
   try {
+    await actualizarOrdenesRetrasadas()
+
     const { rows } = await pool.query(`
       SELECT op.*,
              u."Nombre_Completo" AS "Cliente",
@@ -62,6 +88,8 @@ router.get('/cliente/:idCliente', async (req, res) => {
 // GET orden por ID
 router.get('/:id', async (req, res) => {
   try {
+    await actualizarOrdenesRetrasadas()
+
     const { rows } = await pool.query(`
       SELECT op.*,
              u."Nombre_Completo" AS "Cliente",
@@ -80,10 +108,12 @@ router.get('/:id', async (req, res) => {
 
 // GET órdenes por estado
 router.get('/estado/:estado', async (req, res) => {
-  const estadosValidos = ['En Proceso', 'Completada', 'Pausado']
+  const estadosValidos = ['En Proceso', 'Completada', 'Retrasada']
   if (!estadosValidos.includes(req.params.estado))
     return res.status(400).json({ error: 'Estado inválido' })
   try {
+    await actualizarOrdenesRetrasadas()
+
     const { rows } = await pool.query(`
       SELECT op.*,
              u."Nombre_Completo" AS "Cliente",
@@ -111,6 +141,15 @@ router.post('/', async (req, res) => {
   if (!Id_Cliente || !Id_Material || !Descripcion || !Cantidad || !Fecha_Limite)
     return res.status(400).json({ error: 'Faltan campos obligatorios' })
 
+  let estadoFinal = Estado || 'En Proceso'
+  if (estadoFinal === 'En Proceso' && Fecha_Limite) {
+    const hoy = new Date().toISOString().split('T')[0]
+    const fLim = typeof Fecha_Limite === 'string' ? Fecha_Limite.split('T')[0] : ''
+    if (fLim && fLim < hoy) {
+      estadoFinal = 'Retrasada'
+    }
+  }
+
   try {
     const { rows } = await pool.query(`
       INSERT INTO orden_produccion
@@ -127,7 +166,7 @@ router.post('/', async (req, res) => {
       Cantidad,
       Prioridad    || 'Media',
       Fecha_Limite,
-      Estado       || 'En Proceso',
+      estadoFinal,
       Dificultad   || 'Media',
     ])
     res.status(201).json({ mensaje: 'Orden creada', Id_Orden: rows[0].Id_Orden })
@@ -136,7 +175,6 @@ router.post('/', async (req, res) => {
   }
 })
 
-// PUT actualizar orden
 router.put('/:id', async (req, res) => {
   const {
     Id_Cliente, Id_Material, Id_Operario, Producto, Descripcion,
@@ -145,25 +183,52 @@ router.put('/:id', async (req, res) => {
     Dificultad
   } = req.body
 
+  let estadoFinal = Estado || 'En Proceso'
+  if (estadoFinal === 'En Proceso' && Fecha_Limite) {
+    const hoy = new Date().toISOString().split('T')[0]
+    const fLim = typeof Fecha_Limite === 'string' ? Fecha_Limite.split('T')[0] : ''
+    if (fLim && fLim < hoy) {
+      estadoFinal = 'Retrasada'
+    }
+  }
+
   try {
     const { rowCount } = await pool.query(`
       UPDATE orden_produccion
-      SET "Id_Cliente"=$1, "Id_Material"=$2, "Id_Operario"=$3, "Producto"=$4, "Descripcion"=$5,
-          "Cantidad"=$6, "Prioridad"=$7, "Fecha_Limite"=$8, "Estado"=$9,
-          "Unidades"=$10, "Unidades_Realizadas"=$11,
+      SET "Id_Cliente"=$1,
+          "Id_Material"=$2,
+          "Id_Operario"=$3,
+          "Producto"=$4,
+          "Descripcion"=$5,
+          "Cantidad"=$6,
+          "Prioridad"=$7,
+          "Fecha_Limite"=$8,
+          "Estado"=$9,
+          "Unidades"=$10,
+          "Unidades_Realizadas"=$11,
           "Dificultad"=$12
       WHERE "Id_Orden"=$13
     `, [
-      Id_Cliente, Id_Material, Id_Operario || null,
-      Producto || null, Descripcion, Cantidad, Prioridad,
-      Fecha_Limite, Estado,
-      Unidades ?? null, Unidades_Realizadas ?? null,
+      Id_Cliente,
+      Id_Material,
+      Id_Operario || null,
+      Producto || null,
+      Descripcion,
+      Cantidad,
+      Prioridad,
+      Fecha_Limite,
+      estadoFinal,
+      Unidades ?? null,
+      Unidades_Realizadas ?? null,
       Dificultad || 'Media',
       req.params.id,
     ])
 
-    if (rowCount === 0) return res.status(404).json({ error: 'Orden no encontrada' })
+    if (rowCount === 0)
+      return res.status(404).json({ error: 'Orden no encontrada' })
+
     res.json({ mensaje: 'Orden actualizada' })
+
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
