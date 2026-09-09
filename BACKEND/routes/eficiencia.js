@@ -68,88 +68,93 @@ router.get('/operarios/:id', async (req, res) => {
     return res.status(400).json({ ok: false, mensaje: 'El id debe ser un número válido' })
   }
 
-  await actualizarOrdenesRetrasadas()
+  try {
+    await actualizarOrdenesRetrasadas()
 
-  const { rows } = await db.query(`
-    SELECT
-      u."Id_Usuario",
-      u."Nombre_Completo",
-      u."Nombre_Usuario",
-      u."Correo",
-      u."Telefono",
+    const { rows } = await db.query(`
+      SELECT
+        u."Id_Usuario",
+        u."Nombre_Completo",
+        u."Nombre_Usuario",
+        u."Correo",
+        u."Telefono",
 
-      ${SQL_PRENDAS_POR_DIA} AS prendas_por_dia,
+        ${SQL_PRENDAS_POR_DIA} AS prendas_por_dia,
 
-      COALESCE(SUM(op."Unidades_Realizadas"), 0) AS total_unidades_producidas,
+        COALESCE(SUM(op."Unidades_Realizadas"), 0) AS total_unidades_producidas,
 
-      ${SQL_ORDENES_EN_RETRASO} AS ordenes_en_retraso,
+        ${SQL_ORDENES_EN_RETRASO} AS ordenes_en_retraso,
 
-      COUNT(CASE WHEN op."Estado" = 'Completada' THEN 1 END) AS ordenes_completadas,
-      COUNT(CASE WHEN op."Estado" = 'En Proceso' THEN 1 END) AS ordenes_en_proceso,
-      COUNT(CASE WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso') THEN 1 END) AS ordenes_retrasadas,
+        COUNT(CASE WHEN op."Estado" = 'Completada' THEN 1 END) AS ordenes_completadas,
+        COUNT(CASE WHEN op."Estado" = 'En Proceso' THEN 1 END) AS ordenes_en_proceso,
+        COUNT(CASE WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso') THEN 1 END) AS ordenes_retrasadas,
 
-      COUNT(
-        CASE WHEN (
-          SELECT COUNT(*) FROM observacion_operario ob5
-          WHERE ob5."Id_Orden" = op."Id_Orden"
-        ) > 0 THEN 1 END
-      ) AS ordenes_con_problema,
+        COUNT(
+          CASE WHEN (
+            SELECT COUNT(*) FROM observacion_operario ob5
+            WHERE ob5."Id_Orden" = op."Id_Orden"
+          ) > 0 THEN 1 END
+        ) AS ordenes_con_problema,
 
-      CASE
-        WHEN ${SQL_ORDENES_EN_RETRASO} > 0 THEN 'Bajo'
-        WHEN ${SQL_PRENDAS_POR_DIA} >= 10  THEN 'Alto'
-        WHEN ${SQL_PRENDAS_POR_DIA} >= 3   THEN 'Medio'
-        ELSE 'Bajo'
-      END AS rendimiento
+        CASE
+          WHEN ${SQL_ORDENES_EN_RETRASO} > 0 THEN 'Bajo'
+          WHEN ${SQL_PRENDAS_POR_DIA} >= 10  THEN 'Alto'
+          WHEN ${SQL_PRENDAS_POR_DIA} >= 3   THEN 'Medio'
+          ELSE 'Bajo'
+        END AS rendimiento
 
-    FROM usuario u
-    INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-    LEFT JOIN orden_produccion op ON op."Id_Operario" = u."Id_Usuario"
-    WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
-    GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono"
-  `, [id])
+      FROM usuario u
+      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+      LEFT JOIN orden_produccion op ON op."Id_Operario" = u."Id_Usuario"
+      WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
+      GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono"
+    `, [id])
 
-  if (rows.length === 0) {
-    return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
-  }
+    if (rows.length === 0) {
+      return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
+    }
 
-  const { rows: ordenes } = await db.query(`
-    SELECT
-      op."Id_Orden", op."Producto", op."Estado", op."Prioridad", op."Dificultad",
-      op."Unidades_Realizadas", op."Unidades", op."Fecha_Limite",
-      CASE
-        WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso')
-        THEN true ELSE false
-      END AS vencida,
-      CASE
-        WHEN (
-          SELECT COUNT(*) FROM observacion_operario ob
-          WHERE ob."Id_Orden" = op."Id_Orden"
-        ) > 0 THEN true ELSE false
-      END AS tiene_problema
-    FROM orden_produccion op
-    WHERE op."Id_Operario" = $1
-    ORDER BY op."Fecha_Limite" ASC
-  `, [id])
+    const { rows: ordenes } = await db.query(`
+      SELECT
+        op."Id_Orden", op."Producto", op."Estado", op."Prioridad", op."Dificultad",
+        op."Unidades_Realizadas", op."Unidades", op."Fecha_Limite",
+        CASE
+          WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso')
+          THEN true ELSE false
+        END AS vencida,
+        CASE
+          WHEN (
+            SELECT COUNT(*) FROM observacion_operario ob
+            WHERE ob."Id_Orden" = op."Id_Orden"
+          ) > 0 THEN true ELSE false
+        END AS tiene_problema
+      FROM orden_produccion op
+      WHERE op."Id_Operario" = $1
+      ORDER BY op."Fecha_Limite" ASC
+    `, [id])
 
-  const ordenesConObs = await Promise.all(
-    ordenes.map(async (o) => {
-      const { rows: obs } = await db.query(`
-        SELECT ob."Id_Observacion", ob."Observacion", ob."Fecha",
-               u."Nombre_Completo" AS "Admin"
-        FROM observacion_operario ob
-        INNER JOIN usuario u ON ob."Id_Admin" = u."Id_Usuario"
-        WHERE ob."Id_Operario" = $1 AND ob."Id_Orden" = $2
-        ORDER BY ob."Fecha" DESC
-      `, [id, o.Id_Orden])
-      return { ...o, observaciones: obs }
+    const ordenesConObs = await Promise.all(
+      ordenes.map(async (o) => {
+        const { rows: obs } = await db.query(`
+          SELECT ob."Id_Observacion", ob."Observacion", ob."Fecha",
+                 u."Nombre_Completo" AS "Admin"
+          FROM observacion_operario ob
+          INNER JOIN usuario u ON ob."Id_Admin" = u."Id_Usuario"
+          WHERE ob."Id_Operario" = $1 AND ob."Id_Orden" = $2
+          ORDER BY ob."Fecha" DESC
+        `, [id, o.Id_Orden])
+        return { ...o, observaciones: obs }
+      })
+    )
+
+    res.json({
+      ok: true,
+      data: { ...rows[0], ordenes_detalle: ordenesConObs }
     })
-  )
-
-  res.json({
-    ok: true,
-    data: { ...rows[0], ordenes_detalle: ordenesConObs }
-  })
+  } catch (err) {
+    console.error('Error en GET /eficiencia/operarios/:id:', err)
+    res.status(500).json({ ok: false, mensaje: 'Error interno al cargar el operario' })
+  }
 })
 
 // ─────────────────────────────────────────
@@ -158,82 +163,87 @@ router.get('/operarios/:id', async (req, res) => {
 router.get('/operarios', async (req, res) => {
   const { rendimiento, estado, limite } = req.query
 
-  await actualizarOrdenesRetrasadas()
+  try {
+    await actualizarOrdenesRetrasadas()
 
-  const { rows } = await db.query(`
-    SELECT
-      u."Id_Usuario",
-      u."Nombre_Completo",
-      u."Nombre_Usuario",
+    const { rows } = await db.query(`
+      SELECT
+        u."Id_Usuario",
+        u."Nombre_Completo",
+        u."Nombre_Usuario",
 
-      ${SQL_PRENDAS_POR_DIA} AS prendas_por_dia,
+        ${SQL_PRENDAS_POR_DIA} AS prendas_por_dia,
 
-      COALESCE(SUM(op."Unidades_Realizadas"), 0) AS total_unidades_producidas,
+        COALESCE(SUM(op."Unidades_Realizadas"), 0) AS total_unidades_producidas,
 
-      ${SQL_ORDENES_EN_RETRASO} AS ordenes_en_retraso,
+        ${SQL_ORDENES_EN_RETRASO} AS ordenes_en_retraso,
 
-      COUNT(CASE WHEN op."Estado" = 'Completada' THEN 1 END) AS ordenes_completadas,
-      COUNT(CASE WHEN op."Estado" = 'En Proceso' THEN 1 END) AS ordenes_en_proceso,
-      COUNT(CASE WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso') THEN 1 END) AS ordenes_retrasadas,
+        COUNT(CASE WHEN op."Estado" = 'Completada' THEN 1 END) AS ordenes_completadas,
+        COUNT(CASE WHEN op."Estado" = 'En Proceso' THEN 1 END) AS ordenes_en_proceso,
+        COUNT(CASE WHEN op."Estado" = 'Retrasada' OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso') THEN 1 END) AS ordenes_retrasadas,
 
-      COUNT(
-        CASE WHEN (
-          SELECT COUNT(*) FROM observacion_operario ob5
-          WHERE ob5."Id_Orden" = op."Id_Orden"
-        ) > 0 THEN 1 END
-      ) AS ordenes_con_problema,
+        COUNT(
+          CASE WHEN (
+            SELECT COUNT(*) FROM observacion_operario ob5
+            WHERE ob5."Id_Orden" = op."Id_Orden"
+          ) > 0 THEN 1 END
+        ) AS ordenes_con_problema,
 
-      CASE
-        WHEN ${SQL_ORDENES_EN_RETRASO} > 0 THEN 'Bajo'
-        WHEN ${SQL_PRENDAS_POR_DIA} >= 10  THEN 'Alto'
-        WHEN ${SQL_PRENDAS_POR_DIA} >= 3   THEN 'Medio'
-        ELSE 'Bajo'
-      END AS rendimiento
+        CASE
+          WHEN ${SQL_ORDENES_EN_RETRASO} > 0 THEN 'Bajo'
+          WHEN ${SQL_PRENDAS_POR_DIA} >= 10  THEN 'Alto'
+          WHEN ${SQL_PRENDAS_POR_DIA} >= 3   THEN 'Medio'
+          ELSE 'Bajo'
+        END AS rendimiento
 
-    FROM usuario u
-    INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-    LEFT JOIN orden_produccion op ON op."Id_Operario" = u."Id_Usuario"
-    WHERE u."Estado" = 'activo'
-    GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario"
-    ORDER BY prendas_por_dia DESC
-  `)
+      FROM usuario u
+      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+      LEFT JOIN orden_produccion op ON op."Id_Operario" = u."Id_Usuario"
+      WHERE u."Estado" = 'activo'
+      GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario"
+      ORDER BY prendas_por_dia DESC
+    `)
 
-  let resultado = rows
+    let resultado = rows
 
-  if (rendimiento) {
-    const validos = ['Alto', 'Medio', 'Bajo']
-    if (!validos.includes(rendimiento)) {
-      return res.status(400).json({ ok: false, mensaje: `rendimiento inválido. Usa: ${validos.join(', ')}` })
+    if (rendimiento) {
+      const validos = ['Alto', 'Medio', 'Bajo']
+      if (!validos.includes(rendimiento)) {
+        return res.status(400).json({ ok: false, mensaje: `rendimiento inválido. Usa: ${validos.join(', ')}` })
+      }
+      resultado = resultado.filter(r => r.rendimiento === rendimiento)
     }
-    resultado = resultado.filter(r => r.rendimiento === rendimiento)
-  }
 
-  if (estado) {
-    const validos = ['Completada', 'En Proceso', 'Retrasada']
-    if (!validos.includes(estado)) {
-      return res.status(400).json({ ok: false, mensaje: `estado inválido. Usa: ${validos.join(', ')}` })
+    if (estado) {
+      const validos = ['Completada', 'En Proceso', 'Retrasada']
+      if (!validos.includes(estado)) {
+        return res.status(400).json({ ok: false, mensaje: `estado inválido. Usa: ${validos.join(', ')}` })
+      }
+      resultado = resultado.filter(r => {
+        if (estado === 'Completada') return r.ordenes_completadas > 0
+        if (estado === 'En Proceso') return r.ordenes_en_proceso > 0
+        if (estado === 'Retrasada')  return (r.ordenes_retrasadas > 0 || r.ordenes_en_retraso > 0)
+      })
     }
-    resultado = resultado.filter(r => {
-      if (estado === 'Completada') return r.ordenes_completadas > 0
-      if (estado === 'En Proceso') return r.ordenes_en_proceso > 0
-      if (estado === 'Retrasada')  return (r.ordenes_retrasadas > 0 || r.ordenes_en_retraso > 0)
+
+    if (limite) {
+      const n = parseInt(limite)
+      if (isNaN(n) || n <= 0) {
+        return res.status(400).json({ ok: false, mensaje: 'limite debe ser un número positivo' })
+      }
+      resultado = resultado.slice(0, n)
+    }
+
+    res.json({
+      ok: true,
+      total: resultado.length,
+      filtros_aplicados: { rendimiento: rendimiento || null, estado: estado || null, limite: limite || null },
+      data: resultado
     })
+  } catch (err) {
+    console.error('Error en GET /eficiencia/operarios:', err)
+    res.status(500).json({ ok: false, mensaje: 'Error interno al cargar la eficiencia de operarios' })
   }
-
-  if (limite) {
-    const n = parseInt(limite)
-    if (isNaN(n) || n <= 0) {
-      return res.status(400).json({ ok: false, mensaje: 'limite debe ser un número positivo' })
-    }
-    resultado = resultado.slice(0, n)
-  }
-
-  res.json({
-    ok: true,
-    total: resultado.length,
-    filtros_aplicados: { rendimiento: rendimiento || null, estado: estado || null, limite: limite || null },
-    data: resultado
-  })
 })
 
 // ─────────────────────────────────────────
@@ -250,36 +260,41 @@ router.post('/observaciones', async (req, res) => {
     return res.status(400).json({ ok: false, mensaje: 'La observación no puede superar 500 caracteres' })
   }
 
-  const { rows: operario } = await db.query(
-    `SELECT u."Id_Usuario" FROM usuario u
-     INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol"
-     WHERE u."Id_Usuario" = $1 AND r."Nombre_Rol" = 'operario' AND u."Estado" = 'activo'`,
-    [Id_Operario]
-  )
-  if (operario.length === 0) {
-    return res.status(404).json({ ok: false, mensaje: 'Operario no encontrado o no activo' })
+  try {
+    const { rows: operario } = await db.query(
+      `SELECT u."Id_Usuario" FROM usuario u
+       INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol"
+       WHERE u."Id_Usuario" = $1 AND r."Nombre_Rol" = 'operario' AND u."Estado" = 'activo'`,
+      [Id_Operario]
+    )
+    if (operario.length === 0) {
+      return res.status(404).json({ ok: false, mensaje: 'Operario no encontrado o no activo' })
+    }
+
+    const { rows: orden } = await db.query(
+      `SELECT "Id_Orden" FROM orden_produccion WHERE "Id_Orden" = $1 AND "Id_Operario" = $2`,
+      [Id_Orden, Id_Operario]
+    )
+    if (orden.length === 0) {
+      return res.status(400).json({ ok: false, mensaje: 'La orden no pertenece a este operario' })
+    }
+
+    const { rows: result } = await db.query(
+      `INSERT INTO observacion_operario ("Id_Operario", "Id_Orden", "Id_Admin", "Observacion")
+       VALUES ($1, $2, $3, $4)
+       RETURNING "Id_Observacion"`,
+      [Id_Operario, Id_Orden, Id_Admin, Observacion]
+    )
+
+    res.status(201).json({
+      ok: true,
+      mensaje: 'Observación registrada correctamente',
+      data: { Id_Observacion: result[0].Id_Observacion, Id_Operario, Id_Orden, Id_Admin, Observacion }
+    })
+  } catch (err) {
+    console.error('Error en POST /eficiencia/observaciones:', err)
+    res.status(500).json({ ok: false, mensaje: 'Error interno al registrar la observación' })
   }
-
-  const { rows: orden } = await db.query(
-    `SELECT "Id_Orden" FROM orden_produccion WHERE "Id_Orden" = $1 AND "Id_Operario" = $2`,
-    [Id_Orden, Id_Operario]
-  )
-  if (orden.length === 0) {
-    return res.status(400).json({ ok: false, mensaje: 'La orden no pertenece a este operario' })
-  }
-
-  const { rows: result } = await db.query(
-    `INSERT INTO observacion_operario ("Id_Operario", "Id_Orden", "Id_Admin", "Observacion")
-     VALUES ($1, $2, $3, $4)
-     RETURNING "Id_Observacion"`,
-    [Id_Operario, Id_Orden, Id_Admin, Observacion]
-  )
-
-  res.status(201).json({
-    ok: true,
-    mensaje: 'Observación registrada correctamente',
-    data: { Id_Observacion: result[0].Id_Observacion, Id_Operario, Id_Orden, Id_Admin, Observacion }
-  })
 })
 
 // ─────────────────────────────────────────
@@ -305,8 +320,13 @@ router.get('/observaciones/:id', async (req, res) => {
 
   sql += ` ORDER BY ob."Fecha" DESC`
 
-  const { rows } = await db.query(sql, params)
-  res.json({ ok: true, total: rows.length, data: rows })
+  try {
+    const { rows } = await db.query(sql, params)
+    res.json({ ok: true, total: rows.length, data: rows })
+  } catch (err) {
+    console.error('Error en GET /eficiencia/observaciones/:id:', err)
+    res.status(500).json({ ok: false, mensaje: 'Error interno al cargar las observaciones' })
+  }
 })
 
 // ─────────────────────────────────────────
@@ -355,11 +375,18 @@ router.get('/operarios/:id/historial', async (req, res) => {
       ) AS prendas_por_dia,
       COALESCE(SUM(op."Unidades_Realizadas"), 0) AS total_unidades,
       COUNT(CASE WHEN op."Estado" = 'Completada' THEN 1 END) AS completadas,
-      COUNT(CASE WHEN op."Estado" IN ('En Proceso','Pausado') THEN 1 END) AS en_curso,
+      -- Corregido: 'Pausado' no existe en el enum estado_orden (los
+      -- únicos valores reales son En Proceso | Completada | Retrasada).
+      -- Postgres intenta castear TODOS los literales del IN al tipo del
+      -- enum antes de comparar, así que un solo valor inválido en la
+      -- lista tumbaba la consulta entera sin importar si alguna fila
+      -- realmente tenía ese estado. "En curso" ahora es En Proceso o
+      -- Retrasada (todavía no completada).
+      COUNT(CASE WHEN op."Estado" IN ('En Proceso','Retrasada') THEN 1 END) AS en_curso,
       COUNT(
         CASE
-          WHEN CURRENT_DATE > op."Fecha_Limite"
-           AND op."Estado" IN ('En Proceso', 'Pausado')
+          WHEN op."Estado" = 'Retrasada'
+            OR (CURRENT_DATE > op."Fecha_Limite" AND op."Estado" = 'En Proceso')
           THEN 1
         END
       ) AS retrasos,
@@ -373,65 +400,70 @@ router.get('/operarios/:id/historial', async (req, res) => {
       AND op."Fecha_Creacion" <  CURRENT_DATE - INTERVAL '${offsetFin} days'
   `
 
-  const { rows: operario } = await db.query(
-    `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario"
-     FROM usuario u
-     INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-     WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'`,
-    [id]
-  )
+  try {
+    const { rows: operario } = await db.query(
+      `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario"
+       FROM usuario u
+       INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+       WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'`,
+      [id]
+    )
 
-  if (operario.length === 0) {
-    return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
-  }
-
-  const { rows: actual }   = await db.query(sqlMetricasPeriodo(dias, 0), [id])
-  const { rows: anterior } = await db.query(sqlMetricasPeriodo(dias * 2, dias), [id])
-
-  const ppd_actual   = parseFloat(actual[0].prendas_por_dia)   || 0
-  const ppd_anterior = parseFloat(anterior[0].prendas_por_dia) || 0
-
-  const calcularRendimiento = (ppd, retrasos) => {
-    if (retrasos > 0) return 'Bajo'
-    if (ppd >= 10)    return 'Alto'
-    if (ppd >= 3)     return 'Medio'
-    return 'Bajo'
-  }
-
-  const rendimiento_actual   = calcularRendimiento(ppd_actual,   actual[0].retrasos)
-  const rendimiento_anterior = calcularRendimiento(ppd_anterior, anterior[0].retrasos)
-
-  let tendencia = 'estable'
-  const diferencia = ppd_actual - ppd_anterior
-  if (diferencia > 0.5)       tendencia = 'subiendo'
-  else if (diferencia < -0.5) tendencia = 'bajando'
-
-  res.json({
-    ok: true,
-    data: {
-      operario: operario[0],
-      periodo,
-      dias,
-      actual: {
-        prendas_por_dia: ppd_actual,
-        total_unidades:  actual[0].total_unidades,
-        completadas:     actual[0].completadas,
-        en_curso:        actual[0].en_curso,
-        retrasos:        actual[0].retrasos,
-        con_problema:    actual[0].con_problema,
-        rendimiento:     rendimiento_actual
-      },
-      anterior: {
-        prendas_por_dia: ppd_anterior,
-        total_unidades:  anterior[0].total_unidades,
-        completadas:     anterior[0].completadas,
-        retrasos:        anterior[0].retrasos,
-        rendimiento:     rendimiento_anterior
-      },
-      tendencia,
-      diferencia_prendas: Math.round(diferencia * 10) / 10
+    if (operario.length === 0) {
+      return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
     }
-  })
+
+    const { rows: actual }   = await db.query(sqlMetricasPeriodo(dias, 0), [id])
+    const { rows: anterior } = await db.query(sqlMetricasPeriodo(dias * 2, dias), [id])
+
+    const ppd_actual   = parseFloat(actual[0].prendas_por_dia)   || 0
+    const ppd_anterior = parseFloat(anterior[0].prendas_por_dia) || 0
+
+    const calcularRendimiento = (ppd, retrasos) => {
+      if (retrasos > 0) return 'Bajo'
+      if (ppd >= 10)    return 'Alto'
+      if (ppd >= 3)     return 'Medio'
+      return 'Bajo'
+    }
+
+    const rendimiento_actual   = calcularRendimiento(ppd_actual,   actual[0].retrasos)
+    const rendimiento_anterior = calcularRendimiento(ppd_anterior, anterior[0].retrasos)
+
+    let tendencia = 'estable'
+    const diferencia = ppd_actual - ppd_anterior
+    if (diferencia > 0.5)       tendencia = 'subiendo'
+    else if (diferencia < -0.5) tendencia = 'bajando'
+
+    res.json({
+      ok: true,
+      data: {
+        operario: operario[0],
+        periodo,
+        dias,
+        actual: {
+          prendas_por_dia: ppd_actual,
+          total_unidades:  actual[0].total_unidades,
+          completadas:     actual[0].completadas,
+          en_curso:        actual[0].en_curso,
+          retrasos:        actual[0].retrasos,
+          con_problema:    actual[0].con_problema,
+          rendimiento:     rendimiento_actual
+        },
+        anterior: {
+          prendas_por_dia: ppd_anterior,
+          total_unidades:  anterior[0].total_unidades,
+          completadas:     anterior[0].completadas,
+          retrasos:        anterior[0].retrasos,
+          rendimiento:     rendimiento_anterior
+        },
+        tendencia,
+        diferencia_prendas: Math.round(diferencia * 10) / 10
+      }
+    })
+  } catch (err) {
+    console.error('Error en GET /eficiencia/operarios/:id/historial:', err)
+    res.status(500).json({ ok: false, mensaje: 'Error interno al cargar el historial' })
+  }
 })
 
 // ─────────────────────────────────────────
@@ -444,18 +476,23 @@ router.delete('/observaciones/:id', async (req, res) => {
     return res.status(400).json({ ok: false, mensaje: 'El id debe ser un número válido' })
   }
 
-  const { rows: obs } = await db.query(
-    `SELECT "Id_Observacion" FROM observacion_operario WHERE "Id_Observacion" = $1`,
-    [id]
-  )
+  try {
+    const { rows: obs } = await db.query(
+      `SELECT "Id_Observacion" FROM observacion_operario WHERE "Id_Observacion" = $1`,
+      [id]
+    )
 
-  if (obs.length === 0) {
-    return res.status(404).json({ ok: false, mensaje: `No se encontró la observación con id ${id}` })
+    if (obs.length === 0) {
+      return res.status(404).json({ ok: false, mensaje: `No se encontró la observación con id ${id}` })
+    }
+
+    await db.query(`DELETE FROM observacion_operario WHERE "Id_Observacion" = $1`, [id])
+
+    res.json({ ok: true, mensaje: 'Observación eliminada correctamente' })
+  } catch (err) {
+    console.error('Error en DELETE /eficiencia/observaciones/:id:', err)
+    res.status(500).json({ ok: false, mensaje: 'Error interno al eliminar la observación' })
   }
-
-  await db.query(`DELETE FROM observacion_operario WHERE "Id_Observacion" = $1`, [id])
-
-  res.json({ ok: true, mensaje: 'Observación eliminada correctamente' })
 })
 
 export default router
