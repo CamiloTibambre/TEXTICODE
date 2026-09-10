@@ -40,20 +40,6 @@
         </div>
       </div>
 
-      <!-- STATS -->
-      <div class="cards" :class="{ 'cards-visible': animVisible }">
-        <div v-for="(s, i) in statCards" :key="i" class="stat-card" :style="{ transitionDelay: animVisible ? `${i * 80}ms` : '0ms' }">
-          <div class="stat-accent" :style="{ background: s.accent }"></div>
-          <div class="stat-icon-bg" :style="{ color: s.accent }">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" :d="s.icon"/>
-            </svg>
-          </div>
-          <h3>{{ s.label }}</h3>
-          <p :style="{ color: s.accent }">{{ s.display }}</p>
-        </div>
-      </div>
-
       <!-- LISTA CLIENTES -->
       <section class="table-box" :class="{ 'box-visible': animVisible }" style="transition-delay: 200ms">
         <div class="table-header-bar">
@@ -90,12 +76,12 @@
                 </span>
               </th>
               <th>Teléfono</th>
-              <th>Estado</th>
+              <th>Comprobantes</th>
             </tr>
           </thead>
           <tbody>
-            <TransitionGroup name="row">
-              <tr v-for="(c, idx) in clientesFiltradosOrdenados" :key="c.id" class="table-row" :style="{ animationDelay: `${idx * 45}ms` }">
+            <template v-for="(c, idx) in clientesFiltradosOrdenados" :key="c.id">
+              <tr class="table-row client-row" :style="{ animationDelay: `${idx * 45}ms` }" @click="toggleCliente(c.id)">
                 <td class="user-cell">
                   <div class="avatar-wrap">
                     <div class="avatar" :style="{ background: avatarBg(c.iniciales), color: avatarFg(c.iniciales) }">{{ c.iniciales }}</div>
@@ -103,7 +89,6 @@
                   </div>
                   <div class="user-info">
                     <span class="user-name">{{ c.nombre }}</span>
-                    <span class="user-handle">{{ c.email }}</span>
                   </div>
                 </td>
                 <td class="email-td">{{ c.email }}</td>
@@ -115,9 +100,66 @@
                     {{ c.telefono }}
                   </div>
                 </td>
-                <td><span class="badge success">{{ c.estado }}</span></td>
+                <td>
+                  <div class="comp-toggle">
+                    <span class="comp-count-badge">
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z"/>
+                      </svg>
+                      {{ comprobantesDeCliente(c.id).length }}
+                    </span>
+                    <svg class="chevron" :class="{ 'chevron-open': clientesExpandido[c.id] }" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                    </svg>
+                  </div>
+                </td>
               </tr>
-            </TransitionGroup>
+              <tr v-if="clientesExpandido[c.id]" class="client-detail-row">
+                <td colspan="4">
+                  <div class="client-comprobantes">
+                    <div v-if="comprobantesDeCliente(c.id).length === 0" class="empty-comprobantes">
+                      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z"/>
+                      </svg>
+                      Este cliente no tiene comprobantes registrados.
+                    </div>
+                    <div v-else class="comprobante-card" v-for="o in comprobantesDeCliente(c.id)" :key="o.id">
+                      <div class="comp-icon">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z"/>
+                        </svg>
+                      </div>
+                      <div class="comp-info">
+                        <span class="comp-title">Comprobante #{{ o.numero }}</span>
+                        <span class="comp-date">Fecha: {{ o.fecha }}</span>
+                        <span class="comp-status-badge">
+                          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                          </svg>
+                          Completada
+                        </span>
+                      </div>
+                      <div class="comp-actions">
+                        <button class="action-btn view-btn" title="Ver detalle" @click.stop="verDetalle(o)">
+                          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0Z"/>
+                          </svg>
+                        </button>
+                        <button class="action-btn download-btn" title="Descargar PDF" @click.stop="descargarPDF(o)" :disabled="o.descargando">
+                          <svg v-if="!o.descargando" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                          </svg>
+                          <svg v-else class="spin" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
 
@@ -129,84 +171,6 @@
         </div>
       </section>
 
-      <!-- COMPROBANTES -->
-      <section class="table-box" :class="{ 'box-visible': animVisible }" style="transition-delay: 320ms">
-        <div class="table-header-bar">
-          <div class="table-header-left">
-            <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z"/>
-            </svg>
-            Comprobantes de Entrega
-            <span class="count-badge">{{ ordenesOrdenadas.length }}</span>
-          </div>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th class="sortable" @click="sortOrdenes('numero')">
-                <span class="th-inner">
-                  N.° Orden
-                  <span class="sort-arrows" :class="{ 'sort-active': sortKeyOrdenes === 'numero' }">
-                    <svg v-if="sortKeyOrdenes !== 'numero'" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-neutral"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
-                    <svg v-else-if="sortDirOrdenes === 1" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-up"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
-                    <svg v-else width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-down"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-                  </span>
-                </span>
-              </th>
-              <th class="sortable" @click="sortOrdenes('cliente')">
-                <span class="th-inner">
-                  Cliente
-                  <span class="sort-arrows" :class="{ 'sort-active': sortKeyOrdenes === 'cliente' }">
-                    <svg v-if="sortKeyOrdenes !== 'cliente'" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-neutral"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
-                    <svg v-else-if="sortDirOrdenes === 1" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-up"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
-                    <svg v-else width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-down"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-                  </span>
-                </span>
-              </th>
-              <th class="sortable" @click="sortOrdenes('fecha')">
-                <span class="th-inner">
-                  Fecha Entrega
-                  <span class="sort-arrows" :class="{ 'sort-active': sortKeyOrdenes === 'fecha' }">
-                    <svg v-if="sortKeyOrdenes !== 'fecha'" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-neutral"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>
-                    <svg v-else-if="sortDirOrdenes === 1" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-up"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/></svg>
-                    <svg v-else width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-down"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
-                  </span>
-                </span>
-              </th>
-              <th>Productos</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(o, idx) in ordenesOrdenadas" :key="o.id" class="table-row"
-              :class="{ 'row-flash': o.flash }" :style="{ animationDelay: `${idx * 40}ms` }">
-              <td><span class="order-num-pill">#{{ o.numero }}</span></td>
-              <td>{{ o.cliente }}</td>
-              <td>{{ o.fecha }}</td>
-              <td>{{ o.productos }}</td>
-              <td><span class="badge" :class="o.estadoClass">{{ o.estado }}</span></td>
-              <td class="actions">
-                <button class="action-btn view-btn" title="Ver detalle" @click="verDetalle(o)">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" shape-rendering="geometricPrecision" style="display:block">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0Z"/>
-                  </svg>
-                </button>
-                <button class="action-btn download-btn" title="Descargar PDF" @click="descargarPDF(o)" :disabled="o.descargando">
-                  <svg v-if="!o.descargando" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" shape-rendering="geometricPrecision" style="display:block">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                  </svg>
-                  <svg v-else class="spin" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
-                  </svg>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
     </main>
 
     <!-- MODAL DETALLE COMPROBANTE PROFESIONAL -->
@@ -330,7 +294,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import AppSidebar from '../../components/AppSidebar.vue'
 import { getUsuarios, getComprobantes, getOrdenes } from '../../services/api.js'
 
@@ -341,37 +305,6 @@ const searchFocus = ref(false)
 const toastMsg = ref('')
 const cargando = ref(true)
 const fechaHoy = new Date().toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })
-
-const displayTotalClientes = ref(0)
-const displayActivos = ref(0)
-const displayOrdenes = ref(0)
-
-function animateCount(targetRef, target) {
-  let val = 0
-  const steps = 80; const duration = 2000
-  const intervalMs = Math.round(duration / steps)
-  const step = Math.max(0.1, target / steps)
-  const id = setInterval(() => {
-    val += step
-    if (val >= target) { targetRef.value = target; clearInterval(id) }
-    else targetRef.value = Math.floor(val)
-  }, intervalMs)
-}
-
-const statCards = computed(() => [
-  {
-    label: 'Total Clientes', display: displayTotalClientes.value, accent: '#1f3a52',
-    icon: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z',
-  },
-  {
-    label: 'Clientes Activos', display: displayActivos.value, accent: '#16a34a',
-    icon: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-  },
-  {
-    label: 'Órdenes Totales', display: displayOrdenes.value, accent: '#2563eb',
-    icon: 'm9 14.25 6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0c1.1.128 1.907 1.077 1.907 2.185Z',
-  },
-])
 
 const clientes = ref([])
 const ordenes  = ref([])
@@ -409,6 +342,7 @@ async function cargarDatos() {
         return {
           id: o.Id_Orden,
           numero: String(o.Id_Orden).padStart(4, '0'),
+          clienteId: o.Id_Cliente,
           cliente: clienteInfo.nombre || `Cliente #${o.Id_Cliente}`,
           clienteEmail: clienteInfo.email || '—',
           clienteTel: clienteInfo.telefono || '—',
@@ -436,14 +370,9 @@ async function cargarDatos() {
 // ── Ordenamiento ──
 const sortKeyClientes = ref('nombre')
 const sortDirClientes = ref(1)
-const sortKeyOrdenes  = ref('numero')
-const sortDirOrdenes  = ref(1)
 
 function sortClientes(key) {
   sortKeyClientes.value === key ? sortDirClientes.value *= -1 : (sortKeyClientes.value = key, sortDirClientes.value = 1)
-}
-function sortOrdenes(key) {
-  sortKeyOrdenes.value === key ? sortDirOrdenes.value *= -1 : (sortKeyOrdenes.value = key, sortDirOrdenes.value = 1)
 }
 
 const clientesFiltradosOrdenados = computed(() => {
@@ -457,12 +386,15 @@ const clientesFiltradosOrdenados = computed(() => {
   })
 })
 
-const ordenesOrdenadas = computed(() =>
-  [...ordenes.value].sort((a, b) => {
-    const k = sortKeyOrdenes.value
-    return (a[k] > b[k] ? 1 : a[k] < b[k] ? -1 : 0) * sortDirOrdenes.value
-  })
-)
+
+// ── Desplegable de comprobantes por cliente ──
+const clientesExpandido = reactive({})
+function toggleCliente(id) {
+  clientesExpandido[id] = !clientesExpandido[id]
+}
+function comprobantesDeCliente(id) {
+  return ordenes.value.filter(o => o.clienteId === id && o.estado === 'Entregado')
+}
 
 const avatarBgPalette = ['#dbeafe','#fce7f3','#d1fae5','#fef3c7','#ede9fe','#fee2e2','#e0f2fe']
 const avatarFgPalette = ['#1d4ed8','#9d174d','#065f46','#92400e','#5b21b6','#991b1b','#0369a1']
@@ -686,9 +618,6 @@ onMounted(async () => {
   await cargarDatos()
   setTimeout(() => {
     animVisible.value = true
-    animateCount(displayTotalClientes, clientes.value.length)
-    animateCount(displayActivos, clientes.value.filter(c => c.estado === 'Activo').length)
-    animateCount(displayOrdenes, ordenes.value.length)
   }, 80)
 })
 </script>
@@ -728,17 +657,6 @@ onMounted(async () => {
 .search-ico { width: 16px; height: 16px; color: #9ca3af; flex-shrink: 0; }
 .search-box input { border: none; outline: none; width: 100%; font-size: 14px; color: #374151; background: transparent; }
 .search-box input::placeholder { color: #9ca3af; }
-
-/* STATS */
-.cards { display: flex; gap: 18px; margin-bottom: 28px; }
-.stat-card { background: white; flex: 1; padding: 20px 20px 20px 24px; border-radius: 14px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.45s ease, transform 0.45s ease, box-shadow 0.2s; }
-.cards-visible .stat-card { opacity: 1; transform: translateY(0); }
-.stat-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.09); transform: translateY(-3px) !important; }
-.stat-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
-.stat-icon-bg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); opacity: 0.07; }
-.stat-icon-bg svg { width: 52px; height: 52px; }
-.stat-card h3 { font-size: 13px; color: #6b7280; font-weight: 500; margin: 0 0 10px 0; }
-.stat-card p { font-size: 30px; font-weight: 800; margin: 0; line-height: 1; }
 
 /* TABLE BOX */
 .table-box { background: white; border-radius: 14px; border: 1px solid #e5e7eb; margin-bottom: 28px; overflow: hidden; opacity: 0; transform: translateY(16px); transition: opacity 0.45s ease, transform 0.45s ease; }
@@ -786,6 +704,25 @@ td { padding: 14px 18px; font-size: 14px; color: #374151; border-top: 1px solid 
 .badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 .success { background: #dcfce7; color: #15803d; }
 .danger  { background: #fee2e2; color: #b91c1c; }
+
+/* CLIENTE — DESPLEGABLE DE COMPROBANTES */
+.client-row { cursor: pointer; }
+.comp-toggle { display: flex; align-items: center; gap: 8px; }
+.comp-count-badge { display: inline-flex; align-items: center; gap: 5px; background: #eef2ff; color: #1f3a52; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.chevron { color: #9ca3af; transition: transform 0.2s; flex-shrink: 0; }
+.chevron-open { transform: rotate(180deg); color: #1f3a52; }
+
+.client-detail-row td { padding: 0 18px 16px; border-top: none; background: #fbfcfe; }
+.client-comprobantes { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.empty-comprobantes { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: #f8fafc; border-radius: 12px; color: #9ca3af; font-size: 12px; }
+
+.comprobante-card { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: white; border: 1px solid #eef1f5; border-radius: 12px; }
+.comp-icon { width: 36px; height: 36px; border-radius: 50%; background: #eef2ff; color: #1f3a52; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.comp-info { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.comp-title { font-size: 13px; font-weight: 700; color: #111827; }
+.comp-date { font-size: 11px; color: #6b7280; }
+.comp-status-badge { display: inline-flex; align-items: center; gap: 4px; width: fit-content; background: #dcfce7; color: #15803d; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 999px; margin-top: 2px; }
+.comp-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
 .order-num-pill { display: inline-block; background: #f1f5f9; color: #1f3a52; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 6px; font-family: 'Courier New', monospace; transition: background 0.15s; }
 tr:hover .order-num-pill { background: #e0ecff; color: #2563eb; }
