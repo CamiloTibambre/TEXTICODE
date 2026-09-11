@@ -74,6 +74,12 @@ export const getMaterialesDeOrden  = (idOrden)              => request(`/orden-m
 export const agregarMaterialOrden  = (body)                 => request('/orden-material', { method: 'POST', body: JSON.stringify(body) })
 export const eliminarMaterialOrden = (idOrden, idProducto)  => request(`/orden-material/${idOrden}/${idProducto}`, { method: 'DELETE' })
 
+// ── ORDEN OPERARIO (FASES) ────────────────────────────────
+export const getFasesDeOrden      = (idOrden)  => request(`/orden-operario/orden/${idOrden}`)
+export const crearFaseOperario    = (body)     => request('/orden-operario', { method: 'POST', body: JSON.stringify(body) })
+export const actualizarFaseOperario = (id, body) => request(`/orden-operario/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+export const eliminarFaseOperario = (id)       => request(`/orden-operario/${id}`, { method: 'DELETE' })
+
 // ── USUARIO ORDEN ─────────────────────────────────────────
 export const getUsuariosDeOrden     = (idOrden)            => request(`/usuario-orden/orden/${idOrden}`)
 export const getOrdenesDeUsuario    = (idUsuario)          => request(`/usuario-orden/usuario/${idUsuario}`)
