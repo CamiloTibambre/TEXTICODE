@@ -9,6 +9,7 @@ import ordenesRouter        from './routes/ordenes.js'
 import comprobantesRouter   from './routes/comprobantes.js'
 import rolesRouter          from './routes/roles.js'
 import ordenMaterialRouter  from './routes/orden_material.js'
+import ordenOperarioRouter  from './routes/orden_operario.js'
 import usuarioOrdenRouter   from './routes/usuario_orden.js'
 import notificacionesRouter from './routes/notificaciones.js'
 import authRouter           from './routes/auth.route.js'
@@ -16,7 +17,6 @@ import practicaRouter       from './routes/practica.routes.js'
 import eficienciaRouter     from './routes/eficiencia.js'
 import cargaTrabajoRoutes   from './routes/carga_trabajo.js'
 import googleCalendarRouter from './routes/googleCalendar.js'
-import calendarRouter from './routes/calendar.route.js'
 
 const app = express()
 
@@ -35,6 +35,7 @@ app.use('/api/ordenes',          ordenesRouter)
 app.use('/api/comprobantes',     comprobantesRouter)
 app.use('/api/roles',            rolesRouter)
 app.use('/api/orden-material',   ordenMaterialRouter)
+app.use('/api/orden-operario',   ordenOperarioRouter)
 app.use('/api/usuario-orden',    usuarioOrdenRouter)
 app.use('/api/notificaciones',   notificacionesRouter)
 app.use('/api/auth',             authRouter)
@@ -42,7 +43,6 @@ app.use('/api/practica',         practicaRouter)
 app.use('/api/eficiencia',       eficienciaRouter)
 app.use('/api/carga-trabajo',    cargaTrabajoRoutes)
 app.use('/api/google',           googleCalendarRouter)
-app.use('/api/calendar',         calendarRouter)
 
 app.get('/', (req, res) => {
   res.json({
@@ -54,6 +54,8 @@ app.get('/', (req, res) => {
       'GET  /api/comprobantes',
       'GET  /api/roles',
       'GET  /api/orden-material/orden/:id',
+      'GET  /api/orden-operario/orden/:id',
+      'GET  /api/orden-operario/operario/:id',
       'GET  /api/usuario-orden/orden/:id',
       'POST /api/notificaciones/estado',
       'POST /api/auth/recuperar-contrasena',
@@ -79,7 +81,6 @@ app.get('/', (req, res) => {
 })
 
 const PORT = process.env.PORT || 3001
-
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
 })
