@@ -99,7 +99,15 @@
             <div v-for="a in alertas" :key="a.id" class="alert-item">
               <div class="alert-item-left">
                 <div class="alert-dot" :class="a.estadoClass"></div>
-                <span>{{ a.nombre }}</span>
+                <div class="alert-info">
+                  <span class="alert-name">{{ a.nombre }}</span>
+                  <span class="alert-cliente">
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                    </svg>
+                    {{ a.cliente || 'Sin cliente asignado' }}
+                  </span>
+                </div>
               </div>
               <div class="alert-item-right">
                 <span class="alert-stock">{{ a.stock }} {{ a.unidad }}</span>
@@ -779,6 +787,9 @@ onMounted(async () => {
 .alert-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; color: #4b5563; }
 .alert-item + .alert-item { border-top: 1px solid #fed7aa; }
 .alert-item-left  { display: flex; align-items: center; gap: 8px; }
+.alert-info    { display: flex; flex-direction: column; gap: 2px; }
+.alert-name    { font-weight: 500; color: #4b5563; }
+.alert-cliente { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9a6a3f; }
 .alert-item-right { display: flex; align-items: center; gap: 10px; }
 .alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .alert-dot.warning { background: #ca8a04; }
