@@ -97,7 +97,7 @@
       <div class="view-switch-wrap" :class="{ 'box-visible': animVisible }">
         <div class="view-switch-track">
           <div class="view-switch-slider" :class="{ 'slider-carga': vistaActiva === 'carga' }"></div>
-          <button class="switch-btn" :class="{ active: vistaActiva === 'eficiencia' }" @click="vistaActiva = 'eficiencia'">
+          <button class="switch-btn" :class="{ active: vistaActiva === 'eficiencia' }" @click="vistaActiva = 'eficiencia'; vistaReasignacion = false">
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
             </svg>
@@ -544,171 +544,282 @@
             </div>
           </div>
 
-          <div class="table-box box-visible" style="margin-bottom:16px">
-            <div class="table-header-bar">
-              <div class="table-header-left">
-                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/>
-                </svg>
-                Carga por operario
-                <span class="count-badge">{{ cargaOperariosFiltrados.length }}</span>
+          <!-- BOTÓN REASIGNAR ÓRDENES -->
+          <button
+            v-if="!cargandoCarga && !vistaReasignacion"
+            class="btn-reasignar-global"
+            @click="abrirReasignacion"
+          >
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/>
+            </svg>
+            Reasignar Órdenes
+          </button>
+
+          <!-- TABLA NORMAL DE CARGA -->
+          <template v-if="!vistaReasignacion">
+            <div class="table-box box-visible" style="margin-bottom:16px">
+              <div class="table-header-bar">
+                <div class="table-header-left">
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/>
+                  </svg>
+                  Carga por operario
+                  <span class="count-badge">{{ cargaOperariosFiltrados.length }}</span>
+                </div>
+                <div class="umbrales-info">
+                  <span class="umbral-chip disponible">≤{{ umbrales.limite_disponible }} → Disponible</span>
+                  <span class="umbral-chip sobrecargado">&gt;{{ umbrales.limite_sobrecarga }} → Sobrecargado</span>
+                </div>
               </div>
-              <div class="umbrales-info">
-                <span class="umbral-chip disponible">≤{{ umbrales.limite_disponible }} → Disponible</span>
-                <span class="umbral-chip sobrecargado">&gt;{{ umbrales.limite_sobrecarga }} → Sobrecargado</span>
+
+              <div v-if="cargandoCarga" class="table-skeleton">
+                <div v-for="i in 4" :key="i" class="table-skeleton-row">
+                  <span class="skeleton-avatar"></span>
+                  <span class="skeleton-line skeleton-user"></span>
+                  <span class="skeleton-line skeleton-tag"></span>
+                  <span class="skeleton-line skeleton-phone"></span>
+                  <span class="skeleton-line skeleton-tag"></span>
+                </div>
               </div>
+
+              <table v-else>
+                <thead>
+                  <tr>
+                    <th>Operario</th>
+                    <th>Órdenes activas</th>
+                    <th>Vencidas</th>
+                    <th>Alta prioridad</th>
+                    <th>Barra de carga</th>
+                    <th>Estado</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="op in cargaOperariosFiltrados"
+                    :key="op.Id_Usuario"
+                    class="table-row"
+                    :class="{ 'fila-sobrecarga': op.estado_carga === 'sobrecargado' }"
+                  >
+                    <td>
+                      <div class="user">
+                        <div class="avatar" :style="{ background: avatarBg(op.Nombre_Completo), color: avatarColor(op.Nombre_Completo) }">{{ iniciales(op.Nombre_Completo) }}</div>
+                        <div class="user-info">
+                          <span class="user-name">{{ op.Nombre_Completo }}</span>
+                          <span class="user-handle">@{{ op.Nombre_Usuario }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="num-cell" :style="{ color: cargaColor(op.estado_carga) }">{{ op.ordenes_activas }}</span></td>
+                    <td>
+                      <span class="retraso-cell" :class="{ 'retraso-activo': op.ordenes_vencidas > 0 }">
+                        <svg v-if="op.ordenes_vencidas > 0" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303 3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L10.052 3.378c.866-1.5 3.032-1.5 3.898 0L21.303 16.126Z"/>
+                        </svg>
+                        {{ op.ordenes_vencidas }}
+                      </span>
+                    </td>
+                    <td>
+                      <span v-if="op.ordenes_alta_prioridad > 0" class="badge-prioridad alta">{{ op.ordenes_alta_prioridad }} Alta</span>
+                      <span v-else class="num-cell" style="color:#6b7280">0</span>
+                    </td>
+                    <td style="min-width:120px">
+                      <div class="carga-bar-wrap">
+                        <div class="carga-bar">
+                          <div class="carga-bar-fill" :style="{ width: cargaBarPct(op.ordenes_activas) + '%', background: cargaColor(op.estado_carga) }"></div>
+                        </div>
+                        <span class="avance-txt">{{ op.ordenes_activas }}/{{ umbrales.limite_sobrecarga }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="badge-carga" :class="op.estado_carga">{{ estadoCargaLabel(op.estado_carga) }}</span>
+                    </td>
+                    <td>
+                      <button class="action-btn" @click="verDetalleCarga(op)" title="Ver órdenes activas">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                        </svg>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr v-if="cargaOperariosFiltrados.length === 0 && !cargandoCarga">
+                    <td colspan="7" class="empty-state">
+                      <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z"/>
+                      </svg>
+                      <p>No se encontraron operarios con ese filtro</p>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <div v-if="cargandoCarga" class="table-skeleton">
-              <div v-for="i in 4" :key="i" class="table-skeleton-row">
-                <span class="skeleton-avatar"></span>
-                <span class="skeleton-line skeleton-user"></span>
-                <span class="skeleton-line skeleton-tag"></span>
-                <span class="skeleton-line skeleton-phone"></span>
-                <span class="skeleton-line skeleton-tag"></span>
-              </div>
-            </div>
-
-            <table v-else>
-              <thead>
-                <tr>
-                  <th>Operario</th>
-                  <th>Órdenes activas</th>
-                  <th>Vencidas</th>
-                  <th>Alta prioridad</th>
-                  <th>Barra de carga</th>
-                  <th>Estado</th>
-                  <th>Detalle</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="op in cargaOperariosFiltrados"
-                  :key="op.Id_Usuario"
-                  class="table-row"
-                  :class="{ 'fila-sobrecarga': op.estado_carga === 'sobrecargado' }"
-                >
-                  <td>
-                    <div class="user">
-                      <div class="avatar" :style="{ background: avatarBg(op.Nombre_Completo), color: avatarColor(op.Nombre_Completo) }">{{ iniciales(op.Nombre_Completo) }}</div>
-                      <div class="user-info">
-                        <span class="user-name">{{ op.Nombre_Completo }}</span>
-                        <span class="user-handle">@{{ op.Nombre_Usuario }}</span>
+            <!-- MODAL DETALLE CARGA -->
+            <Transition name="modal">
+              <div v-if="modalCarga" class="modal" @click.self="modalCarga = false">
+                <div class="modal-content">
+                  <span class="close" @click="modalCarga = false">×</span>
+                  <div v-if="cargaDetalle" class="detalle-inner">
+                    <div class="detalle-header">
+                      <div class="detalle-avatar" :style="{ background: avatarBg(cargaDetalle.Nombre_Completo), color: avatarColor(cargaDetalle.Nombre_Completo) }">
+                        {{ iniciales(cargaDetalle.Nombre_Completo) }}
+                      </div>
+                      <div>
+                        <div class="detalle-nombre">{{ cargaDetalle.Nombre_Completo }}</div>
+                        <div class="detalle-usuario">@{{ cargaDetalle.Nombre_Usuario }}</div>
+                        <span class="badge-carga" :class="cargaDetalle.estado_carga">{{ estadoCargaLabel(cargaDetalle.estado_carga) }}</span>
                       </div>
                     </div>
-                  </td>
-                  <td><span class="num-cell" :style="{ color: cargaColor(op.estado_carga) }">{{ op.ordenes_activas }}</span></td>
-                  <td>
-                    <span class="retraso-cell" :class="{ 'retraso-activo': op.ordenes_vencidas > 0 }">
-                      <svg v-if="op.ordenes_vencidas > 0" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303 3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L10.052 3.378c.866-1.5 3.032-1.5 3.898 0L21.303 16.126Z"/>
-                      </svg>
-                      {{ op.ordenes_vencidas }}
-                    </span>
-                  </td>
-                  <td>
-                    <span v-if="op.ordenes_alta_prioridad > 0" class="badge-prioridad alta">{{ op.ordenes_alta_prioridad }} Alta</span>
-                    <span v-else class="num-cell" style="color:#6b7280">0</span>
-                  </td>
-                  <td style="min-width:120px">
-                    <div class="carga-bar-wrap">
-                      <div class="carga-bar">
-                        <div class="carga-bar-fill" :style="{ width: cargaBarPct(op.ordenes_activas) + '%', background: cargaColor(op.estado_carga) }"></div>
+                    <div class="detalle-metricas" style="margin-bottom:20px">
+                      <div class="metrica-item">
+                        <span class="metrica-label">Órdenes activas</span>
+                        <span class="metrica-valor" :style="{ color: cargaColor(cargaDetalle.estado_carga) }">{{ cargaDetalle.ordenes_activas }}</span>
                       </div>
-                      <span class="avance-txt">{{ op.ordenes_activas }}/{{ umbrales.limite_sobrecarga }}</span>
+                      <div class="metrica-item">
+                        <span class="metrica-label">Vencidas</span>
+                        <span class="metrica-valor" :class="cargaDetalle.ordenes_vencidas > 0 ? 'rojo' : 'verde'">{{ cargaDetalle.ordenes_vencidas }}</span>
+                      </div>
+                      <div class="metrica-item">
+                        <span class="metrica-label">Alta prioridad</span>
+                        <span class="metrica-valor amarillo">{{ cargaDetalle.ordenes_alta_prioridad }}</span>
+                      </div>
                     </div>
-                  </td>
-                  <td>
-                    <span class="badge-carga" :class="op.estado_carga">{{ estadoCargaLabel(op.estado_carga) }}</span>
-                  </td>
-                  <td>
-                    <button class="action-btn" @click="verDetalleCarga(op)" title="Ver órdenes activas">
-                      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-                <tr v-if="cargaOperariosFiltrados.length === 0 && !cargandoCarga">
-                  <td colspan="7" class="empty-state">
-                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z"/>
-                    </svg>
-                    <p>No se encontraron operarios con ese filtro</p>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
 
-          <!-- MODAL DETALLE CARGA -->
-          <Transition name="modal">
-            <div v-if="modalCarga" class="modal" @click.self="modalCarga = false">
-              <div class="modal-content">
-                <span class="close" @click="modalCarga = false">×</span>
-                <div v-if="cargaDetalle" class="detalle-inner">
-                  <div class="detalle-header">
-                    <div class="detalle-avatar" :style="{ background: avatarBg(cargaDetalle.Nombre_Completo), color: avatarColor(cargaDetalle.Nombre_Completo) }">
-                      {{ iniciales(cargaDetalle.Nombre_Completo) }}
-                    </div>
-                    <div>
-                      <div class="detalle-nombre">{{ cargaDetalle.Nombre_Completo }}</div>
-                      <div class="detalle-usuario">@{{ cargaDetalle.Nombre_Usuario }}</div>
-                      <span class="badge-carga" :class="cargaDetalle.estado_carga">{{ estadoCargaLabel(cargaDetalle.estado_carga) }}</span>
-                    </div>
-                  </div>
-                  <div class="detalle-metricas" style="margin-bottom:20px">
-                    <div class="metrica-item">
-                      <span class="metrica-label">Órdenes activas</span>
-                      <span class="metrica-valor" :style="{ color: cargaColor(cargaDetalle.estado_carga) }">{{ cargaDetalle.ordenes_activas }}</span>
-                    </div>
-                    <div class="metrica-item">
-                      <span class="metrica-label">Vencidas</span>
-                      <span class="metrica-valor" :class="cargaDetalle.ordenes_vencidas > 0 ? 'rojo' : 'verde'">{{ cargaDetalle.ordenes_vencidas }}</span>
-                    </div>
-                    <div class="metrica-item">
-                      <span class="metrica-label">Alta prioridad</span>
-                      <span class="metrica-valor amarillo">{{ cargaDetalle.ordenes_alta_prioridad }}</span>
-                    </div>
-                  </div>
-
-                  <div v-if="cargandoCargaDetalle" class="cargando-detalle"><div class="spinner"></div> Cargando órdenes...</div>
-                  <div v-else-if="cargaDetalleOrdenes.length" class="detalle-ordenes">
-                    <div class="detalle-ordenes-titulo">Órdenes activas</div>
-                    <table class="tabla-ordenes">
-                      <thead>
-                        <tr>
-                          <th>#</th><th>Producto</th><th>Estado</th><th>Prioridad</th><th>Avance</th><th>Fecha límite</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="o in cargaDetalleOrdenes" :key="o.Id_Orden" :class="{ 'orden-retraso': o.vencida }">
-                          <td>{{ o.Id_Orden }}</td>
-                          <td>{{ o.Producto }}</td>
-                          <td><span class="badge-estado" :class="estadoClass(o.Estado)">{{ o.Estado }}</span></td>
-                          <td><span class="badge-prioridad" :class="o.Prioridad?.toLowerCase()">{{ o.Prioridad }}</span></td>
-                          <td>
-                            <div class="avance-wrap">
-                              <div class="avance-bar">
-                                <div class="avance-fill" :style="{ width: avancePct(o) + '%', background: o.vencida ? '#dc2626' : '#16a34a' }"></div>
+                    <div v-if="cargandoCargaDetalle" class="cargando-detalle"><div class="spinner"></div> Cargando órdenes...</div>
+                    <div v-else-if="cargaDetalleOrdenes.length" class="detalle-ordenes">
+                      <div class="detalle-ordenes-titulo">Órdenes activas</div>
+                      <table class="tabla-ordenes">
+                        <thead>
+                          <tr>
+                            <th>#</th><th>Producto</th><th>Estado</th><th>Prioridad</th><th>Avance</th><th>Fecha límite</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="o in cargaDetalleOrdenes" :key="o.Id_Orden" :class="{ 'orden-retraso': o.vencida }">
+                            <td>{{ o.Id_Orden }}</td>
+                            <td>{{ o.Producto }}</td>
+                            <td><span class="badge-estado" :class="estadoClass(o.Estado)">{{ o.Estado }}</span></td>
+                            <td><span class="badge-prioridad" :class="o.Prioridad?.toLowerCase()">{{ o.Prioridad }}</span></td>
+                            <td>
+                              <div class="avance-wrap">
+                                <div class="avance-bar">
+                                  <div class="avance-fill" :style="{ width: avancePct(o) + '%', background: o.vencida ? '#dc2626' : '#16a34a' }"></div>
+                                </div>
+                                <span class="avance-txt">{{ o.Unidades_Realizadas }}/{{ o.Unidades }}</span>
                               </div>
-                              <span class="avance-txt">{{ o.Unidades_Realizadas }}/{{ o.Unidades }}</span>
-                            </div>
-                          </td>
-                          <td :class="{ 'td-retraso': o.vencida }">
-                            {{ formatFecha(o.Fecha_Limite) }}
-                            <span v-if="o.vencida" class="retraso-tag">VENCIDA</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                            </td>
+                            <td :class="{ 'td-retraso': o.vencida }">
+                              {{ formatFecha(o.Fecha_Limite) }}
+                              <span v-if="o.vencida" class="retraso-tag">VENCIDA</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div v-else class="sin-ordenes">Sin órdenes activas</div>
                   </div>
-                  <div v-else class="sin-ordenes">Sin órdenes activas</div>
+                </div>
+              </div>
+            </Transition>
+          </template>
+
+          <!-- PANEL DE REASIGNACIÓN -->
+          <div v-else class="reasignacion-wrap box-visible">
+            <div class="reasignacion-header">
+              <button class="btn-back" @click="cerrarReasignacion" title="Volver">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/>
+                </svg>
+              </button>
+              <h2>Reasignación de Órdenes</h2>
+            </div>
+
+            <!-- OPERARIOS SOBRECARGADOS -->
+            <div class="reasignacion-section">
+              <div class="reasignacion-section-title">Operario sobrecargado</div>
+              <div v-if="!operariosSobrecargados.length" class="sin-ordenes">
+                🎉 No hay operarios sobrecargados en este momento
+              </div>
+              <div v-else class="lista-sobrecargados">
+                <div
+                  v-for="op in operariosSobrecargados"
+                  :key="op.Id_Usuario"
+                  class="card-sobrecargado"
+                  :class="{ 'card-sobrecargado-activa': operarioReasignActivo?.Id_Usuario === op.Id_Usuario }"
+                  @click="seleccionarOperarioReasign(op)"
+                >
+                  <div class="avatar" :style="{ background: avatarBg(op.Nombre_Completo), color: avatarColor(op.Nombre_Completo) }">
+                    {{ iniciales(op.Nombre_Completo) }}
+                  </div>
+                  <div class="user-info">
+                    <span class="user-name">{{ op.Nombre_Completo }}</span>
+                    <span class="user-handle">{{ op.ordenes_activas }} órdenes activas</span>
+                  </div>
+                  <span v-if="operarioReasignActivo?.Id_Usuario === op.Id_Usuario" class="check-activo">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+                    </svg>
+                  </span>
                 </div>
               </div>
             </div>
-          </Transition>
+
+            <!-- ÓRDENES DEL OPERARIO SELECCIONADO -->
+            <div v-if="operarioReasignActivo" class="reasignacion-section">
+              <div class="reasignacion-section-title">
+                Órdenes de {{ operarioReasignActivo.Nombre_Completo.split(' ')[0] }}
+                <span class="count-badge">{{ ordenesReasignActivo.length }}</span>
+              </div>
+
+              <div v-if="cargandoOrdenesReasign" class="cargando-detalle">
+                <div class="spinner"></div> Cargando órdenes...
+              </div>
+
+              <div v-else-if="!ordenesReasignActivo.length" class="sin-ordenes">
+                Este operario ya no tiene órdenes activas
+              </div>
+
+              <div v-else class="lista-ordenes-reasign">
+                <div v-for="o in ordenesReasignActivo" :key="o.Id_Orden" class="orden-reasign-card">
+                  <div class="orden-reasign-info">
+                    <div class="orden-reasign-titulo">
+                      {{ o.Producto }}
+                      <span class="orden-id-tag">ORD-{{ o.Id_Orden }}</span>
+                    </div>
+                    <div class="orden-reasign-meta">
+                      Vence: {{ formatFecha(o.Fecha_Limite) }} · {{ avancePct(o) }}% completado
+                    </div>
+                    <div class="avance-bar" style="margin-top:6px">
+                      <div class="avance-fill" :style="{ width: avancePct(o) + '%', background: o.vencida ? '#dc2626' : '#16a34a' }"></div>
+                    </div>
+                  </div>
+
+                  <div class="sugerencias-wrap">
+                    <div class="sugerencias-titulo">Sugerencias disponibles</div>
+                    <div v-if="!operariosSugeridos.length" class="sin-ordenes" style="padding:12px">
+                      No hay operarios disponibles para reasignar
+                    </div>
+                    <div v-for="dest in operariosSugeridos" :key="dest.Id_Usuario" class="sugerencia-item">
+                      <div class="avatar avatar-sm" :style="{ background: avatarBg(dest.Nombre_Completo), color: avatarColor(dest.Nombre_Completo) }">
+                        {{ iniciales(dest.Nombre_Completo) }}
+                      </div>
+                      <div class="user-info">
+                        <span class="user-name">{{ dest.Nombre_Completo }}</span>
+                        <span class="user-handle">{{ dest.ordenes_activas }} órdenes</span>
+                      </div>
+                      <button
+                        class="btn-reasignar-mini"
+                        :disabled="reasignando === o.Id_Orden"
+                        @click="reasignarOrden(o, dest)"
+                      >{{ reasignando === o.Id_Orden ? 'Reasignando...' : 'Reasignar' }}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
         </section>
       </Transition>
@@ -724,6 +835,7 @@ import {
   getEficienciaOperarios,
   getEficienciaOperario,
   getCargaTrabajo,
+  reasignarOrdenPorCarga,
 } from '../../services/api.js'
 import { useAuthStore } from '../../stores/auth'
 
@@ -763,6 +875,13 @@ const cargaDetalle         = ref(null)
 const cargaDetalleOrdenes  = ref([])
 const cargandoCargaDetalle = ref(false)
 const umbrales             = reactive({ limite_sobrecarga: 5, limite_disponible: 2 })
+
+// ── ESTADO REASIGNACIÓN ──
+const vistaReasignacion      = ref(false)
+const operarioReasignActivo  = ref(null)
+const ordenesReasignActivo   = ref([])
+const cargandoOrdenesReasign = ref(false)
+const reasignando            = ref(null)
 
 const toast = ref({ visible: false, msg: '', type: 'success' })
 
@@ -996,6 +1115,68 @@ function cargaBarPct(activas) {
   return Math.min(100, Math.round((activas / (umbrales.limite_sobrecarga + 2)) * 100))
 }
 
+// ── REASIGNACIÓN DE ÓRDENES ──
+const operariosSobrecargados = computed(() =>
+  cargaOperarios.value.filter(op => op.estado_carga === 'sobrecargado')
+)
+
+const operariosSugeridos = computed(() =>
+  cargaOperarios.value
+    .filter(op => op.estado_carga !== 'sobrecargado' && op.Id_Usuario !== operarioReasignActivo.value?.Id_Usuario)
+    .sort((a, b) => a.ordenes_activas - b.ordenes_activas)
+)
+
+function abrirReasignacion() {
+  vistaReasignacion.value      = true
+  operarioReasignActivo.value  = null
+  ordenesReasignActivo.value   = []
+}
+
+function cerrarReasignacion() {
+  vistaReasignacion.value      = false
+  operarioReasignActivo.value  = null
+  ordenesReasignActivo.value   = []
+}
+
+async function seleccionarOperarioReasign(op) {
+  operarioReasignActivo.value  = op
+  ordenesReasignActivo.value   = []
+  cargandoOrdenesReasign.value = true
+  try {
+    const res  = await fetch(`${BASE}/carga-trabajo/operarios/${op.Id_Usuario}`, { headers: { 'x-api-key': API_KEY } })
+    const json = await res.json()
+    if (json.ok) ordenesReasignActivo.value = json.data?.ordenes_activas_detalle || []
+  } catch {
+    mostrarToast('Error al cargar las órdenes del operario', 'danger')
+  } finally {
+    cargandoOrdenesReasign.value = false
+  }
+}
+
+// FIX: el backend espera "Id_Operario_Destino", no "Id_Operario_Nuevo".
+// Ahora se usa el servicio reasignarOrdenPorCarga() de api.js.
+async function reasignarOrden(orden, destino) {
+  reasignando.value = orden.Id_Orden
+  try {
+    const json = await reasignarOrdenPorCarga({
+      Id_Orden: orden.Id_Orden,
+      Id_Operario_Destino: destino.Id_Usuario
+    })
+
+    ordenesReasignActivo.value = ordenesReasignActivo.value.filter(o => o.Id_Orden !== orden.Id_Orden)
+    mostrarToast(json.mensaje || `Orden #${orden.Id_Orden} reasignada a ${destino.Nombre_Completo}`)
+
+    await cargarVistaCarga()
+
+    const actualizado = cargaOperarios.value.find(o => o.Id_Usuario === operarioReasignActivo.value?.Id_Usuario)
+    operarioReasignActivo.value = actualizado || null
+  } catch (e) {
+    mostrarToast(e.message || 'Error al reasignar la orden', 'danger')
+  } finally {
+    reasignando.value = null
+  }
+}
+
 // ── HELPERS VISUALES ──
 const PALETTES = [
   { bg: '#dbeafe', color: '#1d4ed8' }, { bg: '#fce7f3', color: '#be185d' },
@@ -1117,6 +1298,15 @@ function formatFechaObs(f) {
 @keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 .skeleton-sm { width: 45%; height: 12px; margin-bottom: 16px; }
 .skeleton-lg { width: 70%; height: 30px; }
+
+/* ── BOTÓN REASIGNAR GLOBAL ── */
+.btn-reasignar-global {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; background: #1f3a52; color: white; border: none;
+  padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-bottom: 16px; transition: background 0.2s, transform 0.1s;
+}
+.btn-reasignar-global:hover { background: #162b3c; transform: translateY(-1px); }
 
 /* ── TABLA BOX ── */
 .table-box { background: white; border-radius: 14px; border: 1px solid #e5e7eb; overflow: hidden; opacity: 0; transform: translateY(16px); transition: opacity 0.45s ease, transform 0.45s ease; }
@@ -1310,6 +1500,34 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 .periodo-unit   { font-size: 11px; color: #9ca3af; }
 .periodo-detalle{ font-size: 10px; color: #6b7280; }
 .periodo-vs     { font-size: 11px; font-weight: 700; color: #9ca3af; flex-shrink: 0; }
+
+/* ── PANEL DE REASIGNACIÓN ── */
+.reasignacion-wrap { background: white; border-radius: 14px; border: 1px solid #e5e7eb; padding: 22px; }
+.reasignacion-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.btn-back { width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid #e5e7eb; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #374151; transition: all 0.15s; flex-shrink: 0; }
+.btn-back:hover { border-color: #1f3a52; color: #1f3a52; background: #f0f4f8; }
+.reasignacion-header h2 { font-size: 18px; font-weight: 700; color: #111827; margin: 0; }
+.reasignacion-section { margin-bottom: 24px; }
+.reasignacion-section:last-child { margin-bottom: 0; }
+.reasignacion-section-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.lista-sobrecargados { display: flex; flex-direction: column; gap: 10px; }
+.card-sobrecargado { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1.5px solid #fecaca; background: #fff5f5; border-radius: 12px; cursor: pointer; transition: all 0.15s; }
+.card-sobrecargado:hover { border-color: #dc2626; }
+.card-sobrecargado-activa { border-color: #dc2626; background: #fee2e2; box-shadow: 0 0 0 3px rgba(220,38,38,0.12); }
+.check-activo { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; background: #dc2626; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.lista-ordenes-reasign { display: flex; flex-direction: column; gap: 16px; }
+.orden-reasign-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; background: #f9fafb; }
+.orden-reasign-info { margin-bottom: 14px; }
+.orden-reasign-titulo { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #111827; }
+.orden-id-tag { font-size: 11px; font-weight: 600; color: #1f3a52; background: #e0e7ee; padding: 2px 8px; border-radius: 999px; }
+.orden-reasign-meta { font-size: 12px; color: #6b7280; margin-top: 4px; }
+.sugerencias-wrap { border-top: 1px dashed #e5e7eb; padding-top: 12px; }
+.sugerencias-titulo { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+.sugerencia-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.avatar-sm { width: 28px; height: 28px; font-size: 10px; }
+.btn-reasignar-mini { margin-left: auto; background: #1f3a52; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
+.btn-reasignar-mini:hover:not(:disabled) { background: #162d42; }
+.btn-reasignar-mini:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ── TOAST ── */
 .toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }

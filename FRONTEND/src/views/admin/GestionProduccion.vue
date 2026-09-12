@@ -41,14 +41,54 @@
         </button>
       </div>
 
-      <!-- RESUMEN GLOBAL DE PRENDAS -->
-      <div class="resumen-card" :class="{ 'resumen-visible': mounted }">
-        <div class="resumen-row">
-          <span class="resumen-txt">{{ resumenPrendas.hechas }} de {{ resumenPrendas.total }} prendas</span>
-          <span class="resumen-pct" :class="{ 'pct-cero': resumenPrendas.pct === 0 }">{{ resumenPrendas.pct }}%</span>
+      <!-- TARJETAS DE ESTADÍSTICAS -->
+      <div class="stats-grid" :class="{ 'box-visible': mounted }">
+        <div class="stat-card stat-total">
+          <div class="stat-info">
+            <span class="stat-number">{{ estadisticas.total }}</span>
+            <span class="stat-label">Total Órdenes</span>
+          </div>
+          <div class="stat-icon-wrap stat-icon-total">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+            </svg>
+          </div>
         </div>
-        <div class="resumen-bar">
-          <div class="resumen-fill" :style="{ width: resumenPrendas.pct + '%' }"></div>
+
+        <div class="stat-card stat-proceso">
+          <div class="stat-info">
+            <span class="stat-number">{{ estadisticas.enProceso }}</span>
+            <span class="stat-label">En Proceso</span>
+          </div>
+          <div class="stat-icon-wrap stat-icon-proceso">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="stat-card stat-completada">
+          <div class="stat-info">
+            <span class="stat-number">{{ estadisticas.completadas }}</span>
+            <span class="stat-label">Completadas</span>
+          </div>
+          <div class="stat-icon-wrap stat-icon-completada">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="stat-card stat-retrasada">
+          <div class="stat-info">
+            <span class="stat-number">{{ estadisticas.retrasadas }}</span>
+            <span class="stat-label">Retrasadas</span>
+          </div>
+          <div class="stat-icon-wrap stat-icon-retrasada">
+            <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+            </svg>
+          </div>
         </div>
       </div>
 
@@ -112,39 +152,35 @@
             <div class="orden-card-top">
               <span class="order-num-pill">ORD-{{ String(o.Id_Orden).padStart(3,'0') }}</span>
               <span class="badge-prioridad" :class="clasePrioridad(o.Prioridad)">{{ o.Prioridad }}</span>
-              <button class="icon-edit-btn" @click="abrirModal(o)" title="Editar">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
-                </svg>
-              </button>
               <span class="badge-estado" :class="claseEstado(o.Estado)">{{ o.Estado }}</span>
-              <button class="icon-del-btn" @click="solicitarEliminar(o)" title="Eliminar">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
-                </svg>
-              </button>
+              <div class="orden-card-acciones">
+                <button class="icon-view-btn" @click="abrirVista(o)" title="Ver detalle">
+                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                  </svg>
+                </button>
+                <button class="icon-edit-btn" @click="abrirModal(o)" title="Editar">
+                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
+                  </svg>
+                </button>
+                <button class="icon-del-btn" @click="solicitarEliminar(o)" title="Eliminar">
+                  <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div class="orden-card-body">
               <h3 class="orden-titulo">{{ o.Producto || o.Descripcion }}</h3>
               <p class="orden-cliente">{{ o.Cliente || '—' }}</p>
 
-              <div class="chips-row" v-if="o.fasesExtra && o.fasesExtra.length">
-                <span v-for="f in o.fasesExtra" :key="f.Id_Orden_Operario" class="chip-fase">
-                  F{{ f.Numero_Fase }} · {{ f.Nombre_Operario }}
-                </span>
-              </div>
-
-              <div class="chips-row" v-if="o.materialesExtra && o.materialesExtra.length">
-                <span
-                  v-for="m in o.materialesExtra"
-                  :key="m.Id_Material ?? m.Id_Producto"
-                  class="chip-mat"
-                >
-                  {{ m.Nombre_Material || m.Nombre_Producto || '—' }}
-                  <span v-if="m.Cantidad_Usada" class="chip-mat-qty">({{ m.Cantidad_Usada }})</span>
-                </span>
-              </div>
+              <p v-if="o.fasesExtra && o.fasesExtra.length" class="orden-fases-info">
+                <span class="orden-fases-label">Fases a realizar:</span>
+                {{ o.fasesExtra.length }}
+              </p>
 
               <div class="orden-vence">Vence: {{ formatFechaCorta(o.Fecha_Limite) }}</div>
 
@@ -156,7 +192,11 @@
                 <div class="orden-progreso-bar">
                   <div
                     class="orden-progreso-fill"
-                    :class="{ 'fill-completo': pctOrden(o) >= 100 }"
+                    :class="{
+                      'fill-completo': pctOrden(o) >= 100,
+                      'fill-proceso': o.Estado === 'En Proceso' && pctOrden(o) < 100,
+                      'fill-retrasada': o.Estado === 'Retrasada' && pctOrden(o) < 100,
+                    }"
                     :style="{ width: pctOrden(o) + '%' }"
                   ></div>
                 </div>
@@ -353,6 +393,123 @@
       </div>
     </Transition>
 
+    <!-- ══ MODAL VER DETALLE ══ -->
+    <Transition name="modal">
+      <div v-if="verVisible" class="modal-overlay" @click.self="cerrarVista">
+        <div class="modal-container view-container">
+          <div class="modal-header">
+            <div class="view-header-text">
+              <span class="view-ordnum">ORD-{{ ordenVista ? String(ordenVista.Id_Orden).padStart(3,'0') : '' }}</span>
+              <span class="modal-title view-titulo">{{ ordenVista?.Producto || ordenVista?.Descripcion }}</span>
+            </div>
+            <button class="modal-close" @click="cerrarVista">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="modal-body view-body">
+
+            <div class="view-badges">
+              <span class="badge-estado" :class="claseEstado(ordenVista?.Estado)">{{ ordenVista?.Estado }}</span>
+              <span class="badge-prioridad" :class="clasePrioridad(ordenVista?.Prioridad)">Prioridad {{ ordenVista?.Prioridad }}</span>
+            </div>
+
+            <div class="view-section">
+              <span class="view-section-title">Progreso de fabricación</span>
+              <div class="orden-progreso">
+                <div class="orden-progreso-row">
+                  <span class="orden-progreso-txt">{{ ordenVista?.Unidades_Realizadas ?? 0 }} de {{ ordenVista?.Unidades ?? ordenVista?.Cantidad }} prendas</span>
+                  <span class="orden-progreso-pct">{{ ordenVista ? pctOrden(ordenVista) : 0 }}%</span>
+                </div>
+                <div class="orden-progreso-bar">
+                  <div
+                    class="orden-progreso-fill"
+                    :class="{
+                      'fill-completo': ordenVista && pctOrden(ordenVista) >= 100,
+                      'fill-proceso': ordenVista && ordenVista.Estado === 'En Proceso' && pctOrden(ordenVista) < 100,
+                      'fill-retrasada': ordenVista && ordenVista.Estado === 'Retrasada' && pctOrden(ordenVista) < 100,
+                    }"
+                    :style="{ width: (ordenVista ? pctOrden(ordenVista) : 0) + '%' }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="view-section">
+              <span class="view-section-title">Información general</span>
+              <div class="view-info-grid">
+                <div class="view-info-item">
+                  <span class="view-info-label">Cliente</span>
+                  <span class="view-info-value">{{ ordenVista?.Cliente || '—' }}</span>
+                </div>
+                <div class="view-info-item">
+                  <span class="view-info-label">Material principal</span>
+                  <span class="view-info-value">{{ materialPrincipal(ordenVista) }}</span>
+                </div>
+                <div class="view-info-item">
+                  <span class="view-info-label">Dificultad</span>
+                  <span class="view-info-value">{{ ordenVista?.Dificultad || '—' }}</span>
+                </div>
+                <div class="view-info-item">
+                  <span class="view-info-label">Fecha de creación</span>
+                  <span class="view-info-value">{{ formatFechaCorta(ordenVista?.Fecha_Creacion) }}</span>
+                </div>
+                <div class="view-info-item">
+                  <span class="view-info-label">Fecha límite</span>
+                  <span class="view-info-value">{{ formatFechaCorta(ordenVista?.Fecha_Limite) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="view-section">
+              <span class="view-section-title">Descripción</span>
+              <p class="view-desc-box">{{ ordenVista?.Descripcion || '—' }}</p>
+            </div>
+
+            <div class="view-section">
+              <span class="view-section-title">Fases y operarios</span>
+              <div v-if="ordenVista?.fasesExtra && ordenVista.fasesExtra.length" class="view-fases-list">
+                <div v-for="f in ordenVista.fasesExtra" :key="f.Id_Orden_Operario" class="view-fase-card">
+                  <div class="view-fase-top">
+                    <div class="view-fase-left">
+                      <span class="view-fase-pill">Fase {{ f.Numero_Fase }}</span>
+                      <span class="view-fase-operario">{{ f.Nombre_Operario }}</span>
+                    </div>
+                    <span
+                      v-if="f.Estado"
+                      class="view-fase-estado"
+                      :class="f.Estado === 'Completada' ? 'completada' : 'pendiente'"
+                    >{{ f.Estado }}</span>
+                  </div>
+                  <p v-if="f.Descripcion_Fase" class="view-fase-desc">{{ f.Descripcion_Fase }}</p>
+                  <span v-if="f.Cantidad_Realizada !== undefined && f.Cantidad_Realizada !== null" class="view-fase-cant">
+                    Cantidad realizada: {{ f.Cantidad_Realizada }}
+                  </span>
+                </div>
+              </div>
+              <p v-else class="view-empty-txt">Sin fases asignadas</p>
+            </div>
+
+            <div class="view-section">
+              <span class="view-section-title">Materiales</span>
+              <div v-if="ordenVista?.materialesExtra && ordenVista.materialesExtra.length" class="chips-row">
+                <span
+                  v-for="m in ordenVista.materialesExtra"
+                  :key="m.Id_Material ?? m.Id_Producto"
+                  class="chip-mat"
+                >
+                  {{ m.Nombre_Material || m.Nombre_Producto || '—' }}
+                  <span v-if="m.Cantidad_Usada" class="chip-mat-qty">({{ m.Cantidad_Usada }})</span>
+                </span>
+              </div>
+              <p v-else class="view-empty-txt">Sin materiales asignados</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <!-- CONFIRM ELIMINAR -->
     <Transition name="modal">
       <div v-if="confirmOrden" class="modal-overlay" @click.self="confirmOrden = null">
@@ -411,6 +568,8 @@ const tocado        = ref(false)
 const modalVisible  = ref(false)
 const editando      = ref(false)
 const confirmOrden  = ref(null)
+const verVisible    = ref(false)
+const ordenVista    = ref(null)
 const toastMsg      = ref('')
 const toastType     = ref('toast-success')
 
@@ -539,13 +698,15 @@ watch(() => form.value.Id_Cliente, () => {
 
 onBeforeUnmount(() => {})
 
-// ── RESUMEN GLOBAL ────────────────────────────────────────────
-const resumenPrendas = computed(() => {
-  const lista = ordenesFiltradas.value
-  const total = lista.reduce((acc, o) => acc + Number(o.Unidades ?? o.Cantidad ?? 0), 0)
-  const hechas = lista.reduce((acc, o) => acc + Number(o.Unidades_Realizadas ?? 0), 0)
-  const pct = total > 0 ? Math.round((hechas / total) * 100) : 0
-  return { total, hechas, pct }
+// ── ESTADÍSTICAS GLOBALES ─────────────────────────────────────
+const estadisticas = computed(() => {
+  const lista = ordenes.value
+  return {
+    total:       lista.length,
+    enProceso:   lista.filter(o => o.Estado === 'En Proceso').length,
+    completadas: lista.filter(o => o.Estado === 'Completada').length,
+    retrasadas:  lista.filter(o => o.Estado === 'Retrasada').length,
+  }
 })
 
 function pctOrden(o) {
@@ -580,6 +741,23 @@ function claseEstado(e) {
 }
 function clasePrioridad(p) {
   return { 'Alta': 'prio-alta', 'Media': 'prio-media', 'Baja': 'prio-baja' }[p] || 'prio-media'
+}
+
+// ── VER DETALLE ───────────────────────────────────────────────
+function abrirVista(o) {
+  ordenVista.value = o
+  verVisible.value = true
+}
+function cerrarVista() {
+  verVisible.value = false
+  ordenVista.value = null
+}
+function materialPrincipal(o) {
+  if (!o) return '—'
+  return o.Nombre_Material
+    || o.materialesExtra?.[0]?.Nombre_Material
+    || o.materialesExtra?.[0]?.Nombre_Producto
+    || '—'
 }
 
 // ── MODAL ─────────────────────────────────────────────────────
@@ -818,18 +996,30 @@ function showToast(msg, type = 'toast-success') {
 .btn-nueva:hover  { background: #162d42; transform: translateY(-1px); }
 .btn-nueva:active { transform: translateY(0); }
 
-/* ── RESUMEN GLOBAL ── */
-.resumen-card { background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; opacity: 0; transform: translateY(12px); transition: opacity 0.4s ease, transform 0.4s ease; }
-.resumen-card.resumen-visible { opacity: 1; transform: translateY(0); }
-.resumen-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.resumen-txt { font-size: 14px; color: #374151; font-weight: 500; }
-.resumen-pct { font-size: 15px; font-weight: 700; color: #1f3a52; }
-.resumen-pct.pct-cero { color: #dc2626; }
-.resumen-bar { width: 100%; height: 8px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
-.resumen-fill { height: 100%; background: linear-gradient(90deg, #1f3a52, #2d6a9f); border-radius: 999px; transition: width 0.6s ease; }
+/* ── TARJETAS DE ESTADÍSTICAS ── */
+.stats-grid { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 20px; opacity: 0; transform: translateY(12px); transition: opacity 0.4s ease, transform 0.4s ease; }
+.stats-grid.box-visible { opacity: 1; transform: translateY(0); }
+.stat-card { flex: 1; min-width: 220px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px 20px 20px 24px; transition: box-shadow 0.2s, transform 0.15s; }
+.stat-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.05); transform: translateY(-1px); }
+.stat-info { display: flex; flex-direction: column; gap: 2px; }
+.stat-number { font-size: 30px; font-weight: 800; color: #111827; line-height: 1; }
+.stat-label  { font-size: 13px; color: #6b7280; font-weight: 500; }
+.stat-icon-wrap { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+.stat-total      { border-left: 3px solid #1f3a52; }
+.stat-icon-total { background: #eef2f6; color: #1f3a52; }
+
+.stat-proceso      { border-left: 3px solid #7c3aed; }
+.stat-icon-proceso { background: #ede9fe; color: #7c3aed; }
+
+.stat-completada      { border-left: 3px solid #16a34a; }
+.stat-icon-completada { background: #dcfce7; color: #16a34a; }
+
+.stat-retrasada      { border-left: 3px solid #dc2626; }
+.stat-icon-retrasada { background: #fee2e2; color: #dc2626; }
 
 /* ── FILTROS ── */
-.filtros-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; opacity: 0; transform: translateY(10px); transition: opacity 0.4s ease, transform 0.4s ease; }
+.filtros-bar { display: flex; justify-content: flex-start; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; opacity: 0; transform: translateY(10px); transition: opacity 0.4s ease, transform 0.4s ease; }
 .filtros-bar.box-visible { opacity: 1; transform: translateY(0); }
 .filtro-cliente-wrap { display: flex; align-items: center; gap: 6px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 7px 10px; transition: border-color 0.2s, box-shadow 0.2s; }
 .filtro-cliente-wrap:focus-within { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.08); }
@@ -858,10 +1048,11 @@ function showToast(msg, type = 'toast-success') {
 .prio-alta  { background: #fef9c3; color: #92400e; }
 .prio-media { background: #fef9c3; color: #92400e; }
 .prio-baja  { background: #f0fdf4; color: #166534; }
-.icon-edit-btn, .icon-del-btn { width: 26px; height: 26px; border-radius: 7px; border: none; background: #f1f5f9; color: #1f3a52; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s, transform 0.15s; }
-.icon-edit-btn:hover { background: #dbeafe; transform: scale(1.06); }
-.icon-del-btn { margin-left: auto; color: #b91c1c; }
-.icon-del-btn:hover { background: #fee2e2; transform: scale(1.06); }
+.icon-view-btn, .icon-edit-btn, .icon-del-btn { width: 32px; height: 32px; border-radius: 7px; border: none; background: #1f3a52; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+.orden-card-acciones { display: flex; gap: 8px; margin-left: auto; }
+.icon-view-btn:hover { background: #2d5580; transform: scale(1.06); }
+.icon-edit-btn:hover { background: #2d5580; transform: scale(1.06); }
+.icon-del-btn:hover { background: #dc2626; transform: scale(1.06); }
 .badge-estado { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
 .estado-proceso    { background: #dbeafe; color: #1e40af; }
 .estado-completada { background: #dcfce7; color: #166534; }
@@ -873,6 +1064,8 @@ function showToast(msg, type = 'toast-success') {
 
 .chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
 .chip-fase { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; background: #ede9fe; color: #5b21b6; white-space: nowrap; }
+.orden-fases-info { font-size: 13px; color: #6b7280; margin: 0 0 12px; }
+.orden-fases-label { color: #6b7280; margin-right: 4px; }
 .chip-mat  { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 999px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; white-space: nowrap; }
 .chip-mat-qty { color: #94a3b8; font-weight: 400; }
 
@@ -884,7 +1077,9 @@ function showToast(msg, type = 'toast-success') {
 .orden-progreso-pct { font-size: 14px; font-weight: 700; color: #1f3a52; }
 .orden-progreso-bar { width: 100%; height: 8px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
 .orden-progreso-fill { height: 100%; background: #1f3a52; border-radius: 999px; transition: width 0.6s ease; }
-.orden-progreso-fill.fill-completo { background: #16a34a; }
+.orden-progreso-fill.fill-proceso   { background: #7c3aed; }
+.orden-progreso-fill.fill-retrasada { background: #dc2626; }
+.orden-progreso-fill.fill-completo  { background: #16a34a; }
 
 /* ── FAB ── */
 .fab-nueva { position: fixed; bottom: 28px; right: 28px; width: 56px; height: 56px; border-radius: 50%; background: #1f3a52; color: white; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 8px 24px rgba(31,58,82,0.4); transition: background 0.2s, transform 0.15s; z-index: 50; }
@@ -904,6 +1099,33 @@ function showToast(msg, type = 'toast-success') {
 .modal-close:hover { background: #f3f4f6; }
 .modal-body   { padding: 16px 24px; display: flex; flex-direction: column; gap: 14px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid #f3f4f6; }
+
+/* ── MODAL VER DETALLE ── */
+.view-container   { width: 520px; }
+.view-header-text { display: flex; flex-direction: column; gap: 2px; }
+.view-ordnum       { font-size: 11px; font-weight: 700; color: #9ca3af; font-family: 'Courier New', monospace; }
+.view-titulo       { font-size: 18px; }
+.view-body         { padding-bottom: 24px; gap: 20px; }
+.view-badges       { display: flex; gap: 8px; }
+.view-section      { display: flex; flex-direction: column; gap: 10px; }
+.view-section-title{ font-size: 12px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.3px; }
+.view-info-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
+.view-info-item    { display: flex; flex-direction: column; gap: 2px; }
+.view-info-label   { font-size: 11px; color: #9ca3af; font-weight: 500; }
+.view-info-value   { font-size: 13.5px; color: #111827; font-weight: 600; }
+.view-desc-box     { margin: 0; font-size: 13.5px; color: #374151; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; line-height: 1.5; }
+.view-empty-txt    { margin: 0; font-size: 13px; color: #9ca3af; font-style: italic; }
+.view-fases-list   { display: flex; flex-direction: column; gap: 10px; }
+.view-fase-card    { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.view-fase-top     { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.view-fase-left    { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.view-fase-pill    { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: #ede9fe; color: #5b21b6; white-space: nowrap; }
+.view-fase-operario{ font-size: 13.5px; font-weight: 700; color: #111827; }
+.view-fase-estado  { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.view-fase-estado.completada { color: #16a34a; }
+.view-fase-estado.pendiente  { color: #9ca3af; }
+.view-fase-desc    { margin: 0; font-size: 13px; color: #374151; }
+.view-fase-cant    { font-size: 12px; color: #9ca3af; }
 
 /* FORM */
 .form-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -974,7 +1196,11 @@ function showToast(msg, type = 'toast-success') {
 @media (max-width: 700px) {
   .main { padding: 20px 14px 90px; }
   .page-hero { flex-direction: column; align-items: flex-start; }
+  .stats-grid { gap: 10px; }
+  .stat-card { min-width: calc(50% - 5px); padding: 14px; }
+  .stat-number { font-size: 22px; }
   .fase-add-row { flex-direction: column; align-items: stretch; }
   .fase-num-input { width: 100%; }
+  .view-info-grid { grid-template-columns: 1fr; }
 }
 </style>
