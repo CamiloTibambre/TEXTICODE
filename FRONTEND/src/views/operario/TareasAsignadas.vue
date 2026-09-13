@@ -296,35 +296,27 @@ onMounted(async () => {
   }
 
   try {
-    const res  = await fetch(`${BASE}/ordenes/operario/${auth.idUsuario}`)
+    const res  = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`)
     const data = await res.json()
 
     tareas.value = data.map(o => {
-      const realizadas = o.Unidades_Realizadas ?? 0
-      const unidades   = o.Unidades ?? o.Cantidad ?? 1
-      const cantidad   = o.Cantidad ?? 0
-      const estado     = mapearEstado(o.Estado)
-
-      let progreso = 0
-      if (estado === 'completado') {
-        progreso = 100
-      } else if (unidades > 0 && realizadas > 0) {
-        progreso = Math.min(100, Math.round((realizadas / unidades) * 100))
-      }
-
+      const completada = o.Estado_Fase === 'Completada'
+      const vencida = !completada && estaRetrasada(o.Fecha_Limite)
       return {
-  id:          o.Id_Orden,
-  nombre:      o.Descripcion,
-  producto:    o.Producto || o.Descripcion,
-  descripcion: o.Descripcion,
+  id:          o.Id_Orden_Operario,
+  nombre:      o.Descripcion_Fase || o.Descripcion_Orden,
+  producto:    o.Producto || o.Descripcion_Orden,
+  descripcion: `Fase ${o.Numero_Fase}: ${o.Descripcion_Fase || 'Sin descripción'}`,
   cliente:     o.Cliente        || '—',
   material:    o.NombreMaterial || '—',
   entrega:     o.Fecha_Limite?.split('T')[0] || '—',
-  cantidad, realizadas, estado, progreso,
+  cantidad: o.Cantidad ?? 0, realizadas: completada ? (o.Cantidad ?? 0) : 0,
+  estado: completada ? 'completado' : vencida ? 'retrasado' : 'en-proceso',
+  progreso: completada ? 100 : 0,
   prioridad: (o.Prioridad || 'Media').toLowerCase(),
-  // vencida ya no se calcula aquí — se confía en o.Estado === 'Retrasada'
+  vencida,
 }
-    })
+    }).sort(ordenarTareas)
   } catch (err) {
     console.error('Error cargando tareas:', err)
   } finally {
@@ -339,12 +331,19 @@ onMounted(async () => {
   }
 })
 
-function mapearEstado(estado) {
-  return {
-    'En Proceso': 'en-proceso',
-    'Completada': 'completado',
-    'Retrasada': 'retrasado',
-  }[estado] || 'en-proceso'
+function ordenarTareas(a, b) {
+  const grupo = t => t.estado === 'retrasado' ? 0 : t.estado === 'en-proceso' ? 1 : 2
+  const porEstado = grupo(a) - grupo(b)
+  if (porEstado) return porEstado
+  return new Date(a.entrega || '9999-12-31') - new Date(b.entrega || '9999-12-31')
+}
+
+function estaRetrasada(fecha) {
+  if (!fecha) return false
+  const limite = new Date(fecha)
+  const ahora = new Date()
+  const inicioHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
+  return limite < inicioHoy
 }
 
 const estadoLabel = (estado) => ({
