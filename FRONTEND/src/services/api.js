@@ -76,6 +76,9 @@ export const eliminarMaterialOrden = (idOrden, idProducto)  => request(`/orden-m
 
 // ── ORDEN OPERARIO (FASES) ────────────────────────────────
 export const getFasesDeOrden      = (idOrden)  => request(`/orden-operario/orden/${idOrden}`)
+export const getFasesDeOperario   = (idOperario) => request(`/orden-operario/operario/${idOperario}`)
+export const getHistorialFasesDeOperario = (idOperario) => request(`/orden-operario/operario/${idOperario}/historial`)
+export const completarFaseOperario = (id, body = {}) => request(`/orden-operario/${id}/completar`, { method: 'PATCH', body: JSON.stringify(body) })
 export const crearFaseOperario    = (body)     => request('/orden-operario', { method: 'POST', body: JSON.stringify(body) })
 export const actualizarFaseOperario = (id, body) => request(`/orden-operario/${id}`, { method: 'PUT', body: JSON.stringify(body) })
 export const eliminarFaseOperario = (id)       => request(`/orden-operario/${id}`, { method: 'DELETE' })

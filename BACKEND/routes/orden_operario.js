@@ -132,6 +132,31 @@ router.get('/operario/:idOperario', async (req, res) => {
   }
 })
 
+// GET historial persistente de fases completadas de un operario.
+router.get('/operario/:idOperario/historial', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT
+        oo.*, uop."Nombre_Completo" AS "Nombre_Operario", op."Producto",
+        op."Descripcion" AS "Descripcion_Orden", op."Cantidad",
+        op."Unidades_Realizadas", op."Estado" AS "Estado_Orden", op."Prioridad",
+        op."Fecha_Limite", op."Id_Cliente", cli."Nombre_Completo" AS "Cliente",
+        m."Nombre_Material" AS "NombreMaterial"
+      FROM orden_operario oo
+      INNER JOIN orden_produccion op ON oo."Id_Orden" = op."Id_Orden"
+      INNER JOIN usuario uop ON oo."Id_Operario" = uop."Id_Usuario"
+      INNER JOIN usuario cli ON op."Id_Cliente" = cli."Id_Usuario"
+      INNER JOIN material m ON op."Id_Material" = m."Id_Material"
+      WHERE oo."Id_Operario" = $1
+        AND oo."Estado_Fase" = 'Completada'
+      ORDER BY oo."Fecha_Completada" DESC NULLS LAST, oo."updated_at" DESC
+    `, [req.params.idOperario])
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // PUT editar numero y/o descripcion de fase
 router.put('/:id', async (req, res) => {
   const { Numero_Fase, Descripcion_Fase } = req.body
@@ -223,13 +248,11 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
-// PATCH reportar avance incremental de una fase
-router.patch('/:id/avance', async (req, res) => {
-  const unidadesSesion = toPositiveInt(req.body.unidadesSesion)
-  if (!unidadesSesion) {
-    return res.status(400).json({ error: 'unidadesSesion debe ser mayor que 0' })
-  }
-
+// PATCH completar una fase. No se reportan prendas parciales.
+router.patch('/:id/completar', async (req, res) => {
+  const nota = typeof req.body.Nota_Operario === 'string'
+    ? req.body.Nota_Operario.trim() || null
+    : null
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -249,22 +272,21 @@ router.patch('/:id/avance', async (req, res) => {
 
     const fase = faseResult.rows[0]
     const cantidadTotal = Number(fase.Cantidad) || 0
-    const cantidadActual = Number(fase.Cantidad_Realizada) || 0
-    const nuevaCantidad = Math.min(cantidadTotal, cantidadActual + unidadesSesion)
-    const estadoFase = nuevaCantidad >= cantidadTotal ? 'Completada' : 'En Proceso'
-
     const updateFase = await client.query(`
       UPDATE orden_operario
-      SET "Cantidad_Realizada" = $1, "Estado_Fase" = $2
+      SET "Cantidad_Realizada" = $1,
+          "Estado_Fase" = 'Completada',
+          "Nota_Operario" = $2,
+          "Fecha_Completada" = COALESCE("Fecha_Completada", NOW())
       WHERE "Id_Orden_Operario" = $3
       RETURNING *
-    `, [nuevaCantidad, estadoFase, req.params.id])
+    `, [cantidadTotal, nota, req.params.id])
 
     const progresoOrden = await recalcularProgresoOrden(client, fase.Id_Orden)
 
     await client.query('COMMIT')
     res.json({
-      mensaje: 'Avance registrado',
+      mensaje: 'Fase completada',
       fase: updateFase.rows[0],
       orden: progresoOrden,
     })

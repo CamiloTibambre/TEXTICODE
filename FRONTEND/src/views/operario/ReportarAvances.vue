@@ -90,15 +90,17 @@
               </div>
 
               <div class="oc-body">
-                <div class="oc-nombre">{{ o.nombre }}</div>
+                <div class="oc-nombre">{{ o.producto || o.nombre }}</div>
+                <div v-if="o.producto && o.nombre && o.producto !== o.nombre" class="oc-fase">
+                  Fase: {{ o.nombre }}
+                </div>
 
                 <div class="oc-meta">
                   <div class="oc-meta-item">
-                    <span class="oc-meta-lbl">Prendas</span>
+                    <span class="oc-meta-lbl">Prendas asignadas</span>
                     <span class="oc-meta-val prendas">
-                      <strong>{{ o.unidadesHechas }}</strong>
-                      <span class="sep">/</span>
-                      <span class="tot">{{ o.unidadesTotales }}</span>
+                      <strong>{{ o.unidadesTotales }}</strong>
+                      <span class="tot">prendas</span>
                     </span>
                   </div>
                   <div class="oc-meta-item">
@@ -109,7 +111,7 @@
 
                 <div class="oc-progress">
                   <div class="oc-progress-row">
-                    <span class="oc-progress-lbl">Progreso de fabricación</span>
+                    <span class="oc-progress-lbl">Progreso de la fase</span>
                     <span class="oc-progress-pct" :class="{ 'pct-verde': o.progreso >= 100, 'pct-rojo': o.estado === 'retrasado' }">{{ o.progreso }}%</span>
                   </div>
                   <div class="oc-bar">
@@ -121,13 +123,6 @@
                       }"
                       :style="{ width: o.progreso + '%' }"
                     ></div>
-                  </div>
-                  <div class="oc-bar-labels">
-                    <span>0</span>
-                    <span>{{ Math.round(o.unidadesTotales * 0.25) }}</span>
-                    <span>{{ Math.round(o.unidadesTotales * 0.5) }}</span>
-                    <span>{{ Math.round(o.unidadesTotales * 0.75) }}</span>
-                    <span>{{ o.unidadesTotales }}</span>
                   </div>
                 </div>
 
@@ -158,21 +153,6 @@
         </div>
 
         <div v-else class="historial-list">
-          <div class="hist-summary" :class="{ 'section-visible': mounted }" style="transition-delay: 200ms">
-            <div class="hist-sum-item" :class="{ 'card-visible': mounted }" style="transition-delay: 200ms">
-              <span class="hist-sum-num">{{ historial.length }}</span>
-              <span class="hist-sum-lbl">Reportes enviados</span>
-            </div>
-            <div class="hist-sum-item" :class="{ 'card-visible': mounted }" style="transition-delay: 280ms">
-              <span class="hist-sum-num">{{ totalUnidadesReportadas }}</span>
-              <span class="hist-sum-lbl">Prendas reportadas</span>
-            </div>
-            <div class="hist-sum-item" :class="{ 'card-visible': mounted }" style="transition-delay: 360ms">
-              <span class="hist-sum-num">{{ ordenesUnicas }}</span>
-              <span class="hist-sum-lbl">Órdenes trabajadas</span>
-            </div>
-          </div>
-
           <TransitionGroup name="row" tag="div" class="hist-entries">
             <div v-for="h in historialOrdenado" :key="h.id" class="hist-card">
               <div class="hist-left">
@@ -187,16 +167,7 @@
                 </div>
               </div>
               <div class="hist-right">
-                <div class="hist-unidades">
-                  <span class="hist-uni-num">+{{ h.nuevas }}</span>
-                  <span class="hist-uni-lbl">prendas</span>
-                </div>
-                <div class="hist-pct-wrap">
-                  <div class="hist-pct-bar">
-                    <div class="hist-pct-fill" :style="{ width: h.progreso + '%' }"></div>
-                  </div>
-                  <span class="hist-pct-txt">{{ h.progreso }}%</span>
-                </div>
+                <div class="hist-unidades"><span class="hist-uni-lbl">Completada</span></div>
                 <div class="hist-fecha">{{ h.fecha }}</div>
               </div>
             </div>
@@ -211,7 +182,7 @@
         <div class="modal">
           <div class="modal-header">
             <div>
-              <div class="modal-title">Reportar Progreso</div>
+            <div class="modal-title">Completar fase</div>
               <div class="modal-subtitle">{{ ordenActual?.id }} — {{ ordenActual?.nombre }}</div>
             </div>
             <button class="modal-close" @click="cerrarModal">
@@ -223,39 +194,32 @@
 
           <div class="modal-estado" v-if="ordenActual">
             <div class="modal-estado-item">
-              <span class="modal-estado-lbl">Prendas hechas</span>
-              <span class="modal-estado-val">{{ ordenActual.unidadesHechas }} / {{ ordenActual.unidadesTotales }}</span>
+              <span class="modal-estado-lbl">Fase</span>
+              <span class="modal-estado-val">{{ ordenActual.id }}</span>
             </div>
             <div class="modal-estado-item">
-              <span class="modal-estado-lbl">Progreso actual</span>
-              <span class="modal-estado-val">{{ ordenActual.progreso }}%</span>
+              <span class="modal-estado-lbl">Prendas asignadas</span>
+              <span class="modal-estado-val">{{ ordenActual.unidadesTotales }}</span>
             </div>
             <div class="modal-estado-item">
-              <span class="modal-estado-lbl">Quedan</span>
-              <span class="modal-estado-val orange">{{ ordenActual.unidadesTotales - ordenActual.unidadesHechas }}</span>
+              <span class="modal-estado-lbl">Resultado</span>
+              <span class="modal-estado-val orange">Completada</span>
             </div>
           </div>
 
           <div class="modal-body">
             <div class="form-group">
-              <label class="form-label">Unidades completadas en esta sesión <span class="req">*</span></label>
-              <input v-model.number="reporte.nuevas" type="number" min="1" class="form-input" placeholder="Ej: 10">
-              <span class="form-hint" v-if="ordenActual && reporte.nuevas > 0">
-                Total tras este reporte: {{ Math.min(ordenActual.unidadesHechas + reporte.nuevas, ordenActual.unidadesTotales) }} / {{ ordenActual.unidadesTotales }}
-              </span>
-            </div>
-            <div class="form-group">
               <label class="form-label">Nota <span class="opt">(opcional)</span></label>
-              <textarea v-model="reporte.nota" class="form-textarea" rows="3" placeholder="Describe el avance..."></textarea>
+              <textarea v-model="reporte.nota" class="form-textarea" rows="3" placeholder="Describe cualquier novedad..."></textarea>
             </div>
           </div>
           <div class="modal-footer">
             <button class="btn-cancelar" @click="cerrarModal">Cancelar</button>
-            <button class="btn-enviar" @click="enviarReporte" :disabled="!reporte.nuevas || reporte.nuevas <= 0">
+            <button class="btn-enviar" @click="enviarReporte">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
               </svg>
-              Enviar Reporte
+              Completar fase
             </button>
           </div>
         </div>
@@ -280,10 +244,6 @@ import { ref, computed, onMounted } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useAuthStore } from '../../stores/auth'
 
-// ── SENDGRID ───────────────────────────────────────────────────
-import { useNotificaciones } from '../../composables/useNotificaciones'
-const { notificarEstado } = useNotificaciones()
-
 const auth = useAuthStore()
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
@@ -298,75 +258,64 @@ const mounted      = ref(false)
 const historial = ref([])
 const ordenes   = ref([])
 
-const reporte = ref({ nuevas: 0, nota: '' })
-const historialStorageKey = computed(() => `historial-avances-operario-${auth.idUsuario || 'anon'}`)
+const reporte = ref({ nota: '' })
 
 // ── Helpers ──
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : '' }
 
 function estaVencida(fechaStr) {
   if (!fechaStr || fechaStr === '—') return false
-  return new Date(fechaStr) < new Date()
+  const fecha = new Date(fechaStr)
+  const ahora = new Date()
+  return fecha < new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate())
 }
 
 function estadoLabel(estado) {
   return { 'en-proceso': 'En Proceso', 'completado': 'Completado', 'retrasado': 'Retrasada' }[estado] || estado
 }
 
-// ── Helper: obtener correo del cliente por Id ──────────────────
-async function obtenerCorreoCliente(idCliente) {
-  try {
-    const res  = await fetch(`${BASE}/usuarios/${idCliente}`)
-    if (!res.ok) return null
-    const data = await res.json()
-    return { correo: data.Correo, nombre: data.Nombre_Completo }
-  } catch {
-    return null
-  }
-}
-
 // ── Carga ──
 onMounted(async () => {
   if (!auth.idUsuario) { cargando.value = false; setTimeout(() => { mounted.value = true }, 80); return }
 
-  cargarHistorialLocal()
-
   try {
-    const res  = await fetch(`${BASE}/ordenes/operario/${auth.idUsuario}`)
-    const data = await res.json()
+    const fasesRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`)
+    if (!fasesRes.ok) throw new Error('No se pudieron cargar las fases')
+    const data = await fasesRes.json()
+    let dataHistorial = []
+    try {
+      const historialRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}/historial`)
+      if (historialRes.ok) dataHistorial = await historialRes.json()
+    } catch {
+      // El historial no impide que las fases activas se muestren.
+    }
 
     ordenes.value = data
-      .filter(t => t.Estado !== 'Cancelada')
       .map(t => {
-        const realizadas  = t.Unidades_Realizadas ?? 0
-        const unidades    = t.Unidades ?? t.Cantidad ?? 1
-        const cantidad    = t.Cantidad ?? 1
-        const estado      = t.Estado === 'Completada' ? 'completado'
-                          : t.Estado === 'Retrasada' ? 'retrasado'
-                          : 'en-proceso'
-
-        let progreso = 0
-        if (estado === 'completado') {
-          progreso = 100
-        } else if (unidades > 0 && realizadas > 0) {
-          progreso = Math.min(100, Math.round((realizadas / unidades) * 100))
-        }
+        const completada = t.Estado_Fase === 'Completada'
+        const retrasada = !completada && estaVencida(t.Fecha_Limite)
 
         return {
-          id:              `OP-${String(t.Id_Orden).padStart(3,'0')}`,
-          idReal:          t.Id_Orden,
+          id:              `OP-${String(t.Id_Orden).padStart(3,'0')} · F${t.Numero_Fase}`,
+          idReal:          t.Id_Orden_Operario,
           idCliente:       t.Id_Cliente,
-          nombre:          t.Descripcion,
-          producto:        t.Producto || t.Descripcion,
-          estado,
+          nombre:          t.Descripcion_Fase || t.Descripcion_Orden || 'Sin descripción de fase',
+          producto:        t.Producto || t.Nombre_Orden || t.Descripcion_Orden || `Orden #${t.Id_Orden}`,
+          estado:          completada ? 'completado' : retrasada ? 'retrasado' : 'en-proceso',
           prioridad:       (t.Prioridad || 'Media').toLowerCase(),
-          unidadesHechas:  realizadas,
-          unidadesTotales: cantidad,
-          unidadesAsig:    unidades,
           fechaLimite:     t.Fecha_Limite?.split('T')[0] || '—',
-          progreso,
+          unidadesHechas:  Number(t.Cantidad_Realizada || 0),
+          unidadesTotales: Number(t.Cantidad || 0),
+          progreso:        completada ? 100 : Math.min(100, Math.round((Number(t.Cantidad_Realizada || 0) / Math.max(1, Number(t.Cantidad || 0))) * 100)),
         }
-      })
+      }).sort(ordenarFases)
+    historial.value = dataHistorial.map(t => ({
+      id: t.Id_Orden_Operario,
+      ordenId: t.Id_Orden,
+      orden: `OP-${String(t.Id_Orden).padStart(3, '0')} · F${t.Numero_Fase} — ${t.Producto || t.Descripcion_Fase || ''}`,
+      nota: t.Nota_Operario,
+      fecha: new Date(t.Fecha_Completada || t.updated_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }),
+    }))
   } catch (err) {
     console.error('Error cargando avances:', err)
   } finally {
@@ -378,107 +327,42 @@ onMounted(async () => {
 // ── Computed ──
 const ordenesActivas          = computed(() => ordenes.value.filter(o => o.estado !== 'completado'))
 const historialOrdenado       = computed(() => [...historial.value].reverse())
-const totalUnidadesReportadas = computed(() => historial.value.reduce((acc, h) => acc + h.nuevas, 0))
-const ordenesUnicas           = computed(() => new Set(historial.value.map(h => h.ordenId)).size)
 
 // ── Modal ──
 function abrirModal(o) {
   ordenActual.value = o
-  reporte.value = { nuevas: 0, nota: '' }
+  reporte.value = { nota: '' }
   modalVisible.value = true
 }
 function cerrarModal() { modalVisible.value = false }
 
-function cargarHistorialLocal() {
-  try {
-    const raw = localStorage.getItem(historialStorageKey.value)
-    historial.value = raw ? JSON.parse(raw) : []
-  } catch {
-    historial.value = []
-  }
-}
-
-function guardarHistorialLocal() {
-  localStorage.setItem(historialStorageKey.value, JSON.stringify(historial.value))
-}
-
 // ── Enviar reporte ──
 async function enviarReporte() {
-  if (!reporte.value.nuevas || reporte.value.nuevas <= 0) return
-
   const o = ordenActual.value
-  const nuevasHechas  = Math.min(o.unidadesHechas + reporte.value.nuevas, o.unidadesTotales)
-  const nuevoProgreso = Math.min(100, Math.round((nuevasHechas / o.unidadesAsig) * 100))
-  const nuevoEstado   = nuevasHechas >= o.unidadesTotales
-    ? 'Completada'
-    : (o.estado === 'retrasado' ? 'Retrasada' : 'En Proceso')
 
   try {
-    const res  = await fetch(`${BASE}/ordenes/${o.idReal}`)
-    if (!res.ok) throw new Error(`GET orden falló: ${res.status}`)
-    const data = await res.json()
-
-    const payload = {
-      Id_Cliente:          data.Id_Cliente,
-      Id_Material:         data.Id_Material,
-      Id_Operario:         data.Id_Operario  || null,
-      Producto:            data.Producto     || null,
-      Descripcion:         data.Descripcion,
-      Cantidad:            data.Cantidad,
-      Prioridad:           data.Prioridad,
-      Fecha_Limite:        data.Fecha_Limite?.split('T')[0] || data.Fecha_Limite,
-      Estado:              nuevoEstado,
-      Unidades:            data.Unidades            ?? o.unidadesTotales,
-      Unidades_Realizadas: nuevasHechas,
-    }
-
-    const putRes = await fetch(`${BASE}/ordenes/${o.idReal}`, {
-      method: 'PUT',
+    const putRes = await fetch(`${BASE}/orden-operario/${o.idReal}/completar`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ Nota_Operario: reporte.value.nota }),
     })
-    if (!putRes.ok) throw new Error(`PUT falló: ${putRes.status}`)
-
-    o.unidadesHechas = nuevasHechas
-    o.progreso       = nuevoProgreso
-    if (nuevoEstado === 'Completada') o.estado = 'completado'
-    else if (nuevoEstado === 'Retrasada') o.estado = 'retrasado'
-    else o.estado = 'en-proceso'
-
-    historial.value.push({
-      id:       Date.now(),
-      ordenId:  o.idReal,
-      orden:    `${o.id} — ${o.nombre}`,
-      nuevas:   reporte.value.nuevas,
-      progreso: nuevoProgreso,
-      nota:     reporte.value.nota,
-      fecha:    new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }),
-    })
-    guardarHistorialLocal()
+    if (!putRes.ok) throw new Error(`No se pudo completar la fase: ${putRes.status}`)
+    o.estado = 'completado'
+    historial.value.unshift({ id: o.idReal, ordenId: o.idReal, orden: `${o.id} — ${o.nombre}`, nota: reporte.value.nota, fecha: new Date().toLocaleDateString('es-CO') })
 
     showToast('Reporte enviado correctamente', 'toast-success')
     cerrarModal()
 
     // ── SENDGRID: notificar al cliente solo si la orden se completó ──
-    if (nuevoEstado === 'Completada') {
-      const cliente = await obtenerCorreoCliente(o.idCliente)
-      if (cliente?.correo) {
-        await notificarEstado(
-          {
-            id:            o.idReal,
-            clienteEmail:  cliente.correo,
-            clienteNombre: cliente.nombre,
-            productos:     o.producto,
-          },
-          'Completada'
-        )
-      }
-    }
-
   } catch (err) {
     console.error('Error:', err)
     showToast('Error al enviar el reporte', 'toast-error')
   }
+}
+
+function ordenarFases(a, b) {
+  const grupo = o => o.estado === 'retrasado' ? 0 : o.estado === 'en-proceso' ? 1 : 2
+  return grupo(a) - grupo(b) || new Date(a.fechaLimite || '9999-12-31') - new Date(b.fechaLimite || '9999-12-31')
 }
 
 // ── Toast ──
@@ -564,6 +448,7 @@ function showToast(msg, type = 'toast-success') {
 
 .oc-body    { padding: 16px 18px; }
 .oc-nombre  { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 14px; }
+.oc-fase    { font-size: 12px; color: #6b7280; margin: -9px 0 14px; }
 .oc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 16px; }
 .oc-meta-item { display: flex; flex-direction: column; gap: 3px; }
 .oc-meta-lbl  { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; }
