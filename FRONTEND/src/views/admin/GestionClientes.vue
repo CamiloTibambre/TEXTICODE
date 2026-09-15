@@ -341,7 +341,14 @@ async function cargarDatos() {
         const clienteInfo = mapaClientes[o.Id_Cliente] || {}
         return {
           id: o.Id_Orden,
-          numero: String(o.Id_Orden).padStart(4, '0'),
+          // Número real del comprobante (tabla `comprobantes`), no el de
+          // la orden — deben coincidir con el número que muestra la app
+          // móvil para el mismo comprobante. Si por algún motivo la orden
+          // todavía no tiene comprobante asociado, se cae a un formato
+          // distinguible en vez de mostrar un número de orden ambiguo.
+          numero: comp
+            ? String(comp.Id_Comprobante).padStart(4, '0')
+            : `ORD-${String(o.Id_Orden).padStart(4, '0')}`,
           clienteId: o.Id_Cliente,
           cliente: clienteInfo.nombre || `Cliente #${o.Id_Cliente}`,
           clienteEmail: clienteInfo.email || '—',

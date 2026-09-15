@@ -112,17 +112,27 @@
             Reportes Disponibles
             <span class="count-badge">{{ reportes.length }} reporte{{ reportes.length !== 1 ? 's' : '' }}</span>
           </div>
-          <div class="select-wrapper">
-            <select v-model="tipoFiltro" class="type-select">
-              <option value="">Todos los tipos</option>
-              <option>Ventas</option>
-              <option>Inventario</option>
-              <option>Clientes</option>
-              <option>Producción</option>
-            </select>
-            <svg class="select-arrow" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
-            </svg>
+          <div class="filters-right">
+            <div class="select-wrapper">
+              <select v-model="mesFiltro" class="type-select">
+                <option value="">Todos los períodos</option>
+                <option v-for="key in mesesDisponibles" :key="key" :value="key">{{ mesLabel(key) }}</option>
+              </select>
+              <svg class="select-arrow" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+              </svg>
+            </div>
+            <div class="select-wrapper">
+              <select v-model="tipoFiltro" class="type-select">
+                <option value="">Todos los tipos</option>
+                <option>Pedidos</option>
+                <option>Eficiencia</option>
+                <option>Inventario</option>
+              </select>
+              <svg class="select-arrow" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+              </svg>
+            </div>
           </div>
         </div>
 
@@ -195,13 +205,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import AppSidebar from '../../components/AppSidebar.vue'
-import { getMateriales, getOrdenes, getUsuarios } from '../../services/api.js'
+import { getMateriales, getOrdenes, getUsuarios, getEficienciaOperarios } from '../../services/api.js'
 
 const animVisible = ref(false)
 const toast = ref({ visible: false, msg: '', type: 'success' })
 const tipoFiltro = ref('')
+const mesFiltro = ref('') // '' = todos los períodos
 const hoveredBar = ref(null)
 const meses = ref([])
 const barHeights = ref([])
@@ -209,6 +220,8 @@ const pendingHeights = ref([])
 const ordenesData = ref([])
 const usuariosData = ref([])
 const materialesData = ref([])
+const eficienciaData = ref([])
+const errorEficiencia = ref(false)
 const statsDisplay = reactive({ total: 0, completados: 0, tasa: 0, pendientes: 0 })
 
 const statCards = computed(() => [
@@ -276,6 +289,19 @@ async function cargarDatos() {
     usuariosData.value = Array.isArray(dataUsuarios) ? dataUsuarios : []
     materialesData.value = Array.isArray(dataMateriales) ? dataMateriales : []
 
+    // La eficiencia va en su propio try/catch: requiere API key y es un
+    // endpoint aparte, así que si falla no debe tumbar el resto de la
+    // pantalla (igual que en la app móvil).
+    try {
+      const dataEficiencia = await getEficienciaOperarios()
+      eficienciaData.value = Array.isArray(dataEficiencia) ? dataEficiencia : []
+      errorEficiencia.value = false
+    } catch (e) {
+      console.error('getEficienciaOperarios() falló:', e)
+      eficienciaData.value = []
+      errorEficiencia.value = true
+    }
+
     const total = ordenesData.value.length
     const completados = ordenesData.value.filter(o => o.Estado === 'Completada').length
     const pendientes  = ordenesData.value.filter(o => o.Estado === 'En Proceso').length
@@ -301,13 +327,19 @@ async function cargarDatos() {
       meses.value = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'].map(nombre => ({ nombre, completadas: 0, pendientes: 0 }))
     }
 
-    const clientes   = usuariosData.value.filter(u => (u.Nombre_Rol || u.Rol || '').toLowerCase() === 'cliente').length
     const stockBajo  = materialesData.value.filter(m => Number(m.Stock_Actual) <= Number(m.Stock_Minimo)).length
 
-    reportesData[0].subtitulo = `${completados} órdenes completadas de ${total}`
-    reportesData[1].subtitulo = `${stockBajo} material(es) con stock bajo`
-    reportesData[2].subtitulo = `${clientes} cliente(s) registrado(s)`
-    reportesData[3].subtitulo = `${total} órdenes totales registradas`
+    reportesData[2].subtitulo = errorEficiencia.value
+      ? 'No se pudo cargar la eficiencia'
+      : eficienciaData.value.length === 0
+        ? 'Sin operarios con datos de eficiencia'
+        : `${eficienciaData.value.length} operario(s) evaluado(s)`
+
+    reportesData[3].subtitulo = materialesData.value.length === 0
+      ? 'Sin materiales registrados'
+      : `${materialesData.value.length} material(es) registrado(s) · ${stockBajo} con stock bajo`
+
+    actualizarReportesPorPeriodo()
   } catch {
     mostrarToast('No fue posible cargar los reportes.', 'danger')
   }
@@ -342,38 +374,98 @@ function animateBars() {
 
 const reportesData = reactive([
   {
-    titulo: 'Reporte de Producción', tipo: 'Producción',
+    titulo: 'Reporte de Pedidos Mensuales', tipo: 'Pedidos', subtipo: 'todos',
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
     downloading: false, exporting: false,
     iconPath: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z'
   },
   {
-    titulo: 'Inventario Stock Bajo', tipo: 'Inventario',
+    titulo: 'Reporte de Pedidos Pendientes', tipo: 'Pedidos', subtipo: 'pendientes',
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
     downloading: false, exporting: false,
-    iconPath: 'm21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9'
+    iconPath: 'M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z'
   },
   {
-    titulo: 'Análisis de Clientes', tipo: 'Clientes',
+    titulo: 'Reporte de Eficiencia Operaria', tipo: 'Eficiencia', subtipo: null,
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
     downloading: false, exporting: false,
     iconPath: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z'
   },
   {
-    titulo: 'Resumen de Órdenes', tipo: 'Ventas',
+    titulo: 'Reporte de Inventario', tipo: 'Inventario', subtipo: null,
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
     downloading: false, exporting: false,
-    iconPath: 'M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+    iconPath: 'm21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9'
   },
 ])
 
 const reportes = computed(() =>
   tipoFiltro.value === '' ? reportesData : reportesData.filter(r => r.tipo === tipoFiltro.value)
 )
+
+const mesesNombres = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+
+function mesLabel(key) {
+  const [anio, mes] = key.split('-')
+  const nombre = mesesNombres[parseInt(mes, 10) - 1]
+  return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${anio}`
+}
+
+// Solo se listan meses que realmente tienen al menos una orden con
+// Fecha_Limite registrada — nunca se ofrece un mes sin datos.
+const mesesDisponibles = computed(() => {
+  const claves = new Set()
+  ordenesData.value.forEach(o => {
+    const fecha = o.Fecha_Limite || o.Fecha
+    if (!fecha) return
+    const d = new Date(fecha)
+    if (isNaN(d)) return
+    claves.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  })
+  return Array.from(claves).sort((a, b) => b.localeCompare(a))
+})
+
+const periodoLabel = computed(() => mesFiltro.value ? mesLabel(mesFiltro.value) : 'Todos los períodos')
+
+// Órdenes que corresponden al período elegido (o todas, si no hay filtro).
+// Los reportes basados en pedidos (Producción, Ventas) usan esto tanto
+// para las filas descargables como para su subtítulo/período mostrado.
+function ordenesDelPeriodo() {
+  if (!mesFiltro.value) return ordenesData.value
+  return ordenesData.value.filter(o => {
+    const fecha = o.Fecha_Limite || o.Fecha
+    if (!fecha) return false
+    const d = new Date(fecha)
+    if (isNaN(d)) return false
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    return key === mesFiltro.value
+  })
+}
+
+// Actualiza período y subtítulo de los 2 reportes que dependen del mes
+// elegido (Pedidos Mensuales y Pedidos Pendientes). Eficiencia e
+// Inventario reflejan el estado actual, no un período — igual que en
+// la app móvil.
+function actualizarReportesPorPeriodo() {
+  const filtradas = ordenesDelPeriodo()
+  const pendientes = filtradas.filter(o => o.Estado !== 'Completada')
+
+  reportesData[0].periodo = periodoLabel.value
+  reportesData[0].subtitulo = filtradas.length === 0
+    ? `Sin órdenes registradas · ${periodoLabel.value}`
+    : `${filtradas.length} órdenes registradas · ${periodoLabel.value}`
+
+  reportesData[1].periodo = periodoLabel.value
+  reportesData[1].subtitulo = pendientes.length === 0
+    ? `Sin pedidos pendientes · ${periodoLabel.value}`
+    : `${pendientes.length} pedidos pendientes · ${periodoLabel.value}`
+}
+
+watch(mesFiltro, actualizarReportesPorPeriodo)
 
 // ── DESCARGA PDF CORREGIDA ──
 async function descargar(r) {
@@ -463,7 +555,11 @@ async function descargar(r) {
       'Pendiente':   { bg: [254, 226, 226], fg: [153, 27, 27] },
     }
     const tableW = MR - ML
-    const weightMap = { descripcion: 3.5, cliente: 2, correo: 2.2, material: 2, orden: 0.8, prioridad: 1, fecha_limite: 1.4, estado: 1.3, stock_actual: 1, stock_minimo: 1, categoria: 1.4, telefono: 1.3 }
+    const weightMap = {
+      codigo: 1, producto: 2.6, cliente: 1.8, operario: 1.8, estado: 1.3, progreso: 1,
+      rendimiento: 1.2, prendas_dia: 1.3, unidades_producidas: 1.7, completadas: 1.2, retrasadas: 1.2,
+      material: 2, categoria: 1.4, stock: 1.2, minimo: 1, maximo: 1,
+    }
     const totalWeight = headers.reduce((s, h) => s + (weightMap[h] || 1), 0)
     const colWidths   = headers.map(h => (weightMap[h] || 1) / totalWeight * tableW)
     const headH = 9; const rowH = 8
@@ -811,25 +907,49 @@ function formatearFecha(val) {
   } catch { return String(val) }
 }
 
+function progresoPorcentaje(o) {
+  const total = Number(o.Cantidad) || 0
+  const actual = Number(o.Unidades_Realizadas) || 0
+  if (total <= 0) return 0
+  return Math.round(Math.min(Math.max(actual / total, 0), 1) * 100)
+}
+
 function obtenerFilasReporte(reporte) {
-  if (reporte.tipo === 'Producción' || reporte.tipo === 'Ventas') {
-    return ordenesData.value.map(o => ({
-      orden:       o.Id_Orden,
-      cliente:     o.Cliente,
-      descripcion: o.Descripcion,
-      estado:      o.Estado,
-      prioridad:   o.Prioridad,
-      fecha_limite: formatearFecha(o.Fecha_Limite),
+  if (reporte.tipo === 'Pedidos') {
+    const base = reporte.subtipo === 'pendientes'
+      ? ordenesDelPeriodo().filter(o => o.Estado !== 'Completada')
+      : ordenesDelPeriodo()
+    return base.map(o => ({
+      codigo:   `ORD-${String(o.Id_Orden).padStart(4, '0')}`,
+      producto: o.Producto || o.Descripcion || '—',
+      cliente:  o.Cliente,
+      operario: o.Operario || '—',
+      estado:   o.Estado,
+      progreso: `${progresoPorcentaje(o)}%`,
+    }))
+  }
+  if (reporte.tipo === 'Eficiencia') {
+    return eficienciaData.value.map(op => ({
+      operario:  op.Nombre_Completo,
+      rendimiento: op.rendimiento,
+      prendas_dia: Number(op.prendas_por_dia || 0).toFixed(1),
+      unidades_producidas: op.total_unidades_producidas,
+      completadas: op.ordenes_completadas,
+      retrasadas: op.ordenes_en_retraso,
     }))
   }
   if (reporte.tipo === 'Inventario') {
-    return materialesData.value
-      .filter(m => Number(m.Stock_Actual) <= Number(m.Stock_Minimo))
-      .map(m => ({ material: m.Nombre_Material, stock_actual: m.Stock_Actual, stock_minimo: m.Stock_Minimo, categoria: m.Categoria || '' }))
+    // Igual que en móvil: TODOS los materiales, no solo los de stock
+    // bajo (esa distinción queda para la tarjeta de estadísticas).
+    return materialesData.value.map(m => ({
+      material: m.Nombre_Material,
+      categoria: m.Categoria || '—',
+      stock: `${m.Stock_Actual ?? '—'}${m.Unidad ? ' ' + m.Unidad : ''}`,
+      minimo: m.Stock_Minimo ?? '—',
+      maximo: m.Stock_Maximo ?? '—',
+    }))
   }
-  return usuariosData.value
-    .filter(u => (u.Nombre_Rol || u.Rol || '').toLowerCase() === 'cliente')
-    .map(u => ({ cliente: u.Nombre_Completo || u.Nombre_Usuario, correo: u.Correo, telefono: u.Telefono, estado: u.Estado }))
+  return []
 }
 
 function descargarArchivo(blob, nombre) {
@@ -871,6 +991,7 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
 .title-char { display: inline-block; opacity: 0; transform: translateY(12px); animation: charReveal 0.4s ease forwards; }
 @keyframes charReveal { to { opacity: 1; transform: translateY(0); } }
 .hero-sub { font-size: 13px; color: #6b7280; margin: 4px 0 0 0; }
+.filters-right { display: flex; align-items: center; gap: 10px; }
 .select-wrapper { position: relative; display: inline-flex; align-items: center; }
 .type-select { padding: 9px 36px 9px 14px; border-radius: 10px; border: 1.5px solid #e5e7eb; background: white; font-size: 14px; color: #374151; appearance: none; -webkit-appearance: none; cursor: pointer; min-width: 190px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
 .type-select:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }

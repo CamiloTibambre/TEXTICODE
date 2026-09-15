@@ -26,11 +26,13 @@ router.get('/', async (req, res) => {
 
     const { rows } = await pool.query(`
       SELECT op.*,
-             u."Nombre_Completo" AS "Cliente",
-             m."Nombre_Material" AS "NombreMaterial"
+             u."Nombre_Completo"   AS "Cliente",
+             m."Nombre_Material"   AS "NombreMaterial",
+             opr."Nombre_Completo" AS "Operario"
       FROM orden_produccion op
       INNER JOIN usuario u ON op."Id_Cliente" = u."Id_Usuario"
       INNER JOIN material m ON op."Id_Material" = m."Id_Material"
+      LEFT JOIN usuario opr ON op."Id_Operario" = opr."Id_Usuario"
       ORDER BY op."Fecha_Limite" ASC
     `)
 
@@ -50,11 +52,13 @@ router.get('/operario/:idOperario', async (req, res) => {
 
     const { rows } = await pool.query(`
       SELECT op.*,
-             u."Nombre_Completo" AS "Cliente",
-             m."Nombre_Material" AS "NombreMaterial"
+             u."Nombre_Completo"   AS "Cliente",
+             m."Nombre_Material"   AS "NombreMaterial",
+             opr."Nombre_Completo" AS "Operario"
       FROM orden_produccion op
       INNER JOIN usuario u ON op."Id_Cliente" = u."Id_Usuario"
       INNER JOIN material m ON op."Id_Material" = m."Id_Material"
+      LEFT JOIN usuario opr ON op."Id_Operario" = opr."Id_Usuario"
       WHERE op."Id_Operario" = $1
       ORDER BY op."Fecha_Limite" ASC
     `, [req.params.idOperario])
@@ -71,11 +75,13 @@ router.get('/cliente/:idCliente', async (req, res) => {
 
     const { rows } = await pool.query(`
       SELECT op.*,
-             u."Nombre_Completo" AS "Cliente",
-             m."Nombre_Material" AS "NombreMaterial"
+             u."Nombre_Completo"   AS "Cliente",
+             m."Nombre_Material"   AS "NombreMaterial",
+             opr."Nombre_Completo" AS "Operario"
       FROM orden_produccion op
       INNER JOIN usuario u ON op."Id_Cliente" = u."Id_Usuario"
       INNER JOIN material m ON op."Id_Material" = m."Id_Material"
+      LEFT JOIN usuario opr ON op."Id_Operario" = opr."Id_Usuario"
       WHERE op."Id_Cliente" = $1
       ORDER BY op."Fecha_Limite" ASC
     `, [req.params.idCliente])
@@ -92,11 +98,13 @@ router.get('/:id', async (req, res) => {
 
     const { rows } = await pool.query(`
       SELECT op.*,
-             u."Nombre_Completo" AS "Cliente",
-             m."Nombre_Material" AS "NombreMaterial"
+             u."Nombre_Completo"   AS "Cliente",
+             m."Nombre_Material"   AS "NombreMaterial",
+             opr."Nombre_Completo" AS "Operario"
       FROM orden_produccion op
       INNER JOIN usuario u ON op."Id_Cliente" = u."Id_Usuario"
       INNER JOIN material m ON op."Id_Material" = m."Id_Material"
+      LEFT JOIN usuario opr ON op."Id_Operario" = opr."Id_Usuario"
       WHERE op."Id_Orden" = $1
     `, [req.params.id])
     if (rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada' })
@@ -116,11 +124,13 @@ router.get('/estado/:estado', async (req, res) => {
 
     const { rows } = await pool.query(`
       SELECT op.*,
-             u."Nombre_Completo" AS "Cliente",
-             m."Nombre_Material" AS "NombreMaterial"
+             u."Nombre_Completo"   AS "Cliente",
+             m."Nombre_Material"   AS "NombreMaterial",
+             opr."Nombre_Completo" AS "Operario"
       FROM orden_produccion op
       INNER JOIN usuario u ON op."Id_Cliente" = u."Id_Usuario"
       INNER JOIN material m ON op."Id_Material" = m."Id_Material"
+      LEFT JOIN usuario opr ON op."Id_Operario" = opr."Id_Usuario"
       WHERE op."Estado" = $1
     `, [req.params.estado])
     res.json(rows)
