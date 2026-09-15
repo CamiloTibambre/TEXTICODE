@@ -103,19 +103,12 @@
 
         <Transition name="err">
           <div v-if="error" class="error-msg">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
             </svg>
             {{ error }}
           </div>
         </Transition>
-
-        <button class="btn-google" @click="iniciarSesionGoogle" :disabled="loading" type="button">
-          <span class="google-icon">G</span>
-          Continuar con Google
-        </button>
-
-        <div class="login-separator"><span>o ingresa con contraseña</span></div>
 
         <button class="btn-login" @click="iniciarSesion" :disabled="loading" :class="{ loading }">
           <span class="btn-shimmer"></span>
@@ -131,6 +124,20 @@
             </svg>
             Verificando...
           </span>
+        </button>
+
+        <div class="login-separator"><span>o continúa con</span></div>
+
+        <button class="btn-google" @click="iniciarSesionGoogle" :disabled="loading" type="button">
+          <img
+            v-if="!googleLogoError"
+            src="/img/google_logo.png"
+            alt="Google"
+            class="google-icon-img"
+            @error="googleLogoError = true"
+          >
+          <span v-else class="google-icon">G</span>
+          Continuar con Google
         </button>
       </div>
 
@@ -270,7 +277,8 @@ const cardVisible  = ref(false)
 const shakeError   = ref(false)
 const toastMsg     = ref('')
 const toastType    = ref('success')
-const fabricCanvas = ref(null)
+const fabricCanvas   = ref(null)
+const googleLogoError = ref(false)
 
 const showRecuperar    = ref(false)
 const recuperarEmail   = ref('')
@@ -619,7 +627,7 @@ h1.visible { opacity: 1; transform: none; }
 
 .input-wrap {
   display: flex; align-items: center;
-  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  border: 1.5px solid #e5e7eb; border-radius: 12px;
   background: #f9fafb;
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
@@ -652,7 +660,7 @@ h1.visible { opacity: 1; transform: none; }
   display: flex; align-items: center; gap: 6px;
   color: #dc2626; font-size: 12.5px; font-weight: 500;
   margin-bottom: 13px; padding: 9px 12px;
-  background: #fef2f2; border-radius: 8px; border: 1px solid #fecaca;
+  background: #fef2f2; border-radius: 12px; border: 1px solid #fecaca;
 }
 .err-enter-active { transition: all 0.22s ease; }
 .err-leave-active { transition: all 0.18s ease; }
@@ -676,20 +684,21 @@ h1.visible { opacity: 1; transform: none; }
 
 
 .btn-google {
-  width: 100%; padding: 12px; margin: 0 0 12px;
-  background: white; color: #1f2937; border: 1.5px solid #e5e7eb; border-radius: 10px;
-  font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 12px; margin: 12px 0 0;
+  background: white; color: #1f2937; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
   transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
 }
 .btn-google:hover:not(:disabled) { transform: translateY(-1px); border-color: #93c5fd; box-shadow: 0 8px 22px rgba(37,99,235,0.12); }
-.google-icon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: white; background: linear-gradient(135deg,#4285f4,#34a853); font-weight: 900; }
-.login-separator { display: flex; align-items: center; gap: 10px; color: #9ca3af; font-size: 11px; margin: 2px 0 12px; }
+.google-icon-img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+.google-icon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: white; background: linear-gradient(135deg,#4285f4,#34a853); font-weight: 900; font-size: 12px; flex-shrink: 0; }
+.login-separator { display: flex; align-items: center; gap: 10px; color: #9ca3af; font-size: 11px; margin: 16px 0 0; }
 .login-separator::before, .login-separator::after { content: ''; height: 1px; background: #e5e7eb; flex: 1; }
 
 .btn-login {
   width: 100%; padding: 13px; margin-top: 4px;
   background: linear-gradient(135deg, #1f3a52 0%, #2d5478 100%);
-  color: white; border: none; border-radius: 10px;
+  color: white; border: none; border-radius: 12px;
   font-size: 14.5px; font-weight: 600; cursor: pointer;
   transition: all 0.22s; position: relative; overflow: hidden;
 }

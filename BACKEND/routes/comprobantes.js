@@ -8,13 +8,16 @@ router.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT c.*,
-             u."Nombre_Completo" AS "Usuario",
-             op."Descripcion"   AS "Orden_Descripcion",
-             op."Estado"        AS "Orden_Estado",
-             op."Id_Cliente"
+             u."Nombre_Completo"   AS "Usuario",
+             op."Producto"         AS "Orden_Producto",
+             op."Descripcion"      AS "Orden_Descripcion",
+             op."Estado"           AS "Orden_Estado",
+             op."Id_Cliente",
+             cli."Nombre_Completo" AS "Cliente"
       FROM comprobantes c
       INNER JOIN usuario u          ON c."Id_Usuario" = u."Id_Usuario"
       INNER JOIN orden_produccion op ON c."Id_Orden"   = op."Id_Orden"
+      INNER JOIN usuario cli         ON op."Id_Cliente" = cli."Id_Usuario"
       ORDER BY c."Fecha_Limite" DESC
     `)
     res.json(rows)
@@ -28,13 +31,16 @@ router.get('/cliente/:idCliente', async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT c.*,
-             u."Nombre_Completo" AS "Usuario",
-             op."Descripcion"   AS "Orden_Descripcion",
-             op."Estado"        AS "Orden_Estado",
-             op."Id_Cliente"
+             u."Nombre_Completo"   AS "Usuario",
+             op."Producto"         AS "Orden_Producto",
+             op."Descripcion"      AS "Orden_Descripcion",
+             op."Estado"           AS "Orden_Estado",
+             op."Id_Cliente",
+             cli."Nombre_Completo" AS "Cliente"
       FROM comprobantes c
       INNER JOIN usuario u          ON c."Id_Usuario" = u."Id_Usuario"
       INNER JOIN orden_produccion op ON c."Id_Orden"   = op."Id_Orden"
+      INNER JOIN usuario cli         ON op."Id_Cliente" = cli."Id_Usuario"
       WHERE op."Id_Cliente" = $1
       ORDER BY c."Fecha_Limite" DESC
     `, [req.params.idCliente])
@@ -49,11 +55,16 @@ router.get('/:id', async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT c.*,
-             u."Nombre_Completo" AS "Usuario",
-             op."Descripcion"   AS "Orden_Descripcion"
+             u."Nombre_Completo"   AS "Usuario",
+             op."Producto"         AS "Orden_Producto",
+             op."Descripcion"      AS "Orden_Descripcion",
+             op."Estado"           AS "Orden_Estado",
+             op."Id_Cliente",
+             cli."Nombre_Completo" AS "Cliente"
       FROM comprobantes c
       INNER JOIN usuario u          ON c."Id_Usuario" = u."Id_Usuario"
       INNER JOIN orden_produccion op ON c."Id_Orden"   = op."Id_Orden"
+      INNER JOIN usuario cli         ON op."Id_Cliente" = cli."Id_Usuario"
       WHERE c."Id_Comprobante" = $1
     `, [req.params.id])
 
