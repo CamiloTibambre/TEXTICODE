@@ -12,6 +12,7 @@ router.get('/', async (req, res) => {
              op."Producto"         AS "Orden_Producto",
              op."Descripcion"      AS "Orden_Descripcion",
              op."Estado"           AS "Orden_Estado",
+             op."Cantidad"         AS "Orden_Cantidad",
              op."Id_Cliente",
              cli."Nombre_Completo" AS "Cliente"
       FROM comprobantes c
@@ -35,6 +36,7 @@ router.get('/cliente/:idCliente', async (req, res) => {
              op."Producto"         AS "Orden_Producto",
              op."Descripcion"      AS "Orden_Descripcion",
              op."Estado"           AS "Orden_Estado",
+             op."Cantidad"         AS "Orden_Cantidad",
              op."Id_Cliente",
              cli."Nombre_Completo" AS "Cliente"
       FROM comprobantes c
@@ -59,6 +61,7 @@ router.get('/:id', async (req, res) => {
              op."Producto"         AS "Orden_Producto",
              op."Descripcion"      AS "Orden_Descripcion",
              op."Estado"           AS "Orden_Estado",
+             op."Cantidad"         AS "Orden_Cantidad",
              op."Id_Cliente",
              cli."Nombre_Completo" AS "Cliente"
       FROM comprobantes c

@@ -69,7 +69,7 @@
             <div v-for="(mes, idx) in meses" :key="mes.nombre" class="bar-col"
               @mouseenter="hoveredBar = idx" @mouseleave="hoveredBar = null">
               <div class="bar-wrapper">
-                <div class="bar-total" :class="{ 'bar-hovered': hoveredBar === idx }"
+                <div class="bar-total" :class="{ 'bar-hovered': hoveredBar === idx, 'bar-empty': (mes.completadas + mes.pendientes) === 0 }"
                   :style="{ height: barHeights[idx] + 'px' }">
                   <div class="bar-pending-strip" :style="{ height: pendingHeights[idx] + 'px' }"></div>
 
@@ -138,10 +138,10 @@
 
         <div class="report-list-wrap">
           <TransitionGroup name="report" tag="div" class="report-list">
-            <div v-for="(r, idx) in reportes" :key="r.titulo" class="report-row"
+            <div v-for="(r, idx) in reportes" :key="r.titulo" class="report-card"
               :class="{ 'report-downloading': r.downloading, 'report-exporting': r.exporting }"
               :style="{ animationDelay: `${idx * 45}ms` }">
-              <div class="report-left">
+              <div class="report-card-top">
                 <div class="report-icon-wrap">
                   <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="report-svg">
                     <path stroke-linecap="round" stroke-linejoin="round" :d="r.iconPath"/>
@@ -149,30 +149,38 @@
                 </div>
                 <div class="report-info">
                   <div class="report-title">{{ r.titulo }}</div>
-                  <div class="report-meta">
-                    <span>Período: {{ r.periodo }}</span>
-                    <span>Generado: {{ r.generado }}</span>
-                    <span v-if="r.subtitulo" class="meta-subtitulo">{{ r.subtitulo }}</span>
-                  </div>
+                  <div class="report-subtitle">{{ r.subtitulo }}</div>
                 </div>
-              </div>
-              <div class="report-right">
                 <span class="badge-generado">Generado</span>
-                <button class="action-btn view-btn" @click="descargar(r)" :disabled="r.downloading" :title="r.downloading ? 'Descargando...' : 'Descargar PDF'">
-                  <svg v-if="!r.downloading" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16" style="display:block">
+              </div>
+
+              <div class="report-actions">
+                <button class="rep-btn rep-btn-ver" @click="verReporte(r)" :disabled="r.viendo" :title="r.viendo ? 'Generando vista previa...' : 'Ver'">
+                  <svg v-if="!r.viendo" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="13" height="13" style="display:block">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                  </svg>
+                  <svg v-else class="spinner" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="13" height="13" style="display:block">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                  </svg>
+                  <span>Ver</span>
+                </button>
+                <button class="rep-btn rep-btn-pdf" @click="descargar(r)" :disabled="r.downloading" :title="r.downloading ? 'Descargando...' : 'Descargar PDF'">
+                  <svg v-if="!r.downloading" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="13" height="13" style="display:block">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                   </svg>
-                  <svg v-else class="spinner" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16" style="display:block">
+                  <svg v-else class="spinner" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="13" height="13" style="display:block">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
                   </svg>
+                  <span>PDF</span>
                 </button>
-                <button class="action-btn download-btn" @click="exportarExcel(r)" :disabled="r.exporting" :title="r.exporting ? 'Exportando...' : 'Exportar a Excel'">
-                  <svg v-if="!r.exporting" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16" style="display:block">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                <button class="rep-btn rep-btn-excel" @click="exportarExcel(r)" :disabled="r.exporting" :title="r.exporting ? 'Exportando...' : 'Exportar a Excel'">
+                  <svg v-if="!r.exporting" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="13" height="13" style="display:block">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.375 19.5h17.25c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v12.75c0 .621.504 1.125 1.125 1.125Z M3.75 9.75h16.5M3.75 14.25h16.5M9 4.5v15M15 4.5v15"/>
                   </svg>
-                  <svg v-else class="spinner" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="16" height="16" style="display:block">
+                  <svg v-else class="spinner" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="13" height="13" style="display:block">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
                   </svg>
+                  <span>Excel</span>
                 </button>
               </div>
             </div>
@@ -222,6 +230,7 @@ const usuariosData = ref([])
 const materialesData = ref([])
 const eficienciaData = ref([])
 const errorEficiencia = ref(false)
+const stockBajoRef = ref(0)
 const statsDisplay = reactive({ total: 0, completados: 0, tasa: 0, pendientes: 0 })
 
 const statCards = computed(() => [
@@ -328,16 +337,7 @@ async function cargarDatos() {
     }
 
     const stockBajo  = materialesData.value.filter(m => Number(m.Stock_Actual) <= Number(m.Stock_Minimo)).length
-
-    reportesData[2].subtitulo = errorEficiencia.value
-      ? 'No se pudo cargar la eficiencia'
-      : eficienciaData.value.length === 0
-        ? 'Sin operarios con datos de eficiencia'
-        : `${eficienciaData.value.length} operario(s) evaluado(s)`
-
-    reportesData[3].subtitulo = materialesData.value.length === 0
-      ? 'Sin materiales registrados'
-      : `${materialesData.value.length} material(es) registrado(s) · ${stockBajo} con stock bajo`
+    stockBajoRef.value = stockBajo
 
     actualizarReportesPorPeriodo()
   } catch {
@@ -377,29 +377,29 @@ const reportesData = reactive([
     titulo: 'Reporte de Pedidos Mensuales', tipo: 'Pedidos', subtipo: 'todos',
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
-    downloading: false, exporting: false,
-    iconPath: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z'
+    downloading: false, exporting: false, viendo: false,
+    iconPath: 'M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z'
   },
   {
     titulo: 'Reporte de Pedidos Pendientes', tipo: 'Pedidos', subtipo: 'pendientes',
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
-    downloading: false, exporting: false,
-    iconPath: 'M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z'
+    downloading: false, exporting: false, viendo: false,
+    iconPath: 'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z'
   },
   {
     titulo: 'Reporte de Eficiencia Operaria', tipo: 'Eficiencia', subtipo: null,
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
-    downloading: false, exporting: false,
-    iconPath: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z'
+    downloading: false, exporting: false, viendo: false,
+    iconPath: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z'
   },
   {
     titulo: 'Reporte de Inventario', tipo: 'Inventario', subtipo: null,
     periodo: new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' }),
     generado: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(), subtitulo: 'Cargando...',
-    downloading: false, exporting: false,
-    iconPath: 'm21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9'
+    downloading: false, exporting: false, viendo: false,
+    iconPath: 'M3.375 19.5h17.25c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v12.75c0 .621.504 1.125 1.125 1.125Z M3.75 9.75h16.5M3.75 14.25h16.5M9 4.5v15M15 4.5v15'
   },
 ])
 
@@ -446,10 +446,12 @@ function ordenesDelPeriodo() {
   })
 }
 
-// Actualiza período y subtítulo de los 2 reportes que dependen del mes
-// elegido (Pedidos Mensuales y Pedidos Pendientes). Eficiencia e
-// Inventario reflejan el estado actual, no un período — igual que en
-// la app móvil.
+// Actualiza el subtítulo de los 4 reportes cada vez que cambia el mes
+// filtrado, para que el comportamiento sea consistente entre todos
+// ellos (antes solo Pedidos Mensuales/Pendientes reflejaban el
+// período elegido, y Eficiencia/Inventario se quedaban con el texto
+// de la carga inicial, dando la sensación de que "no cambiaban" o
+// de que su información desaparecía al filtrar).
 function actualizarReportesPorPeriodo() {
   const filtradas = ordenesDelPeriodo()
   const pendientes = filtradas.filter(o => o.Estado !== 'Completada')
@@ -463,25 +465,47 @@ function actualizarReportesPorPeriodo() {
   reportesData[1].subtitulo = pendientes.length === 0
     ? `Sin pedidos pendientes · ${periodoLabel.value}`
     : `${pendientes.length} pedidos pendientes · ${periodoLabel.value}`
+
+  // Eficiencia e Inventario NO se recalculan por período: la API de
+  // eficiencia (getEficienciaOperarios) no acepta ningún parámetro de
+  // fecha y devuelve un acumulado histórico ya calculado en el
+  // servidor, y MaterialItem no tiene ningún campo de fecha (el stock
+  // es una foto del momento). obtenerFilasReporte() nunca filtra estas
+  // dos por mesFiltro, así que etiquetarlas con el mes elegido sería
+  // mentir en el propio PDF/Excel exportado (imprime "Período: <mes>"
+  // con filas que en realidad son de todo el histórico). Por eso su
+  // `periodo` se deja fijo en "Datos actuales", igual que ya hace la
+  // app móvil (_tablaEficiencia/_tablaInventario no usan _mesFiltro).
+  reportesData[2].periodo = 'Datos actuales'
+  reportesData[2].subtitulo = errorEficiencia.value
+    ? `No se pudo cargar la eficiencia · Datos actuales`
+    : eficienciaData.value.length === 0
+      ? `Sin operarios con datos de eficiencia · Datos actuales`
+      : `${eficienciaData.value.length} operario(s) evaluado(s) · Datos actuales`
+
+  reportesData[3].periodo = 'Datos actuales'
+  reportesData[3].subtitulo = materialesData.value.length === 0
+    ? `Sin materiales registrados · Datos actuales`
+    : `${materialesData.value.length} material(es) registrado(s) · ${stockBajoRef.value} con stock bajo`
 }
 
 watch(mesFiltro, actualizarReportesPorPeriodo)
 
-// ── DESCARGA PDF CORREGIDA ──
-async function descargar(r) {
-  r.downloading = true
-  try {
-    // Cargar jsPDF de forma segura
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script')
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-        s.onload = resolve
-        s.onerror = () => reject(new Error('No se pudo cargar jsPDF'))
-        document.head.appendChild(s)
-      })
-    }
+// ── CONSTRUCCIÓN DEL PDF (compartida entre "Ver" y "Descargar") ──
+async function cargarJsPdf() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script')
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+      s.onload = resolve
+      s.onerror = () => reject(new Error('No se pudo cargar jsPDF'))
+      document.head.appendChild(s)
+    })
+  }
+}
 
+async function generarDocPdf(r) {
+    await cargarJsPdf()
     const { jsPDF } = window.jspdf
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     const rows    = obtenerFilasReporte(r)
@@ -629,6 +653,13 @@ async function descargar(r) {
       doc.text(`Página ${p} de ${totalPages}`, MR, pH - 5, { align: 'right' })
     }
 
+    return doc
+}
+
+async function descargar(r) {
+  r.downloading = true
+  try {
+    const doc = await generarDocPdf(r)
     doc.save(`${slugify(r.titulo)}.pdf`)
     mostrarToast(`"${r.titulo}" descargado como PDF`, 'success')
   } catch (err) {
@@ -636,6 +667,22 @@ async function descargar(r) {
     mostrarToast(`Error al generar PDF: ${err.message}`, 'danger')
   } finally {
     r.downloading = false
+  }
+}
+
+// ── VER (botón del ojito) — misma idea que la vista previa de la app
+// móvil: genera el PDF y lo abre para visualizarlo, sin descargarlo. ──
+async function verReporte(r) {
+  r.viendo = true
+  try {
+    const doc = await generarDocPdf(r)
+    const blobUrl = doc.output('bloburl')
+    window.open(blobUrl, '_blank')
+  } catch (err) {
+    console.error('Error vista previa PDF:', err)
+    mostrarToast(`Error al generar la vista previa: ${err.message}`, 'danger')
+  } finally {
+    r.viendo = false
   }
 }
 
@@ -1031,7 +1078,9 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
   overflow: visible; /* CLAVE: permite que el tooltip salga del área */
 }
 .bar-total.bar-hovered { background: #2d5580; transform: scaleX(1.05); }
-.bar-pending-strip { width: 100%; background: #94a3b8; border-radius: 0 0 6px 6px; min-height: 0; }
+.bar-total.bar-empty { background: #e2e8f0; } /* mes sin pedidos: gris de la web, no azul */
+.bar-total.bar-empty.bar-hovered { background: #cbd5e1; }
+.bar-pending-strip { width: 100%; background: #94a3b8; border-radius: 0; min-height: 0; }
 
 /* ── TOOLTIP CORREGIDO ──
    Por defecto aparece arriba (.bar-tooltip).
@@ -1083,28 +1132,44 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
 .dot-dark   { background: #1f3a52; }
 .dot-orange { background: #94a3b8; }
 
-/* REPORT LIST */
+/* REPORT LIST — mismo diseño que la card de la app móvil */
 .report-list-wrap { padding: 16px 20px; border-radius: 0 0 14px 14px; overflow: hidden; }
 .report-list { display: flex; flex-direction: column; gap: 12px; }
-.report-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border: 1px solid #e5e7eb; border-radius: 10px; background: white; transition: border-color 0.2s, box-shadow 0.2s; animation: rowSlideIn 0.35s ease both; }
-.report-row:hover { border-color: #d1d5db; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.report-card {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px; border: 1px solid #e5e7eb; border-radius: 18px;
+  background: #f8fafc; transition: border-color 0.2s, box-shadow 0.2s;
+  animation: rowSlideIn 0.35s ease both;
+}
+.report-card:hover { border-color: #d1d5db; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .report-downloading { border-color: #bfdbfe !important; background: #eff6ff !important; }
 .report-exporting   { border-color: #bbf7d0 !important; background: #f0fdf4 !important; }
 @keyframes rowSlideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
-.report-left { display: flex; align-items: center; gap: 14px; }
-.report-icon-wrap { width: 38px; height: 38px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s, transform 0.2s; }
-.report-row:hover .report-icon-wrap { background: #e5e7eb; transform: scale(1.08); }
-.report-svg { width: 20px; height: 20px; color: #1f3a52; }
-.report-title { font-size: 15px; font-weight: 600; color: #111827; margin-bottom: 4px; }
-.report-meta { font-size: 12px; color: #9ca3af; display: flex; gap: 16px; flex-wrap: wrap; }
-.report-right { display: flex; align-items: center; gap: 10px; }
-.badge-generado { background: #dcfce7; color: #16a34a; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; }
 
-.action-btn { width: 32px; height: 32px; border-radius: 7px; border: none; background: #1f3a52; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: all 0.15s; }
-.action-btn svg { pointer-events: none; filter: drop-shadow(0 0 0.3px rgba(255,255,255,0.4)); }
-.action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.view-btn:hover:not(:disabled)     { background: #2d5580; transform: scale(1.07); }
-.download-btn:hover:not(:disabled) { background: #16a34a; transform: scale(1.07); }
+.report-card-top { display: flex; align-items: flex-start; gap: 10px; }
+.report-icon-wrap { width: 36px; height: 36px; background: #f3f4f6; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.report-svg { width: 17px; height: 17px; color: #1f3a52; }
+.report-info { flex: 1; min-width: 0; }
+.report-title { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+.report-subtitle { font-size: 11px; color: #9ca3af; }
+.badge-generado { flex-shrink: 0; background: #dcfce7; color: #16a34a; font-size: 9px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+
+/* Fila de 3 botones (Ver / PDF / Excel) — alineados a la derecha, sin ocupar todo el ancho */
+.report-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.rep-btn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 8px 12px; border-radius: 10px; border: 1px solid transparent;
+  font-size: 11px; font-weight: 600; cursor: pointer; transition: opacity 0.15s, transform 0.1s, background 0.15s;
+}
+.rep-btn svg { pointer-events: none; flex-shrink: 0; }
+.rep-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.rep-btn:active:not(:disabled) { transform: scale(0.97); }
+.rep-btn-ver   { background: #1f3a52; border-color: #1f3a52; color: #fff; }
+.rep-btn-ver:hover:not(:disabled)   { background: #2d5580; }
+.rep-btn-pdf   { background: #fef2f2; border-color: rgba(220,38,38,0.4); color: #dc2626; }
+.rep-btn-pdf:hover:not(:disabled)   { background: #fee2e2; }
+.rep-btn-excel { background: #dcfce7; border-color: rgba(22,163,74,0.4); color: #16a34a; }
+.rep-btn-excel:hover:not(:disabled) { background: #bbf7d0; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner { animation: spin 0.8s linear infinite; }
