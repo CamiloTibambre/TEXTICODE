@@ -215,7 +215,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import AppSidebar from '../../components/AppSidebar.vue'
-import { getMateriales, getOrdenes, getUsuarios, getEficienciaOperarios } from '../../services/api.js'
+import { getMateriales, getOrdenes, getUsuarios, getEficienciaOperarios, getHistorialInventario } from '../../services/api.js'
 
 const animVisible = ref(false)
 const toast = ref({ visible: false, msg: '', type: 'success' })
@@ -301,15 +301,7 @@ async function cargarDatos() {
     // La eficiencia va en su propio try/catch: requiere API key y es un
     // endpoint aparte, así que si falla no debe tumbar el resto de la
     // pantalla (igual que en la app móvil).
-    try {
-      const dataEficiencia = await getEficienciaOperarios()
-      eficienciaData.value = Array.isArray(dataEficiencia) ? dataEficiencia : []
-      errorEficiencia.value = false
-    } catch (e) {
-      console.error('getEficienciaOperarios() falló:', e)
-      eficienciaData.value = []
-      errorEficiencia.value = true
-    }
+    await actualizarEficienciaPorPeriodo()
 
     const total = ordenesData.value.length
     const completados = ordenesData.value.filter(o => o.Estado === 'Completada').length
@@ -340,9 +332,41 @@ async function cargarDatos() {
     stockBajoRef.value = stockBajo
 
     actualizarReportesPorPeriodo()
+    actualizarInventarioPorPeriodo()
   } catch {
     mostrarToast('No fue posible cargar los reportes.', 'danger')
   }
+}
+
+// Carga la eficiencia de operarios. Sin periodo trae el acumulado
+// histórico completo (comportamiento de siempre); con periodo
+// ('YYYY-MM') el backend filtra las órdenes por Fecha_Limite dentro
+// de ese mes, así que las métricas (prendas/día, completadas,
+// retrasadas, rendimiento) quedan calculadas solo con lo que
+// realmente pasó ese mes — ya no es un texto que cambia sobre datos
+// que no se movieron.
+async function cargarEficiencia(periodo) {
+  try {
+    const dataEficiencia = await getEficienciaOperarios(periodo ? { periodo } : {})
+    eficienciaData.value = Array.isArray(dataEficiencia) ? dataEficiencia : []
+    errorEficiencia.value = false
+  } catch (e) {
+    console.error('getEficienciaOperarios() falló:', e)
+    eficienciaData.value = []
+    errorEficiencia.value = true
+  }
+}
+
+async function actualizarEficienciaPorPeriodo() {
+  reportesData[2].periodo = mesFiltro.value ? periodoLabel.value : 'Datos actuales'
+  reportesData[2].subtitulo = 'Cargando...'
+  await cargarEficiencia(mesFiltro.value || undefined)
+  const sufijo = mesFiltro.value ? periodoLabel.value : 'Datos actuales'
+  reportesData[2].subtitulo = errorEficiencia.value
+    ? `No se pudo cargar la eficiencia · ${sufijo}`
+    : eficienciaData.value.length === 0
+      ? `Sin operarios con datos de eficiencia · ${sufijo}`
+      : `${eficienciaData.value.length} operario(s) evaluado(s) · ${sufijo}`
 }
 
 function animateBars() {
@@ -465,31 +489,53 @@ function actualizarReportesPorPeriodo() {
   reportesData[1].subtitulo = pendientes.length === 0
     ? `Sin pedidos pendientes · ${periodoLabel.value}`
     : `${pendientes.length} pedidos pendientes · ${periodoLabel.value}`
-
-  // Eficiencia e Inventario NO se recalculan por período: la API de
-  // eficiencia (getEficienciaOperarios) no acepta ningún parámetro de
-  // fecha y devuelve un acumulado histórico ya calculado en el
-  // servidor, y MaterialItem no tiene ningún campo de fecha (el stock
-  // es una foto del momento). obtenerFilasReporte() nunca filtra estas
-  // dos por mesFiltro, así que etiquetarlas con el mes elegido sería
-  // mentir en el propio PDF/Excel exportado (imprime "Período: <mes>"
-  // con filas que en realidad son de todo el histórico). Por eso su
-  // `periodo` se deja fijo en "Datos actuales", igual que ya hace la
-  // app móvil (_tablaEficiencia/_tablaInventario no usan _mesFiltro).
-  reportesData[2].periodo = 'Datos actuales'
-  reportesData[2].subtitulo = errorEficiencia.value
-    ? `No se pudo cargar la eficiencia · Datos actuales`
-    : eficienciaData.value.length === 0
-      ? `Sin operarios con datos de eficiencia · Datos actuales`
-      : `${eficienciaData.value.length} operario(s) evaluado(s) · Datos actuales`
-
-  reportesData[3].periodo = 'Datos actuales'
-  reportesData[3].subtitulo = materialesData.value.length === 0
-    ? `Sin materiales registrados · Datos actuales`
-    : `${materialesData.value.length} material(es) registrado(s) · ${stockBajoRef.value} con stock bajo`
 }
 
-watch(mesFiltro, actualizarReportesPorPeriodo)
+// Inventario SÍ se recalcula por período ahora, a partir de la
+// bitácora de movimientos (material_movimiento). Si no hay mes
+// filtrado, usa el stock actual (foto del momento, como antes). Si
+// hay un mes elegido, le pide al backend el inventario reconstruido
+// al final de ese mes (GET /materiales/reportes/historial). Solo hay
+// datos reales desde que se activó la migración en adelante — un mes
+// anterior a eso legítimamente no tiene nada que mostrar, y así se le
+// indica al usuario en vez de fingir que sí hay información.
+const inventarioHistoricoData = ref([])
+const cargandoInventarioHistorico = ref(false)
+const errorInventarioHistorico = ref(false)
+
+async function actualizarInventarioPorPeriodo() {
+  if (!mesFiltro.value) {
+    reportesData[3].periodo = 'Datos actuales'
+    reportesData[3].subtitulo = materialesData.value.length === 0
+      ? `Sin materiales registrados · Datos actuales`
+      : `${materialesData.value.length} material(es) registrado(s) · ${stockBajoRef.value} con stock bajo`
+    return
+  }
+
+  cargandoInventarioHistorico.value = true
+  errorInventarioHistorico.value = false
+  reportesData[3].periodo = periodoLabel.value
+  reportesData[3].subtitulo = 'Cargando...'
+  try {
+    inventarioHistoricoData.value = await getHistorialInventario(mesFiltro.value)
+    reportesData[3].subtitulo = inventarioHistoricoData.value.length === 0
+      ? `Sin datos de inventario para este período · ${periodoLabel.value}`
+      : `${inventarioHistoricoData.value.length} material(es) registrado(s) · ${periodoLabel.value}`
+  } catch (e) {
+    console.error('getHistorialInventario() falló:', e)
+    inventarioHistoricoData.value = []
+    errorInventarioHistorico.value = true
+    reportesData[3].subtitulo = `No se pudo cargar el inventario de ese período · ${periodoLabel.value}`
+  } finally {
+    cargandoInventarioHistorico.value = false
+  }
+}
+
+watch(mesFiltro, () => {
+  actualizarReportesPorPeriodo()
+  actualizarInventarioPorPeriodo()
+  actualizarEficienciaPorPeriodo()
+})
 
 // ── CONSTRUCCIÓN DEL PDF (compartida entre "Ver" y "Descargar") ──
 async function cargarJsPdf() {
@@ -576,7 +622,7 @@ async function generarDocPdf(r) {
     const estadoColor = {
       'Completada': { bg: [209, 250, 229], fg: [6, 95, 70] },
       'En Proceso':  { bg: [254, 243, 199], fg: [146, 64, 14] },
-      'Pendiente':   { bg: [254, 226, 226], fg: [153, 27, 27] },
+      'Retrasada':   { bg: [254, 226, 226], fg: [153, 27, 27] },
     }
     const tableW = MR - ML
     const weightMap = {
@@ -844,7 +890,7 @@ async function exportarExcel(r) {
 
     // Filas de datos
     const estadoXfMap = {
-      'Completada': [9,12], 'En Proceso': [10,13], 'Pendiente': [11,14]
+      'Completada': [9,12], 'En Proceso': [10,13], 'Retrasada': [11,14]
     }
     rows.forEach((rowData, ri) => {
       const rowNum = 5 + ri
@@ -986,9 +1032,13 @@ function obtenerFilasReporte(reporte) {
     }))
   }
   if (reporte.tipo === 'Inventario') {
-    // Igual que en móvil: TODOS los materiales, no solo los de stock
-    // bajo (esa distinción queda para la tarjeta de estadísticas).
-    return materialesData.value.map(m => ({
+    // Igual que en móvil cuando no hay período elegido: TODOS los
+    // materiales, no solo los de stock bajo (esa distinción queda
+    // para la tarjeta de estadísticas). Con período elegido, se usa
+    // el inventario reconstruido para ese mes (misma forma de fila,
+    // porque el backend devuelve las mismas columnas).
+    const fuente = mesFiltro.value ? inventarioHistoricoData.value : materialesData.value
+    return fuente.map(m => ({
       material: m.Nombre_Material,
       categoria: m.Categoria || '—',
       stock: `${m.Stock_Actual ?? '—'}${m.Unidad ? ' ' + m.Unidad : ''}`,

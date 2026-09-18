@@ -577,6 +577,11 @@ const ordenes    = ref([])
 const clientes   = ref([])
 const materiales = ref([])
 const operarios  = ref([])
+// Cuánto tenía reservado la orden que se está editando de cada
+// material (Id_Material -> cantidad), usado para validar stock en
+// guardar() sin bloquear una re-edición válida. Vacío al crear una
+// orden nueva (no hay nada reservado todavía).
+const materialesOriginalesOrden = ref({})
 
 const materialParaAgregar = ref('')
 const operarioParaFase    = ref('')
@@ -768,6 +773,11 @@ async function abrirModal(o) {
   materialParaAgregar.value  = ''
   operarioParaFase.value     = ''
   descripcionFaseNueva.value = ''
+  // Cuánto tenía reservado ESTA orden de cada material, antes de
+  // editar. Se usa al validar stock en guardar(): esa cantidad se
+  // devuelve al inventario antes de volver a descontarse, así que no
+  // debe contar como "no disponible" al reeditar la misma orden.
+  materialesOriginalesOrden.value = {}
 
   if (o) {
     let matsActuales = []
@@ -779,6 +789,9 @@ async function abrirModal(o) {
         Nombre_Material: m.Nombre_Material ?? m.Nombre_Producto ?? '—',
         cantidad:        m.Cantidad_Usada ?? 1,
       }))
+      matsActuales.forEach(m => {
+        materialesOriginalesOrden.value[m.Id_Material] = m.cantidad
+      })
     } catch { matsActuales = [] }
     try {
       const fases = await getFasesDeOrden(o.Id_Orden)
@@ -834,6 +847,23 @@ async function guardar() {
     return
   }
 
+  // Validar stock ANTES de tocar la orden — así, si algo no alcanza,
+  // no queda una orden a medias (creada/editada pero sin sus
+  // materiales). Al editar, lo que esta misma orden ya tenía reservado
+  // (materialesOriginalesOrden) se devuelve antes de reasignar, así
+  // que cuenta como disponible; el backend sigue validando de nuevo
+  // con el dato real al momento de guardar (esto es solo para avisar
+  // antes, no reemplaza esa validación).
+  for (const mat of form.value.materiales_seleccionados) {
+    const infoMaterial = materiales.value.find(m => m.Id_Material === mat.Id_Material)
+    const yaReservado  = materialesOriginalesOrden.value[mat.Id_Material] || 0
+    const disponible   = (Number(infoMaterial?.Stock_Actual) || 0) + yaReservado
+    if (mat.cantidad > disponible) {
+      errorGuardar.value = `No hay suficiente stock de "${mat.Nombre_Material}": disponible ${disponible}${infoMaterial?.Unidad ? ' ' + infoMaterial.Unidad : ''}, se necesitan ${mat.cantidad}.`
+      return
+    }
+  }
+
   guardando.value    = true
   errorGuardar.value = ''
 
@@ -882,15 +912,20 @@ async function guardar() {
     } catch { /* continuar */ }
 
     for (const mat of form.value.materiales_seleccionados) {
-      try {
-        await agregarMaterialOrden({
-          Id_Orden:       idOrden,
-          Id_Producto:    mat.Id_Material,
-          Cantidad_Usada: mat.cantidad || 1,
-        })
-      } catch (e) {
-        console.warn('No se pudo agregar material a orden_material:', e.message)
-      }
+      // Antes esto tenía un try/catch que solo hacía console.warn: con
+      // la validación de stock que ahora hace el backend (POST
+      // /orden-material bloquea si no hay suficiente), tragarse el
+      // error aquí dejaría la orden "guardada" sin avisar que el
+      // material nunca se asignó ni se descontó. Se deja que el error
+      // suba al catch de guardar() de más abajo, que sí lo muestra en
+      // errorGuardar. (La orden en sí ya quedó creada/actualizada antes
+      // de este punto — eso no se revierte; si esto te preocupa, se
+      // puede mover la validación de stock a ANTES de crear la orden.)
+      await agregarMaterialOrden({
+        Id_Orden:       idOrden,
+        Id_Producto:    mat.Id_Material,
+        Cantidad_Usada: mat.cantidad || 1,
+      })
     }
 
     // ── Fases: reemplazar las existentes ──
