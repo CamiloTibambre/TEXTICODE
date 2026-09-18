@@ -159,9 +159,26 @@ router.get('/operarios/:id', async (req, res) => {
 
 // ─────────────────────────────────────────
 // GET /api/eficiencia/operarios
+// Acepta ?periodo=YYYY-MM (opcional). Cuando viene, las métricas se
+// calculan SOLO con las órdenes cuya Fecha_Limite cae en ese mes — el
+// mismo campo y el mismo criterio que ya usa Reportes.vue para decidir
+// a qué mes pertenece un pedido, así que el selector de período de
+// Reportes queda consistente en las 4 tarjetas.
+//
+// El filtro va en el ON del LEFT JOIN (no en el WHERE): así un
+// operario sin ninguna orden en ese mes sigue apareciendo en la lista
+// con sus métricas en 0, en vez de desaparecer del reporte.
 // ─────────────────────────────────────────
 router.get('/operarios', async (req, res) => {
-  const { rendimiento, estado, limite } = req.query
+  const { rendimiento, estado, limite, periodo } = req.query
+
+  let inicioPeriodo = null
+  if (periodo) {
+    if (!/^\d{4}-\d{2}$/.test(periodo)) {
+      return res.status(400).json({ ok: false, mensaje: 'periodo inválido, use el formato YYYY-MM' })
+    }
+    inicioPeriodo = `${periodo}-01`
+  }
 
   try {
     await actualizarOrdenesRetrasadas()
@@ -198,11 +215,19 @@ router.get('/operarios', async (req, res) => {
 
       FROM usuario u
       INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-      LEFT JOIN orden_produccion op ON op."Id_Operario" = u."Id_Usuario"
+      LEFT JOIN orden_produccion op
+        ON op."Id_Operario" = u."Id_Usuario"
+       AND (
+             $1::date IS NULL
+             OR (
+                  op."Fecha_Limite" >= $1::date
+                  AND op."Fecha_Limite" < ($1::date + INTERVAL '1 month')
+                )
+           )
       WHERE u."Estado" = 'activo'
       GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario"
       ORDER BY prendas_por_dia DESC
-    `)
+    `, [inicioPeriodo])
 
     let resultado = rows
 
@@ -237,7 +262,7 @@ router.get('/operarios', async (req, res) => {
     res.json({
       ok: true,
       total: resultado.length,
-      filtros_aplicados: { rendimiento: rendimiento || null, estado: estado || null, limite: limite || null },
+      filtros_aplicados: { rendimiento: rendimiento || null, estado: estado || null, limite: limite || null, periodo: periodo || null },
       data: resultado
     })
   } catch (err) {

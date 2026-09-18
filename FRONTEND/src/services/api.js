@@ -44,6 +44,11 @@ export const getStockBajo        = ()         => request('/materiales/alertas/st
 export const crearMaterial       = (body)     => request('/materiales', { method: 'POST', body: JSON.stringify(body) })
 export const actualizarMaterial  = (id, body) => request(`/materiales/${id}`, { method: 'PUT', body: JSON.stringify(body) })
 export const eliminarMaterial    = (id)       => request(`/materiales/${id}`, { method: 'DELETE' })
+// Inventario reconstruido al final de un período (formato 'YYYY-MM'),
+// a partir de la bitácora de movimientos. Solo devuelve datos reales
+// desde el momento en que se activó el historial — no inventa stock
+// para meses anteriores a esa fecha.
+export const getHistorialInventario = (periodo) => request(`/materiales/reportes/historial?periodo=${encodeURIComponent(periodo)}`)
 
 // ── ÓRDENES DE PRODUCCIÓN ─────────────────────────────────
 export const getOrdenes           = ()         => request('/ordenes')
@@ -95,6 +100,7 @@ export async function getEficienciaOperarios(filtros = {}) {
   if (filtros.rendimiento) params.append('rendimiento', filtros.rendimiento)
   if (filtros.estado)      params.append('estado',      filtros.estado)
   if (filtros.limite)      params.append('limite',      filtros.limite)
+  if (filtros.periodo)     params.append('periodo',     filtros.periodo)
   const query = params.toString() ? `?${params}` : ''
   const json = await requestWithKey(`/eficiencia/operarios${query}`)
   return json.data
