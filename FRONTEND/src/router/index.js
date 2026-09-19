@@ -31,9 +31,9 @@ const routes = [
   { path: '/cliente/cuenta',   name: 'ClienteCuenta',   component: () => import('../views/cliente/CuentaPersonal.vue'),   meta: { rol: 'cliente' } },
   { path: '/cliente/pedidos',  name: 'ClientePedidos',  component: () => import('../views/cliente/PedidosEntregas.vue'),  meta: { rol: 'cliente' } },
   { path: '/cliente/soporte',  name: 'ClienteSoporte',  component: () => import('../views/cliente/CentroSoporte.vue'),    meta: { rol: 'cliente' } },
-  { path: '/cliente/google-calendar', name: 'ClienteGoogleCalendar', component: () => import('../views/GoogleCalendarView.vue'), meta: { rol: 'cliente' } },
   { path: '/cliente/alertas', name: 'ClienteAlertas', component: () => import('../views/cliente/AlertasMateriales.vue'), meta: { rol: 'cliente' } },
-
+  { path: '/cliente/google-calendar', name: 'ClienteGoogleCalendar', component: () => import('../views/GoogleCalendarView.vue'), meta: { rol: 'cliente' } },
+ 
   // 404
   { path: '/:pathMatch(.*)*', redirect: '/' }
 ]
