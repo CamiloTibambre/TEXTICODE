@@ -8,6 +8,10 @@ const toPositiveInt = (value) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null
 }
 
+// Progreso en dos niveles:
+//  1) por fase: operarios completados / operarios asignados a esa fase
+//  2) por orden: promedio del avance de las fases DISTINTAS
+// Una fase compartida solo llega a 100% cuando todos sus operarios completan.
 async function recalcularProgresoOrden(client, idOrden) {
   const ordenResult = await client.query(
     'SELECT "Cantidad" FROM orden_produccion WHERE "Id_Orden" = $1',
@@ -28,24 +32,29 @@ async function recalcularProgresoOrden(client, idOrden) {
   }
 
   const fasesResult = await client.query(`
+    WITH fases AS (
+      SELECT
+        "Numero_Fase",
+        COUNT(*) FILTER (WHERE "Estado_Fase" = 'Completada')::numeric / COUNT(*) AS avance
+      FROM orden_operario
+      WHERE "Id_Orden" = $1
+      GROUP BY "Numero_Fase"
+    )
     SELECT
-      COUNT(*)::int AS "Total_Fases",
-      COALESCE(
-        SUM(LEAST(GREATEST("Cantidad_Realizada", 0), $2)::numeric / $2),
-        0
-      ) AS "Suma_Progreso_Fases"
-    FROM orden_operario
-    WHERE "Id_Orden" = $1
-  `, [idOrden, cantidadTotal])
+      COUNT(*)::int             AS "Total_Fases",
+      COALESCE(AVG(avance), 0)  AS "Progreso",
+      COALESCE(MIN(avance), 0)  AS "Avance_Min"
+    FROM fases
+  `, [idOrden])
 
   const totalFases = Number(fasesResult.rows[0].Total_Fases) || 0
-  const sumaProgresoFases = Number(fasesResult.rows[0].Suma_Progreso_Fases) || 0
-  const progreso = totalFases === 0 ? 0 : sumaProgresoFases / totalFases
-  const unidadesRealizadas = Math.min(
-    cantidadTotal,
-    Math.max(0, Math.round(progreso * cantidadTotal))
-  )
-  const estado = unidadesRealizadas >= cantidadTotal ? 'Completada' : 'En Proceso'
+  const progreso = Number(fasesResult.rows[0].Progreso) || 0
+  const todasCompletas = totalFases > 0 && Number(fasesResult.rows[0].Avance_Min) >= 1
+
+  const unidadesRealizadas = todasCompletas
+    ? cantidadTotal
+    : Math.min(cantidadTotal, Math.max(0, Math.round(progreso * cantidadTotal)))
+  const estado = todasCompletas ? 'Completada' : 'En Proceso'
 
   await client.query(`
     UPDATE orden_produccion
@@ -56,7 +65,8 @@ async function recalcularProgresoOrden(client, idOrden) {
   return { unidadesRealizadas, estado, progreso }
 }
 
-// POST crear fase/operario para una orden
+// POST crear fase/operario para una orden.
+// Varios operarios pueden compartir el mismo Numero_Fase.
 router.post('/', async (req, res) => {
   const { Id_Orden, Id_Operario, Numero_Fase, Descripcion_Fase } = req.body
   const idOrden = toPositiveInt(Id_Orden)
@@ -67,20 +77,30 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Faltan campos obligatorios' })
   }
 
+  const client = await pool.connect()
   try {
-    const { rows } = await pool.query(`
+    await client.query('BEGIN')
+
+    const { rows } = await client.query(`
       INSERT INTO orden_operario
         ("Id_Orden", "Id_Operario", "Numero_Fase", "Descripcion_Fase")
       VALUES ($1, $2, $3, $4)
       RETURNING *
     `, [idOrden, idOperario, numeroFase, Descripcion_Fase || null])
 
+    // Una fase nueva (o un operario nuevo en una fase) cambia el avance.
+    await recalcularProgresoOrden(client, idOrden)
+
+    await client.query('COMMIT')
     res.status(201).json(rows[0])
   } catch (err) {
+    await client.query('ROLLBACK')
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'Ya existe una fase con ese número en la orden' })
+      return res.status(409).json({ error: 'Ese operario ya está asignado a esa fase en la orden' })
     }
     res.status(500).json({ error: err.message })
+  } finally {
+    client.release()
   }
 })
 
@@ -183,14 +203,17 @@ router.put('/:id', async (req, res) => {
     const current = currentResult.rows[0]
     let numeroFaseForUpdate = numeroFase
     if (numeroFase && numeroFase !== current.Numero_Fase) {
+      // Solo hay conflicto real si ESTE MISMO operario ya tiene ese número de
+      // fase en la orden. Otros operarios en esa fase = fase compartida (válido).
       const conflictResult = await client.query(`
         SELECT *
         FROM orden_operario
         WHERE "Id_Orden" = $1
           AND "Numero_Fase" = $2
-          AND "Id_Orden_Operario" <> $3
+          AND "Id_Operario" = $3
+          AND "Id_Orden_Operario" <> $4
         FOR UPDATE
-      `, [current.Id_Orden, numeroFase, req.params.id])
+      `, [current.Id_Orden, numeroFase, current.Id_Operario, req.params.id])
 
       if (conflictResult.rows.length > 0) {
         const conflict = conflictResult.rows[0]
@@ -220,12 +243,15 @@ router.put('/:id', async (req, res) => {
       RETURNING *
     `, [numeroFaseForUpdate, Descripcion_Fase, req.params.id])
 
+    // Cambiar el número de fase puede agrupar/desagrupar operarios.
+    await recalcularProgresoOrden(client, current.Id_Orden)
+
     await client.query('COMMIT')
     res.json(rows[0])
   } catch (err) {
     await client.query('ROLLBACK')
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'Ya existe una fase con ese número en la orden' })
+      return res.status(409).json({ error: 'Ese operario ya está asignado a esa fase en la orden' })
     }
     res.status(500).json({ error: err.message })
   } finally {
@@ -235,16 +261,29 @@ router.put('/:id', async (req, res) => {
 
 // DELETE quitar fase de una orden
 router.delete('/:id', async (req, res) => {
+  const client = await pool.connect()
   try {
-    const { rowCount } = await pool.query(
-      'DELETE FROM orden_operario WHERE "Id_Orden_Operario" = $1',
+    await client.query('BEGIN')
+
+    const { rows } = await client.query(
+      'DELETE FROM orden_operario WHERE "Id_Orden_Operario" = $1 RETURNING "Id_Orden"',
       [req.params.id]
     )
 
-    if (rowCount === 0) return res.status(404).json({ error: 'Fase no encontrada' })
+    if (rows.length === 0) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Fase no encontrada' })
+    }
+
+    await recalcularProgresoOrden(client, rows[0].Id_Orden)
+
+    await client.query('COMMIT')
     res.json({ mensaje: 'Fase eliminada de la orden' })
   } catch (err) {
+    await client.query('ROLLBACK')
     res.status(500).json({ error: err.message })
+  } finally {
+    client.release()
   }
 })
 
@@ -272,6 +311,23 @@ router.patch('/:id/completar', async (req, res) => {
 
     const fase = faseResult.rows[0]
     const cantidadTotal = Number(fase.Cantidad) || 0
+
+    // Operarios que comparten esta misma fase (incluido el actual).
+    const companerosResult = await client.query(`
+      SELECT "Id_Orden_Operario"
+      FROM orden_operario
+      WHERE "Id_Orden" = $1 AND "Numero_Fase" = $2
+      ORDER BY "Id_Orden_Operario" ASC
+    `, [fase.Id_Orden, fase.Numero_Fase])
+
+    const n = companerosResult.rows.length || 1
+    const indice = Math.max(
+      0,
+      companerosResult.rows.findIndex(r => Number(r.Id_Orden_Operario) === Number(fase.Id_Orden_Operario))
+    )
+    // Su parte de la fase: reparto equitativo; el resto va a los primeros.
+    const cuota = Math.floor(cantidadTotal / n) + (indice < cantidadTotal % n ? 1 : 0)
+
     const updateFase = await client.query(`
       UPDATE orden_operario
       SET "Cantidad_Realizada" = $1,
@@ -280,7 +336,7 @@ router.patch('/:id/completar', async (req, res) => {
           "Fecha_Completada" = COALESCE("Fecha_Completada", NOW())
       WHERE "Id_Orden_Operario" = $3
       RETURNING *
-    `, [cantidadTotal, nota, req.params.id])
+    `, [cuota, nota, req.params.id])
 
     const progresoOrden = await recalcularProgresoOrden(client, fase.Id_Orden)
 
@@ -299,4 +355,3 @@ router.patch('/:id/completar', async (req, res) => {
 })
 
 export default router
-
