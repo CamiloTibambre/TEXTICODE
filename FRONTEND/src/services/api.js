@@ -28,6 +28,8 @@ async function requestWithKey(url, options = {}) {
   if (!res.ok) throw new Error(data.mensaje || data.error || 'Error en la API')
   return data
 }
+// ── MATERIALES POR CLIENTE (vista de Alertas) ─────────────
+export const getMaterialesPorCliente = (idCliente) => request(`/practica/clientes/${idCliente}/materiales`)
 
 // ── USUARIOS ──────────────────────────────────────────────
 export const getUsuarios        = ()         => request('/usuarios')
