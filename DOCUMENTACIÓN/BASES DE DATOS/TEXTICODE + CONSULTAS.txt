@@ -1,0 +1,265 @@
+CREATE TABLE rol (
+    Id_Rol INT AUTO_INCREMENT PRIMARY KEY,
+    Nombre_Rol VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE Usuario (
+    Id_Usuario INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador único del usuario',
+    Id_Rol INT NOT NULL COMMENT 'Rol asignado al usuario (clave foránea)',
+	Nombre_Completo VARCHAR(100) NOT NULL COMMENT 'Nombre completo del usuario',
+	Nombre_Usuario VARCHAR(50) NOT NULL UNIQUE COMMENT 'Nombre de usuario para iniciar sesión',
+	Correo VARCHAR(120) NOT NULL UNIQUE COMMENT 'Correo electrónico del usuario',
+	Telefono VARCHAR(20) COMMENT 'Número de teléfono del usuario',
+	Direccion VARCHAR(150) COMMENT 'Dirección de residencia del usuario',
+    Estado ENUM('activo','inactivo') NOT NULL DEFAULT 'activo' COMMENT 'Usuarios dispobibles',
+	Contrasena VARCHAR(255) NOT NULL COMMENT 'Contraseña del usuario (almacenada encriptada)',
+
+    FOREIGN KEY (Id_Rol) REFERENCES Rol(Id_Rol)
+    ON DELETE CASCADE ON UPDATE CASCADE 
+
+)
+COMMENT = 'Tabla que almacena los usuarios del sistema y su rol asociado';
+
+
+CREATE TABLE Material (
+    Id_Producto INT AUTO_INCREMENT PRIMARY KEY
+        COMMENT 'Identificador único del producto',
+
+    Nombre_Producto VARCHAR(100) NOT NULL UNIQUE
+        COMMENT 'Nombre del producto',
+
+    Categoria VARCHAR(80) NOT NULL
+        COMMENT 'Categoría del producto',
+
+    Stock_Actual INT NOT NULL DEFAULT 0
+        COMMENT 'Cantidad actual disponible en inventario',
+
+    Unidad VARCHAR(30) NOT NULL
+        COMMENT 'Unidad de medida del producto (metros, unidades, etc.)',
+
+    Stock_Minimo INT NOT NULL DEFAULT 0
+        COMMENT 'No puede ser menor a 0',
+
+    Stock_Maximo INT NOT NULL DEFAULT 0
+        COMMENT 'Cantidad máxima permitida en inventario',
+
+    Fecha DATETIME DEFAULT CURRENT_TIMESTAMP
+        COMMENT 'Fecha de generación del comprobante. Debe ser actual.',
+
+    Nombre_Rol VARCHAR(100) NOT NULL
+        COMMENT 'Cliente asociado al producto',
+
+    CHECK (Stock_Minimo >= 0),
+
+    FOREIGN KEY (Nombre_Rol) REFERENCES rol (Nombre_Rol)
+
+) COMMENT = 'Tabla que almacena los productos registrados en el sistema';
+
+CREATE TABLE Orden_Produccion (
+    Id_Orden INT AUTO_INCREMENT PRIMARY KEY
+        COMMENT 'Identificador único de la orden de producción',
+
+    Nombre_Cliente INT NOT NULL
+        COMMENT 'Cliente que solicita la orden',
+
+    Id_Producto INT NOT NULL
+        COMMENT 'Producto a fabricar',
+
+    Cantidad INT NOT NULL
+        COMMENT 'Cantidad a producir',
+       
+
+          Materiales VARCHAR (100) NOT NULL
+        COMMENT 'Materiales asignados para la produccion',
+
+    Nombre_Operador INT NOT NULL
+        COMMENT 'Operador asignado a la orden',
+
+    Prioridad ENUM('Baja', 'Media', 'Alta') NOT NULL DEFAULT 'Media'
+        COMMENT 'Nivel de prioridad',
+
+    Fecha_Limite DATE NOT NULL 
+        COMMENT 'La fecha no puede ser anterior al dia vigente',
+    
+    Descripcion VARCHAR (100) NOT NULL
+        COMMENT 'Descripcion del producto',
+
+    Estado ENUM('En Proceso', 'Completada', 'Cancelada') NOT NULL DEFAULT 'En Proceso' 	
+        COMMENT 'Estado de la orden'
+    
+ 	CHECK (Cantidad >= 0)
+)
+COMMENT='Tabla que almacena las órdenes de producción';
+
+
+
+CREATE TABLE Comprobantes (
+    Id_Comprobante INT PRIMARY KEY AUTO_INCREMENT 
+        COMMENT 'Identificador único del comprobante.',
+
+    Nombre_Rol VARCHAR(100)
+        COMMENT 'Persona que crea el comprobante',
+
+    Id_Producto INT NOT NULL 
+        COMMENT 'Referencia lógica al pedido asociado al comprobante.',
+                                                                                            
+    Estado ENUM('Entregado', 'Pendiente') 
+        NOT NULL DEFAULT 'Pendiente'
+        COMMENT 'Estado del comprobante',
+
+    Id_Orden INT 
+        COMMENT 'Numero de orden',
+
+    Fecha_Limite DATE 
+        COMMENT 'Fecha de generación del comprobante. No debe ser pasada.',
+
+    FOREIGN KEY (Nombre_Rol) REFERENCES rol (Nombre_Rol),
+    FOREIGN KEY (Id_Orden) REFERENCES Orden_Produccion (Id_Orden),
+    FOREIGN KEY (Id_Producto) REFERENCES Material (Id_Producto)
+
+) COMMENT='Tabla que gestiona los comprobantes generados en el sistema.';
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+
+24 EJEMPLOS APLICADOS
+
+
+
+INSERT BASE
+
+Roles
+
+INSERT INTO rol (Nombre_Rol) VALUES
+('Administrador'),
+('Operador'),
+('Cliente');
+
+
+Usuarios
+
+INSERT INTO Usuario 
+(Id_Rol, Nombre_Completo, Nombre_Usuario, Correo, Telefono, Direccion, Estado, Contrasena)
+VALUES
+(1, 'Kevin Montenegro', 'kevin', 'kevin@email.com', '300000000', 'Colombia', 'activo', '123'),
+(2, 'Ana Torres', 'ana', 'ana@email.com', '301000000', 'Colombia', 'activo', '123');
+
+
+
+INNER JOIN / JOIN
+
+
+SELECT u.Nombre_Completo, r.Nombre_Rol
+FROM Usuario u
+JOIN rol r ON u.Id_Rol = r.Id_Rol;
+
+
+SELECT c.Id_Comprobante, m.Nombre_Producto
+FROM Comprobantes c
+JOIN Material m ON c.Id_Producto = m.Id_Producto;
+
+
+WHERE
+
+SELECT * FROM Material
+WHERE Categoria = 'Tela';
+
+
+SELECT * FROM Usuario
+WHERE Estado = 'activo';
+
+
+GROUP BY
+
+SELECT Categoria, COUNT(*) AS total_materiales
+FROM Material
+GROUP BY Categoria;
+
+
+SELECT Id_Producto, SUM(Cantidad) AS total_producido
+FROM Orden_Produccion
+GROUP BY Id_Producto;
+
+
+ORDER BY
+
+SELECT * FROM Material
+ORDER BY Stock_Actual DESC;
+
+SELECT * FROM Usuario
+ORDER BY Nombre_Completo ASC;
+
+COUNT
+
+SELECT COUNT(*) AS total_usuarios FROM Usuario;
+
+
+SELECT COUNT(*) AS total_ordenes FROM Orden_Produccion;
+
+
+AVG
+
+SELECT AVG(Stock_Actual) AS promedio_stock FROM Material;
+
+
+SELECT AVG(Cantidad) AS promedio_produccion FROM Orden_Produccion;
+
+
+SUM
+
+SELECT SUM(Stock_Actual) AS total_stock FROM Material;
+
+
+SELECT SUM(Cantidad) AS total_prendas FROM Orden_Produccion;
+
+
+UPDATE / SET
+
+UPDATE Material
+SET Stock_Actual = 600
+WHERE Id_Producto = 1;
+
+
+UPDATE Usuario
+SET Estado = 'inactivo'
+WHERE Id_Usuario = 2;
+
+
+LIMIT
+
+SELECT * FROM Material
+LIMIT 3;
+
+
+SELECT * FROM Usuario
+LIMIT 2;
+
+
+DISTINCT
+
+SELECT DISTINCT Categoria FROM Material;
+
+
+SELECT DISTINCT Estado FROM Usuario;
+
+
+MIN / MAX
+
+SELECT MIN(Stock_Actual) AS stock_minimo FROM Material;
+
+
+SELECT MAX(Cantidad) AS produccion_maxima FROM Orden_Produccion;
+
+
+-----------------------------------------------------------------------------------------------------
+
+Consulta completa (JOIN + GROUP BY)
+
+SELECT 
+    r.Nombre_Rol,
+    COUNT(u.Id_Usuario) AS total_usuarios
+FROM rol r
+JOIN Usuario u ON r.Id_Rol = u.Id_Rol
+GROUP BY r.Nombre_Rol;
+

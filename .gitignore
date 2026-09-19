@@ -1,6 +1,7 @@
 # Variables de entorno
 .env
 texticode-api/.env
+texticode-vue/.env
 
 # Dependencias y build
 node_modules

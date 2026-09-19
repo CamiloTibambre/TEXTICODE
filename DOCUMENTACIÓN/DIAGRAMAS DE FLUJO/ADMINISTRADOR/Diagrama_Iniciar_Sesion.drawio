@@ -1,0 +1,190 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="rsGHt9bAOCRE32eYsB7C">
+    <mxGraphModel dx="4120" dy="2352" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-3" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" value="INICIO" vertex="1">
+          <mxGeometry height="60" width="100" x="375" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-5" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El usuario accede a la pantalla&amp;nbsp;&lt;div&gt;de inicio de sesion del sistema&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="340" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-7" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Eñ sistema muestra el formulario&amp;nbsp;&lt;div&gt;con campos de correo y contraseña&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="230" x="310" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-9" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-11" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El usuario escribe su correo&amp;nbsp;&lt;div&gt;y su contraseña&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="190" x="330" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Puede ver / ocultar clave&amp;nbsp;" vertex="1">
+          <mxGeometry height="60" width="120" x="635" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-13" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El usuario hace click en&lt;div&gt;&amp;nbsp;&quot;iniciar sesion&quot;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="340" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-15" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-14" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-18" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-17" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-12" parent="1" style="rhombus;whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;" value="¿Hay campos vacios?" vertex="1">
+          <mxGeometry height="80" width="150" x="350" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Muestra mensaje: completa todos los campos y sacude el formulario" vertex="1">
+          <mxGeometry height="60" width="220" x="560" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-16" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Si" vertex="1">
+          <mxGeometry height="30" width="60" x="490" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-22" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-21" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El sistema verifica las credenciales&lt;div&gt;con la base de datos&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="230" x="310" y="880" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-19" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="No" vertex="1">
+          <mxGeometry height="30" width="60" x="410" y="800" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-20" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-17" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.555;entryY=1.073;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" target="rA3Zr5-iBR_8r6be7IOp-14" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="910" />
+            </Array>
+            <mxPoint x="635" y="890" as="sourcePoint" />
+            <mxPoint x="685" y="840" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-24" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-23" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-27" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-26" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-21" parent="1" style="rhombus;whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;" value="¿Las credenciales son correctas?" vertex="1">
+          <mxGeometry height="80" width="230" x="310" y="1010" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-23" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Muestra error:&amp;nbsp;&lt;div&gt;credenciales incorrectas y sacude el formulario&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="135" x="40" y="1020" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-25" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="No" vertex="1">
+          <mxGeometry height="30" width="60" x="260" y="1030" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-31" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-26" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-30" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-26" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El sistema muestra un mensaje&lt;div&gt;&quot;Bienvenido, [Nombre de usuario]&quot;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="230" x="310" y="1180" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-28" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Si" vertex="1">
+          <mxGeometry height="30" width="60" x="400" y="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-29" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-26" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;endFill=0;startArrow=classic;startFill=1;" target="rA3Zr5-iBR_8r6be7IOp-23" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="110" y="1210" />
+            </Array>
+            <mxPoint x="40" y="1190" as="sourcePoint" />
+            <mxPoint x="90" y="1140" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-33" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-32" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-30" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El sistema identifica el rol&lt;div&gt;del usuario autenticado&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="340" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-35" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-34" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-37" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-36" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-41" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-40" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-32" parent="1" style="rhombus;whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;" value="¿Cual es el rol del usuario?" vertex="1">
+          <mxGeometry height="80" width="190" x="330" y="1450" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-34" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Redirige a&amp;nbsp;&lt;div&gt;Admin / usuarios&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="95" y="1460" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-36" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Redirige a&amp;nbsp;&lt;div&gt;cliente / cuenta&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="635" y="1460" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-38" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Administrador" vertex="1">
+          <mxGeometry height="30" width="60" x="240" y="1450" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-39" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;rotation=0;" value="Cliente" vertex="1">
+          <mxGeometry height="30" width="60" x="530" y="1450" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-40" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Redirige a&amp;nbsp;&lt;div&gt;Operario / cuenta&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="365" y="1620" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-42" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Operario" vertex="1">
+          <mxGeometry height="30" width="60" x="430" y="1540" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-49" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-43" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="rA3Zr5-iBR_8r6be7IOp-48" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-43" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El usuario entra al modulo&amp;nbsp;&lt;div&gt;correspondiente a su rol&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="340" y="1760" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-45" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="rA3Zr5-iBR_8r6be7IOp-34" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="155" y="1730" />
+            </Array>
+            <mxPoint x="420" y="1730" as="sourcePoint" />
+            <mxPoint x="190" y="1570" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-46" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="rA3Zr5-iBR_8r6be7IOp-36" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="695" y="1730" />
+            </Array>
+            <mxPoint x="430" y="1730" as="sourcePoint" />
+            <mxPoint x="635" y="1600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-47" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-43" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;startArrow=classic;startFill=1;" target="rA3Zr5-iBR_8r6be7IOp-40" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="510" y="1710" as="sourcePoint" />
+            <mxPoint x="560" y="1660" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-48" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El usuario puede pulsar&lt;div&gt;&quot;volver al inicio&quot; para ir a la pagina principal&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="250" x="300" y="1900" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-50" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;" value="FIN" vertex="1">
+          <mxGeometry height="60" width="100" x="375" y="2010" as="geometry" />
+        </mxCell>
+        <mxCell id="rA3Zr5-iBR_8r6be7IOp-51" edge="1" parent="1" source="rA3Zr5-iBR_8r6be7IOp-48" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="rA3Zr5-iBR_8r6be7IOp-50" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="530" y="2000" as="sourcePoint" />
+            <mxPoint x="580" y="1950" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,154 @@
+<mxfile host="app.diagrams.net">
+  <diagram id="m_mbWkKlTSxMPjkceJ7w" name="Page-2">
+    <mxGraphModel grid="1" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="dyogploXAiaT4QDWo-C--3" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--2" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--1" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.start_1;whiteSpace=wrap;" value="INICIO" vertex="1">
+          <mxGeometry height="60" width="100" x="375" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--5" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El administrador ingresa&lt;div&gt;al modulo de Reportes&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="210" x="320" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--7" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El sistema obtiene datos&amp;nbsp;&lt;div&gt;de ordenes, inventario y clientes&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="210" x="320" y="320" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--9" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--8" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Muestra tarjetas de resumen&amp;nbsp;&lt;div&gt;total pedidos, ventas clientes activos&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="210" x="320" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--11" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--10" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Muestra grafico de barras&amp;nbsp;&lt;div&gt;pedidos por mes (ultimos 6 meses)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="210" x="320" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--13" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--12" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--16" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--15" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--10" parent="1" style="rhombus;whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;" value="¿Pasa el cursor por una barra?" vertex="1">
+          <mxGeometry height="80" width="230" x="310" y="730" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Muestra detalles del mes" vertex="1">
+          <mxGeometry height="60" width="120" x="675" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--14" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Si" vertex="1">
+          <mxGeometry height="30" width="60" x="530" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--19" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--18" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--15" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Muestra la lista de reportes&amp;nbsp;&lt;div&gt;disponibles: produccion, inventario, clientes y ordenes&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="210" x="320" y="900" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--17" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="No" vertex="1">
+          <mxGeometry height="30" width="60" x="420" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--21" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--20" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--18" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El administrador seleccona&lt;div&gt;el tipo de reporte que desea ver&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="210" x="320" y="1040" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--23" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--22" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--20" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El sistema filtra y muestra&amp;nbsp;&lt;div&gt;solo los reportes del tipo seleccionado&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="190" x="330" y="1180" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--25" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--24" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--28" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--27" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--31" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--22" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--30" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--22" parent="1" style="rhombus;whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;" value="¿Desea descargar un reporte?" vertex="1">
+          <mxGeometry height="80" width="210" x="320" y="1310" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--24" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Consulta en pantalla" vertex="1">
+          <mxGeometry height="60" width="120" x="75" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--26" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="No" vertex="1">
+          <mxGeometry height="30" width="60" x="230" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--27" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="Exporta el&amp;nbsp; archivo en Excel o PDF" vertex="1">
+          <mxGeometry height="60" width="120" x="655" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--29" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Si" vertex="1">
+          <mxGeometry height="30" width="60" x="570" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--36" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="dyogploXAiaT4QDWo-C--35" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--30" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;" value="El sistema confirma la accion&lt;div&gt;y mantiene la vista activa&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="170" x="340" y="1480" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--33" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.542;entryY=1;entryDx=0;entryDy=0;entryPerimeter=0;" target="dyogploXAiaT4QDWo-C--27" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="720" y="1440" />
+            </Array>
+            <mxPoint x="430" y="1440" as="sourcePoint" />
+            <mxPoint x="725" y="1390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--34" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="dyogploXAiaT4QDWo-C--24" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="135" y="1440" />
+            </Array>
+            <mxPoint x="420" y="1440" as="sourcePoint" />
+            <mxPoint x="160" y="1450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--35" parent="1" style="rhombus;whiteSpace=wrap;html=1;rounded=1;strokeWidth=2;" value="¿Desea consultar otro reporte?" vertex="1">
+          <mxGeometry height="80" width="210" x="320" y="1610" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--38" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;" value="FIN" vertex="1">
+          <mxGeometry height="60" width="100" x="375" y="1740" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--39" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--35" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" target="dyogploXAiaT4QDWo-C--38" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="480" y="1690" as="sourcePoint" />
+            <mxPoint x="530" y="1640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--40" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="No" vertex="1">
+          <mxGeometry height="30" width="60" x="410" y="1690" as="geometry" />
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--41" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--35" style="endArrow=none;dashed=1;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <Array as="points">
+              <mxPoint x="570" y="1650" />
+            </Array>
+            <mxPoint x="560" y="1650" as="sourcePoint" />
+            <mxPoint x="570" y="1070" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dyogploXAiaT4QDWo-C--42" edge="1" parent="1" source="dyogploXAiaT4QDWo-C--18" style="endArrow=none;dashed=1;html=1;rounded=0;startArrow=classic;startFill=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="540" y="1070" as="sourcePoint" />
+            <mxPoint x="570" y="1070" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

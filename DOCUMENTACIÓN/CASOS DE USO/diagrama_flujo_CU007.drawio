@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-04-22T00:00:00.000Z" agent="Claude" version="21.0.0" type="device">
+  <diagram name="CU-007 Gestión de Producción" id="cu007-gestion-produccion">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="1654" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== TÍTULO ===== -->
+        <mxCell id="title" value="CU-007 – Gestión de Producción&#xa;Actor: Administrador  |  RF-013, RF-014, RF-015" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=16;fontStyle=1;fontColor=#003366;" vertex="1" parent="1">
+          <mxGeometry x="234" y="20" width="700" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== INICIO ===== -->
+        <mxCell id="start" value="INICIO" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#003366;fontStyle=1;fontSize=13;arcSize=50;" vertex="1" parent="1">
+          <mxGeometry x="484" y="90" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 1 ===== -->
+        <mxCell id="step1" value="&lt;b&gt;PASO 1&lt;/b&gt;&#xa;El administrador accede al módulo&#xa;de Gestión de Producción&#xa;[RF-013]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="180" width="300" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 2 ===== -->
+        <mxCell id="step2" value="&lt;b&gt;PASO 2&lt;/b&gt;&#xa;Crea nueva orden de producción:&#xa;cliente, producto, materiales,&#xa;cantidad y fecha límite&#xa;[RF-013]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="290" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== DECISIÓN 1 ===== -->
+        <mxCell id="dec1" value="¿Datos de la&#xa;orden válidos?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="484" y="410" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ALT 1 -->
+        <mxCell id="alt1" value="&lt;b&gt;ALT 1&lt;/b&gt;&#xa;Datos incompletos o inválidos →&#xa;el sistema muestra error y&#xa;solicita corrección" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="134" y="415" width="250" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 3 ===== -->
+        <mxCell id="step3" value="&lt;b&gt;PASO 3&lt;/b&gt;&#xa;Asigna la orden a un operario&#xa;disponible, define prioridad&#xa;[RF-013] [RF-014]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="550" width="300" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- ===== DECISIÓN 2 ===== -->
+        <mxCell id="dec2" value="¿Operario&#xa;disponible?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="484" y="670" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ALT 2 -->
+        <mxCell id="alt2" value="&lt;b&gt;ALT 2&lt;/b&gt;&#xa;Reasignar a otro operario&#xa;o dejar en estado Pendiente" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="134" y="680" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 4 ===== -->
+        <mxCell id="step4" value="&lt;b&gt;PASO 4&lt;/b&gt;&#xa;El sistema registra la orden con&#xa;estado &quot;En Proceso&quot; y notifica&#xa;al operario asignado&#xa;[RF-013] [RF-014]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="810" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 5 ===== -->
+        <mxCell id="step5" value="&lt;b&gt;PASO 5&lt;/b&gt;&#xa;El administrador monitorea avance:&#xa;progreso porcentual, unidades&#xa;completadas y barra de estado&#xa;[RF-014]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="935" width="300" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- ===== DECISIÓN 3 ===== -->
+        <mxCell id="dec3" value="¿Se reporta&#xa;alguna incidencia?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="484" y="1065" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ALT/EXC 3 -->
+        <mxCell id="exc3" value="&lt;b&gt;EXC / ALT 3&lt;/b&gt;&#xa;Se registra la incidencia&#xa;(retraso, material faltante).&#xa;Administrador: reasigna,&#xa;pausa o escala al cliente&#xa;[RF-015]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="134" y="1060" width="250" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ===== DECISIÓN 4 ===== -->
+        <mxCell id="dec4" value="¿Orden&#xa;completada?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="484" y="1205" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- ALT 4 -->
+        <mxCell id="alt4" value="&lt;b&gt;ALT 4&lt;/b&gt;&#xa;Continúa ciclo de monitoreo&#xa;→ regresa al Paso 5" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="134" y="1215" width="250" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 6 ===== -->
+        <mxCell id="step6" value="&lt;b&gt;PASO 6&lt;/b&gt;&#xa;El sistema actualiza la orden a&#xa;&quot;Completada&quot; automáticamente&#xa;al alcanzar las unidades totales&#xa;[RF-014]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="1345" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 7 ===== -->
+        <mxCell id="step7" value="&lt;b&gt;PASO 7&lt;/b&gt;&#xa;Se genera registro de auditoría:&#xa;fecha inicio/fin, operario responsable&#xa;y progreso total&#xa;[RF-013] [RF-014] [RF-015]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="1470" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PASO 8 ===== -->
+        <mxCell id="step8" value="&lt;b&gt;PASO 8&lt;/b&gt;&#xa;El sistema actualiza tiempos de entrega&#xa;vinculados al cliente. La orden queda&#xa;disponible para reportes y comprobantes&#xa;[RF-013]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="434" y="1595" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== FIN ===== -->
+        <mxCell id="end" value="FIN" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=13;arcSize=50;" vertex="1" parent="1">
+          <mxGeometry x="484" y="1720" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ============ FLECHAS FLUJO NORMAL ============ -->
+
+        <!-- inicio → paso1 -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="start" target="step1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- paso1 → paso2 -->
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step1" target="step2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- paso2 → dec1 -->
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step2" target="dec1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- dec1 → paso3 (SÍ) -->
+        <mxCell id="e4" value="SÍ" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#006600;" edge="1" source="dec1" target="step3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- dec1 → alt1 (NO) -->
+        <mxCell id="e5" value="NO" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#cc0000;" edge="1" source="dec1" target="alt1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- alt1 → paso2 (regresa) -->
+        <mxCell id="e6" value="corregir" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;fontColor=#666666;dashed=1;" edge="1" source="alt1" target="step2" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="80" y="455" />
+              <mxPoint x="80" y="330" />
+              <mxPoint x="434" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- paso3 → dec2 -->
+        <mxCell id="e7" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step3" target="dec2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- dec2 → paso4 (SÍ) -->
+        <mxCell id="e8" value="SÍ" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#006600;" edge="1" source="dec2" target="step4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- dec2 → alt2 (NO) -->
+        <mxCell id="e9" value="NO" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#cc0000;" edge="1" source="dec2" target="alt2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- alt2 → paso3 (regresa) -->
+        <mxCell id="e10" value="reasignar" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;fontColor=#666666;dashed=1;" edge="1" source="alt2" target="step3" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="80" y="715" />
+              <mxPoint x="80" y="587" />
+              <mxPoint x="434" y="587" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- paso4 → paso5 -->
+        <mxCell id="e11" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step4" target="step5" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- paso5 → dec3 -->
+        <mxCell id="e12" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step5" target="dec3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- dec3 → exc3 (SÍ) -->
+        <mxCell id="e13" value="SÍ" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#cc0000;" edge="1" source="dec3" target="exc3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- exc3 → dec4 (continúa) -->
+        <mxCell id="e14" value="resuelto" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;fontColor=#666666;dashed=1;" edge="1" source="exc3" target="dec4" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="80" y="1160" />
+              <mxPoint x="80" y="1250" />
+              <mxPoint x="484" y="1250" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- dec3 → dec4 (NO) -->
+        <mxCell id="e15" value="NO" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#006600;" edge="1" source="dec3" target="dec4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- dec4 → alt4 (NO) -->
+        <mxCell id="e16" value="NO" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#cc0000;" edge="1" source="dec4" target="alt4" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- alt4 → paso5 (regresa) -->
+        <mxCell id="e17" value="monitorear" style="edgeStyle=orthogonalEdgeStyle;fontSize=10;fontColor=#666666;dashed=1;" edge="1" source="alt4" target="step5" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="80" y="1250" />
+              <mxPoint x="80" y="977" />
+              <mxPoint x="434" y="977" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- dec4 → paso6 (SÍ) -->
+        <mxCell id="e18" value="SÍ" style="edgeStyle=orthogonalEdgeStyle;fontStyle=1;fontSize=11;fontColor=#006600;" edge="1" source="dec4" target="step6" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- paso6 → paso7 -->
+        <mxCell id="e19" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step6" target="step7" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- paso7 → paso8 -->
+        <mxCell id="e20" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step7" target="step8" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- paso8 → fin -->
+        <mxCell id="e21" style="edgeStyle=orthogonalEdgeStyle;" edge="1" source="step8" target="end" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ===== LEYENDA ===== -->
+        <mxCell id="leg_title" value="LEYENDA" style="text;html=1;strokeColor=none;fillColor=none;align=left;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="830" y="90" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="Inicio / Fin" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#003366;fontSize=10;arcSize=50;" vertex="1" parent="1">
+          <mxGeometry x="830" y="120" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="Proceso (Paso)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="830" y="165" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="Decisión" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="845" y="205" width="90" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" value="Flujo Alternativo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="830" y="270" width="120" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" value="Excepción" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="830" y="315" width="120" height="30" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
