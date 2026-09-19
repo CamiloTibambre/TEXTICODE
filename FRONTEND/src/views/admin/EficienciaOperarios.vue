@@ -1369,6 +1369,12 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 .badge-rendimiento.alto  { background: #dcfce7; color: #15803d; }
 .badge-rendimiento.medio { background: #dbeafe; color: #1d4ed8; }
 .badge-rendimiento.bajo  { background: #fee2e2; color: #b91c1c; }
+.tendencia-cell { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; cursor: help; }
+.tendencia-cell.subiendo { background: #dcfce7; color: #16a34a; }
+.tendencia-cell.bajando  { background: #fee2e2; color: #dc2626; }
+.tendencia-cell.estable  { background: #f1f5f9; color: #6b7280; }
+.th-tendencia { text-align: center; }
+td:has(.tendencia-cell) { text-align: center; }
 .badge-carga { padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .badge-carga.disponible   { background: #dcfce7; color: #15803d; }
 .badge-carga.normal       { background: #dbeafe; color: #1d4ed8; }
