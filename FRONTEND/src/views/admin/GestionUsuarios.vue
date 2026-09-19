@@ -198,6 +198,7 @@
             <span class="skeleton-avatar"></span>
             <span class="skeleton-line skeleton-user"></span>
             <span class="skeleton-line skeleton-tag"></span>
+            <span class="skeleton-line skeleton-phone"></span>
             <span class="skeleton-line skeleton-date"></span>
           </div>
         </div>
@@ -237,6 +238,7 @@
                   </span>
                 </span>
               </th>
+              <th>Teléfono</th>
               <th class="th-sortable" @click="sortBy('fechaRegistro')">
                 <span class="th-inner">
                   Fecha Registro
@@ -279,6 +281,14 @@
                   </div>
                 </td>
                 <td><span class="badge-role" :class="u.rol">{{ u.rolLabel }}</span></td>
+                <td>
+                  <div class="phone-cell">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/>
+                    </svg>
+                    {{ u.telefono || '—' }}
+                  </div>
+                </td>
                 <td>{{ u.fechaRegistro }}</td>
                 <td>
                   <div class="actions">
@@ -333,8 +343,9 @@
           <span v-if="errores.email && formTouched" class="error-msg">{{ errores.email }}</span>
 
           <label>Teléfono</label>
-          <input v-model="form.telefono" type="tel" placeholder="+57 300 000 0000"
-            :class="{ 'input-error': errores.telefono && formTouched }" @blur="formTouched = true">
+          <input v-model="form.telefono" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567"
+            :class="{ 'input-error': errores.telefono && formTouched }"
+            @keypress="soloNumeros" @input="limitarTelefono" @blur="formTouched = true">
           <span v-if="errores.telefono && formTouched" class="error-msg">{{ errores.telefono }}</span>
 
           <label>Rol</label>
@@ -667,15 +678,38 @@ const errores = computed(() => ({
     : /[0-9]/.test(form.value.nombre)
       ? 'El nombre no puede contener números.'
       : '',
-  nombreUsuario: !form.value.nombreUsuario.trim() ? 'El nombre de usuario es requerido' : '',
+  nombreUsuario: !form.value.nombreUsuario.trim()
+    ? 'El nombre de usuario es requerido'
+    : /^\d+$/.test(form.value.nombreUsuario.trim())
+      ? 'El nombre de usuario no puede contener solo números'
+      : '',
   email: !form.value.email.includes('@') ? 'Ingresa un email válido' : '',
   Id_Rol: !form.value.Id_Rol ? 'Selecciona un rol' : '',
   contrasena: !editando.value && !form.value.contrasena.trim()
     ? 'La contraseña es requerida'
     : validarContrasena(form.value.contrasena),
-  telefono: form.value.telefono && !/^\+?[\d\s]{7,}$/.test(form.value.telefono) ? 'Teléfono inválido' : '',
+  telefono: !form.value.telefono.trim()
+    ? 'El teléfono es requerido'
+    : !/^\d{10}$/.test(form.value.telefono)
+      ? 'El teléfono debe tener 10 dígitos'
+      : '',
 }))
 const tieneErrores = computed(() => Object.values(errores.value).some(e => e !== ''))
+
+// ── TELÉFONO: mismo formato que en new_user_sheet.dart / edit_user_sheet.dart ──
+// El usuario solo digita sus 10 dígitos locales; al guardar se antepone
+// "+57 " y se agrupan en bloques (300 123 4567).
+function formatearTelefono(digitos) {
+  return `+57 ${digitos.slice(0, 3)} ${digitos.slice(3, 6)} ${digitos.slice(6, 10)}`
+}
+
+// Al editar, "desarma" un teléfono ya guardado (con +57 y espacios, o
+// un registro antiguo sin formato) para volver a mostrar solo los 10
+// dígitos locales en el input.
+function extraerTelefonoLocal(telefono) {
+  const digitos = (telefono || '').replace(/\D/g, '')
+  return (digitos.length === 12 && digitos.startsWith('57')) ? digitos.slice(2) : digitos
+}
 
 // ── MODAL USUARIO ──
 function abrirModal(usuario) {
@@ -687,7 +721,7 @@ function abrirModal(usuario) {
       nombre: usuario.nombre,
       nombreUsuario: usuario.nombreUsuario,
       email: usuario.email,
-      telefono: usuario.telefono,
+      telefono: extraerTelefonoLocal(usuario.telefono),
       Id_Rol: usuario.Id_Rol,
       estado: usuario.estado === 'active' ? 'activo' : 'inactivo',
       contrasena: '',
@@ -708,7 +742,7 @@ async function guardarUsuario() {
     Nombre_Completo: form.value.nombre,
     Nombre_Usuario: form.value.nombreUsuario || form.value.nombre.toLowerCase().replace(/\s+/g, '.'),
     Correo: form.value.email,
-    Telefono: form.value.telefono || null,
+    Telefono: formatearTelefono(form.value.telefono),
     Id_Rol: form.value.Id_Rol,
     Estado: form.value.estado,
     ...(form.value.contrasena.trim() ? { Contrasena: form.value.contrasena.trim() } : {}),
@@ -717,11 +751,24 @@ async function guardarUsuario() {
     if (editando.value) {
       await actualizarUsuario(form.value.id, payload)
       mostrarToast('Usuario actualizado correctamente', 'info')
+      await cargarDatos()
     } else {
       await crearUsuario(payload)
       mostrarToast('Usuario creado exitosamente', 'success')
+      await cargarDatos()
+      // Que el usuario recién creado aparezca de primeras sin tener
+      // que buscarlo con scroll: pasamos la tabla a "más reciente
+      // primero" (por Id_Usuario, que siempre crece con cada alta) y
+      // resaltamos brevemente esa fila.
+      sortKey.value = 'id'
+      sortDir.value = -1
+      const nuevo = usuarios.value.reduce(
+        (max, u) => (!max || u.id > max.id ? u : max), null)
+      if (nuevo) {
+        nuevo.flash = true
+        setTimeout(() => { nuevo.flash = false }, 1800)
+      }
     }
-    await cargarDatos()
     animateStats()
     cerrarModal()
   } catch (e) {
@@ -749,6 +796,17 @@ function soloLetras(e) {
   if (!/^[A-Za-zÁÉÍÓÚáéíóúÀÈÌÒÙàèìòùÄËÏÖÜäëïöüÑñ\s'-]$/.test(e.key)) {
     e.preventDefault()
   }
+}
+
+function soloNumeros(e) {
+  if (!/^[0-9]$/.test(e.key)) e.preventDefault()
+}
+
+// Limpia lo que quede (por pegado, autocompletado, etc.) a solo
+// dígitos y lo recorta a 10, igual que en new_user_sheet.dart /
+// edit_user_sheet.dart en el móvil.
+function limitarTelefono() {
+  form.value.telefono = form.value.telefono.replace(/\D/g, '').slice(0, 10)
 }
 
 async function guardarPerfilAdmin() {
@@ -1015,7 +1073,7 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 
 /* ── SKELETON TABLA ── */
 .table-skeleton { padding: 18px; display: grid; gap: 12px; }
-.table-skeleton-row { display: grid; grid-template-columns: 34px 1.6fr 0.8fr 0.8fr; align-items: center; gap: 16px; padding: 14px 10px; border-radius: 16px; background: rgba(255,255,255,0.72); }
+.table-skeleton-row { display: grid; grid-template-columns: 34px 1.4fr 0.7fr 0.7fr 0.7fr; align-items: center; gap: 16px; padding: 14px 10px; border-radius: 16px; background: rgba(255,255,255,0.72); }
 .skeleton-avatar { display: block; width: 34px; height: 34px; border-radius: 999px; background: #e5e7eb; }
 .skeleton-user  { width: 72%; height: 16px; }
 .skeleton-tag   { width: 90px; height: 14px; }
