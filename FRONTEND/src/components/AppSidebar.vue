@@ -156,6 +156,7 @@ const menuConfig = {
       { to: '/cliente/pedidos', label: 'Pedidos y Entregas', icon: iconPedidos },
       { to: '/cliente/soporte', label: 'Centro de Soporte',  icon: iconSoporte },
       { to: '/cliente/google-calendar', label: 'Google Calendar', icon: iconGoogle },
+      { to: '/cliente/alertas', label: 'Alertas de Materiales', icon: iconInventario },
     ]
   }
 }
