@@ -482,7 +482,13 @@ async function descargarPDF(orden) {
     doc.setFontSize(20); doc.setFont('helvetica', 'bold')
     doc.text(`N.° ${orden.numero}`, MR, 25, { align: 'right' })
 
-    // Bloque info cliente
+    // Bloque CLIENTE / FECHA DE EMISION / ESTADO DEL PEDIDO en tres columnas iguales
+    // (mismo reparto que el grid de 3 columnas 1fr 1fr 1fr que se ve en pantalla)
+    const infoW = MR - ML
+    const dividerX1 = ML + infoW / 3
+    const dividerX2 = ML + (infoW * 2) / 3
+    const colPad = 6
+
     let y = 42
     doc.setFontSize(8); doc.setFont('helvetica', 'bold')
     doc.setTextColor(...GRIS_T)
@@ -490,12 +496,12 @@ async function descargarPDF(orden) {
     y += 5
     doc.setFontSize(12); doc.setFont('helvetica', 'bold')
     doc.setTextColor(...NEGRO)
-    doc.text(orden.cliente, ML, y)
+    doc.text(orden.cliente, ML, y, { maxWidth: dividerX1 - ML - colPad })
     y += 5
     if (orden.clienteEmail !== '—') {
       doc.setFontSize(9); doc.setFont('helvetica', 'normal')
       doc.setTextColor(...GRIS_T)
-      doc.text(orden.clienteEmail, ML, y)
+      doc.text(orden.clienteEmail, ML, y, { maxWidth: dividerX1 - ML - colPad })
       y += 4
     }
     if (orden.clienteTel !== '—') {
@@ -503,8 +509,8 @@ async function descargarPDF(orden) {
       y += 4
     }
 
-    // Fechas (columna derecha)
-    const col2X = W / 2 + 10
+    // Fechas (columna central)
+    const col2X = dividerX1 + colPad
     let y2 = 42
     doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(...GRIS_T)
     doc.text('FECHA DE EMISIÓN', col2X, y2)
@@ -540,6 +546,13 @@ async function descargarPDF(orden) {
     doc.text('#' + orden.numero, col3X, y3, { align: 'right' })
 
     y = Math.max(y, y2, y3) + 10
+
+    // Lineas separadoras verticales entre CLIENTE / FECHA DE EMISION / ESTADO DEL PEDIDO
+    // (mismos tercios que el grid de pantalla, cp-info-bloque--center)
+    const infoTopY = 37
+    doc.setDrawColor(...GRIS_LN); doc.setLineWidth(0.2)
+    doc.line(dividerX1, infoTopY, dividerX1, y)
+    doc.line(dividerX2, infoTopY, dividerX2, y)
 
     // Linea separadora (borde inferior del bloque info, igual que en movil)
     doc.setDrawColor(...GRIS_LN); doc.setLineWidth(0.2)
