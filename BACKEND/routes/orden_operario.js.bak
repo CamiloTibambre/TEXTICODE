@@ -1,33 +1,7 @@
-import { Router } from 'express'
+﻿import { Router } from 'express'
 import pool from '../db.js'
-import { notificarCambioEstado } from '../services/emailService.js'
 
 const router = Router()
-
-// Avisa al cliente por correo cuando su orden pasa a Completada.
-// Corre despues de responder y nunca rompe la peticion si el correo falla.
-async function notificarOrdenCompletada(idOrden) {
-  try {
-    const { rows } = await pool.query(`
-      SELECT u."Correo", u."Nombre_Completo",
-             COALESCE(op."Producto", op."Descripcion") AS "Productos"
-      FROM orden_produccion op
-      INNER JOIN usuario u ON u."Id_Usuario" = op."Id_Cliente"
-      WHERE op."Id_Orden" = $1
-    `, [idOrden])
-    const o = rows[0]
-    if (!o || !o.Correo) return
-    await notificarCambioEstado({
-      ordenId: idOrden,
-      clienteEmail: o.Correo,
-      clienteNombre: o.Nombre_Completo,
-      estado: 'Completada',
-      productos: o.Productos || '',
-    })
-  } catch (err) {
-    console.error('[orden_operario] No se pudo enviar el correo de orden completada:', err.message)
-  }
-}
 
 const toPositiveInt = (value) => {
   const parsed = Number.parseInt(value, 10)
@@ -40,7 +14,7 @@ const toPositiveInt = (value) => {
 // Una fase compartida solo llega a 100% cuando todos sus operarios completan.
 async function recalcularProgresoOrden(client, idOrden) {
   const ordenResult = await client.query(
-    `SELECT "Cantidad", ("Fecha_Limite"::date < (NOW() AT TIME ZONE 'America/Bogota')::date) AS "Vencida" FROM orden_produccion WHERE "Id_Orden" = $1`,
+    'SELECT "Cantidad" FROM orden_produccion WHERE "Id_Orden" = $1',
     [idOrden]
   )
 
@@ -49,14 +23,12 @@ async function recalcularProgresoOrden(client, idOrden) {
   }
 
   const cantidadTotal = Number(ordenResult.rows[0].Cantidad) || 0
-  // Si la fecha limite ya paso y la orden no esta completa, queda 'Retrasada'.
-  const estadoPendiente = ordenResult.rows[0].Vencida === true ? 'Retrasada' : 'En Proceso'
   if (cantidadTotal <= 0) {
     await client.query(
       'UPDATE orden_produccion SET "Unidades_Realizadas" = 0, "Estado" = $1 WHERE "Id_Orden" = $2',
-      [estadoPendiente, idOrden]
+      ['En Proceso', idOrden]
     )
-    return { unidadesRealizadas: 0, estado: estadoPendiente, progreso: 0 }
+    return { unidadesRealizadas: 0, estado: 'En Proceso', progreso: 0 }
   }
 
   const fasesResult = await client.query(`
@@ -82,7 +54,7 @@ async function recalcularProgresoOrden(client, idOrden) {
   const unidadesRealizadas = todasCompletas
     ? cantidadTotal
     : Math.min(cantidadTotal, Math.max(0, Math.round(progreso * cantidadTotal)))
-  const estado = todasCompletas ? 'Completada' : estadoPendiente
+  const estado = todasCompletas ? 'Completada' : 'En Proceso'
 
   await client.query(`
     UPDATE orden_produccion
@@ -165,15 +137,8 @@ router.get('/operario/:idOperario', async (req, res) => {
         op."Fecha_Creacion",
         op."Id_Cliente",
         cli."Nombre_Completo" AS "Cliente",
-        m."Nombre_Material" AS "NombreMaterial",
-        (op."Cantidad"::int / cnt.total) + CASE WHEN cnt.idx < op."Cantidad"::int % cnt.total THEN 1 ELSE 0 END AS "Cuota"
+        m."Nombre_Material" AS "NombreMaterial"
       FROM orden_operario oo
-      INNER JOIN LATERAL (
-        SELECT COUNT(*)::int AS total,
-               (COUNT(*) FILTER (WHERE x."Id_Orden_Operario" < oo."Id_Orden_Operario"))::int AS idx
-        FROM orden_operario x
-        WHERE x."Id_Orden" = oo."Id_Orden" AND x."Numero_Fase" = oo."Numero_Fase"
-      ) cnt ON TRUE
       INNER JOIN orden_produccion op ON oo."Id_Orden" = op."Id_Orden"
       INNER JOIN usuario uop ON oo."Id_Operario" = uop."Id_Usuario"
       INNER JOIN usuario cli ON op."Id_Cliente" = cli."Id_Usuario"
@@ -196,15 +161,8 @@ router.get('/operario/:idOperario/historial', async (req, res) => {
         op."Descripcion" AS "Descripcion_Orden", op."Cantidad",
         op."Unidades_Realizadas", op."Estado" AS "Estado_Orden", op."Prioridad",
         op."Fecha_Limite", op."Id_Cliente", cli."Nombre_Completo" AS "Cliente",
-        m."Nombre_Material" AS "NombreMaterial",
-        (op."Cantidad"::int / cnt.total) + CASE WHEN cnt.idx < op."Cantidad"::int % cnt.total THEN 1 ELSE 0 END AS "Cuota"
+        m."Nombre_Material" AS "NombreMaterial"
       FROM orden_operario oo
-      INNER JOIN LATERAL (
-        SELECT COUNT(*)::int AS total,
-               (COUNT(*) FILTER (WHERE x."Id_Orden_Operario" < oo."Id_Orden_Operario"))::int AS idx
-        FROM orden_operario x
-        WHERE x."Id_Orden" = oo."Id_Orden" AND x."Numero_Fase" = oo."Numero_Fase"
-      ) cnt ON TRUE
       INNER JOIN orden_produccion op ON oo."Id_Orden" = op."Id_Orden"
       INNER JOIN usuario uop ON oo."Id_Operario" = uop."Id_Usuario"
       INNER JOIN usuario cli ON op."Id_Cliente" = cli."Id_Usuario"
@@ -380,9 +338,6 @@ router.patch('/:id/completar', async (req, res) => {
       RETURNING *
     `, [cuota, nota, req.params.id])
 
-    const estadoPrevio = (await client.query(
-      'SELECT "Estado" FROM orden_produccion WHERE "Id_Orden" = $1', [fase.Id_Orden]
-    )).rows[0]?.Estado
     const progresoOrden = await recalcularProgresoOrden(client, fase.Id_Orden)
 
     await client.query('COMMIT')
@@ -391,11 +346,6 @@ router.patch('/:id/completar', async (req, res) => {
       fase: updateFase.rows[0],
       orden: progresoOrden,
     })
-
-    // Correo al cliente (no bloquea la respuesta)
-    if (progresoOrden.estado === 'Completada' && estadoPrevio !== 'Completada') {
-      notificarOrdenCompletada(fase.Id_Orden)
-    }
   } catch (err) {
     await client.query('ROLLBACK')
     res.status(500).json({ error: err.message })

@@ -310,7 +310,7 @@ onMounted(async () => {
   cliente:     o.Cliente        || '—',
   material:    o.NombreMaterial || '—',
   entrega:     o.Fecha_Limite?.split('T')[0] || '—',
-  cantidad: o.Cuota ?? o.Cantidad ?? 0, realizadas: completada ? (o.Cuota ?? o.Cantidad ?? 0) : 0,
+  cantidad: o.Cantidad ?? 0, realizadas: completada ? (o.Cantidad ?? 0) : 0,
   estado: completada ? 'completado' : vencida ? 'retrasado' : 'en-proceso',
   progreso: completada ? 100 : 0,
   prioridad: (o.Prioridad || 'Media').toLowerCase(),

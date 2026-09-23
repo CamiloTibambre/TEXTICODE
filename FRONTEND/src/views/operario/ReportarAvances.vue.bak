@@ -305,7 +305,7 @@ onMounted(async () => {
           prioridad:       (t.Prioridad || 'Media').toLowerCase(),
           fechaLimite:     t.Fecha_Limite?.split('T')[0] || '—',
           unidadesHechas:  Number(t.Cantidad_Realizada || 0),
-          unidadesTotales: Number(t.Cuota ?? t.Cantidad ?? 0),
+          unidadesTotales: Number(t.Cantidad || 0),
           progreso:        completada ? 100 : Math.min(100, Math.round((Number(t.Cantidad_Realizada || 0) / Math.max(1, Number(t.Cantidad || 0))) * 100)),
         }
       }).sort(ordenarFases)

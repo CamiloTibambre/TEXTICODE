@@ -64,10 +64,6 @@ router.get('/operario/:idOperario', async (req, res) => {
               SELECT 1 FROM orden_operario oo
               WHERE oo."Id_Orden" = op."Id_Orden" AND oo."Id_Operario" = $1
             )
-         OR EXISTS (
-              SELECT 1 FROM orden_operario oo
-              WHERE oo."Id_Orden" = op."Id_Orden" AND oo."Id_Operario" = $1
-            )
       ORDER BY op."Fecha_Limite" ASC
     `, [req.params.idOperario])
     res.json(rows)
