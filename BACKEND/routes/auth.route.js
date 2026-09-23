@@ -178,8 +178,10 @@ router.post('/google/mobile', async (req, res) => {
 // ─────────────────────────────────────────────────────────
 router.post('/recuperar-contrasena', async (req, res) => {
   const { email } = req.body
+  console.log('[recuperar-contrasena] REQUEST recibido, correo:', email, 'origen:', req.headers['user-agent'])
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    console.log('[recuperar-contrasena] correo con formato inválido, se corta aquí')
     return res.status(400).json({ mensaje: 'El correo no es válido.' })
   }
 
@@ -191,8 +193,10 @@ router.post('/recuperar-contrasena', async (req, res) => {
        LIMIT 1`,
       [email.trim().toLowerCase()]
     )
+    console.log('[recuperar-contrasena] filas encontradas en usuario:', rows.length)
 
     if (!rows.length) {
+      console.log('[recuperar-contrasena] correo no registrado, responde 200 genérico SIN enviar correo')
       return res.status(200).json({ mensaje: 'Si el correo está registrado, recibirás el enlace.' })
     }
 
@@ -211,8 +215,9 @@ router.post('/recuperar-contrasena', async (req, res) => {
 
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
     const enlace = `${FRONTEND_URL}/cambiar-contrasena?token=${token}`
+    console.log('[recuperar-contrasena] token generado, llamando a sgMail.send() para', usuario.Correo)
 
-    await sgMail.send({
+    const sgResponse = await sgMail.send({
       to:      usuario.Correo,
       from:    process.env.SENDGRID_FROM_EMAIL,
       subject: 'Texticode — Cambiar contraseña',
@@ -274,11 +279,12 @@ router.post('/recuperar-contrasena', async (req, res) => {
         </html>
       `
     })
+    console.log('[recuperar-contrasena] sgMail.send() OK, status code:', sgResponse?.[0]?.statusCode)
 
     return res.status(200).json({ mensaje: 'Si el correo está registrado, recibirás el enlace.' })
 
   } catch (err) {
-    console.error('[recuperar-contrasena]', err?.response?.body || err.message)
+    console.error('[recuperar-contrasena] ERROR:', err?.response?.body || err.message)
     return res.status(500).json({ mensaje: 'Error interno. Intenta más tarde.' })
   }
 })
