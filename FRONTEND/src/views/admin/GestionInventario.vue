@@ -424,7 +424,7 @@ const statCards = computed(() => [
 ])
 
 // ── Helpers ──────────────────────────────────────────────────
-const categorias = ['Telas', 'Hilos', 'Accesorios', 'Otros']
+const categorias = ['Telas', 'Hilos', 'Accesorios']
 
 function calcularEstado(m) {
   if (m.stock === 0)      return { estado: 'Agotado',    estadoClass: 'danger' }
