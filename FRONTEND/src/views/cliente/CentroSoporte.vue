@@ -173,7 +173,7 @@ onMounted(() => {
 })
 
 const faqs = [
-  { id: 1, pregunta: '¿Cómo puedo rastrear mi pedido?', respuesta: 'Ve a tu cuenta personal o a la sección de pedidos para revisar el estado actualizado.' },
+  { id: 1, pregunta: '¿Cómo puedo ver mi pedido?', respuesta: 'Ve a la sección de pedidos para revisar el estado actualizado.' },
   { id: 2, pregunta: '¿Dónde descargo mis comprobantes?', respuesta: 'Los comprobantes aparecen cuando el administrador marca tu orden como completada.' },
   { id: 3, pregunta: '¿Qué hago si necesito un cambio?', respuesta: 'Contáctanos por WhatsApp o correo y menciona tu número de orden.' },
   { id: 4, pregunta: '¿Por qué no veo comprobantes todavía?', respuesta: 'Se generan cuando la orden es completada.' },

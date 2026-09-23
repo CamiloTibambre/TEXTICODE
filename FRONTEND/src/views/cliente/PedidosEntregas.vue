@@ -1,5 +1,5 @@
 <template>
-  <div style="display:flex;min-height:100vh;background:#f1f5f9;position:relative;overflow:hidden">
+  <div style="display:flex;min-height:100vh;background:#f1f5f9;position:relative">
     <AppSidebar rol="cliente" />
 
     <!-- FONDO DECORATIVO -->
@@ -34,34 +34,31 @@
             <p class="hero-sub">Seguimiento en tiempo real de tus órdenes</p>
           </div>
         </div>
-        <div class="hero-filters-wrap">
-          <div class="search-box" :class="{ 'search-focus': searchFocus }">
-            <svg class="search-ico" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
-            </svg>
-            <input v-model="busqueda" placeholder="Buscar orden..." @focus="searchFocus = true" @blur="searchFocus = false">
-          </div>
-          <div class="select-wrapper">
-            <select v-model="filtroEstado" class="select">
-              <option value="">Todos los estados</option>
-              <option value="En Proceso">En Proceso</option>
-              <option value="Completada">Completada</option>
-              <option value="Retrasada">Retrasada</option>
-            </select>
-            <svg class="select-arrow" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
-            </svg>
-          </div>
+      </div>
+            <!-- BARRA DE BÚSQUEDA (arriba de las órdenes) -->
+      <div class="search-row">
+        <div class="search-box" :class="{ 'search-focus': searchFocus }">
+          <svg class="search-ico" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+          </svg>
+          <input v-model="busqueda" placeholder="Buscar orden..." @focus="searchFocus = true" @blur="searchFocus = false">
         </div>
+        <button v-if="filtroEstado" type="button" class="clear-filter-btn" @click="toggleFiltro(filtroEstado)">
+          Quitar filtro: {{ filtroEstado }}
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
       </div>
 
-      <!-- STATS CARDS -->
+      <!-- STATS CARDS (ahora funcionan como filtros) -->
       <div class="stats-grid" :class="{ 'stats-visible': mounted }">
-        <div
+        <button
           v-for="(s, i) in statsCards"
           :key="s.label"
+          type="button"
           class="stat-card"
-          :style="{ transitionDelay: mounted ? `${i * 80}ms` : '0ms' }"
+          :class="{ 'stat-card-active': filtroEstado === s.filterValue }"
+          :style="{ transitionDelay: mounted ? `${i * 80}ms` : '0ms', '--accent': s.accent }"
+          @click="toggleFiltro(s.filterValue)"
         >
           <div class="stat-accent" :style="{ background: s.accent }"></div>
           <div class="stat-icon-bg" :style="{ color: s.accent }">
@@ -71,7 +68,7 @@
           </div>
           <h3>{{ s.label }}</h3>
           <p :style="{ color: s.accent }">{{ s.display }}</p>
-        </div>
+        </button>
       </div>
 
       <!-- ESTADOS -->
@@ -151,17 +148,15 @@
                       <strong>{{ o.unidadesRealizadas }}</strong> de <strong>{{ o.cantidad }}</strong>
                       <span class="progress-pct" :class="{ 'pct-completo': o.progreso === 100 }">· {{ o.progreso }}%</span>
                     </span>
-                  </div>
-                  <div class="progress-bg">
-                    <div
-                      class="progress-fill"
-                      :class="{
-                        'fill-green':   o.progreso === 100,
-                        'fill-orange':  o.progreso > 0 && o.progreso < 100
-                      }"
-                      :style="{ width: barWidths[o.id] + '%' }"
-                    ></div>
-                  </div>
+                   </div>
+                     <div class="progress-bg">
+                     <div
+                     class="progress-fill"
+                     :class="o.estadoClass.replace('stripe-', 'fill-')"
+                     :style="{ width: barWidths[o.id] + '%' }"
+                    >
+                 </div>
+                </div>
                   <div class="progress-milestones">
                     <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
                   </div>
@@ -180,6 +175,21 @@
                   <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
                   Orden con entrega retrasada — producción en seguimiento prioritario
                 </div>
+
+                <!-- BOTÓN DESCARGAR PDF -->
+                <button
+                  class="btn-pdf"
+                  :class="{ 'btn-pdf-disabled': o.estado !== 'Completada' }"
+                  :disabled="o.estado !== 'Completada' || descargando[o.id]"
+                  :title="o.estado !== 'Completada' ? 'Disponible cuando la orden esté completada' : 'Descargar comprobante en PDF'"
+                  @click="descargarPDF(o)"
+                >
+                  <svg v-if="!descargando[o.id]" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                  </svg>
+                  <span v-else class="btn-pdf-spinner"></span>
+                  {{ descargando[o.id] ? 'Generando...' : 'Descargar PDF' }}
+                </button>
               </div>
             </div>
           </TransitionGroup>
@@ -206,6 +216,7 @@ const errorMsg     = ref('')
 const mounted      = ref(false)
 const searchFocus  = ref(false)
 const barWidths    = ref({})
+const descargando  = ref({})
 
 // Contadores animados
 const displayTotal     = ref(0)
@@ -231,11 +242,15 @@ const ICON_CHECK = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 
 const ICON_ALERT = 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'
 
 const statsCards = computed(() => [
-  { label: 'Total Órdenes', display: displayTotal.value,      accent: '#1f3a52', icon: ICON_ALL   },
-  { label: 'En Proceso',    display: displayProceso.value,    accent: '#2563eb', icon: ICON_PROC  },
-  { label: 'Completadas',   display: displayComp.value,       accent: '#16a34a', icon: ICON_CHECK },
-  { label: 'Retrasadas',    display: displayRetrasadas.value, accent: '#dc2626', icon: ICON_ALERT },
+  { label: 'Total Órdenes', display: displayTotal.value,      accent: '#1f3a52', icon: ICON_ALL,   filterValue: ''            },
+  { label: 'En Proceso',    display: displayProceso.value,    accent: '#2563eb', icon: ICON_PROC,  filterValue: 'En Proceso'  },
+  { label: 'Completadas',   display: displayComp.value,       accent: '#16a34a', icon: ICON_CHECK, filterValue: 'Completada'  },
+  { label: 'Retrasadas',    display: displayRetrasadas.value, accent: '#dc2626', icon: ICON_ALERT, filterValue: 'Retrasada'   },
 ])
+
+function toggleFiltro(valor) {
+  filtroEstado.value = filtroEstado.value === valor ? '' : valor
+}
 
 async function cargarOrdenes() {
   if (!auth.idUsuario) return
@@ -291,6 +306,28 @@ async function cargarOrdenes() {
 
 onMounted(cargarOrdenes)
 
+async function descargarPDF(o) {
+  if (o.estado !== 'Completada' || descargando.value[o.id]) return
+  descargando.value = { ...descargando.value, [o.id]: true }
+  try {
+    const res = await fetch(`${BASE}/ordenes/${o.id}/pdf`)
+    if (!res.ok) throw new Error(`Error ${res.status}`)
+    const blob = await res.blob()
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `orden-${o.id}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (e) {
+    errorMsg.value = `No se pudo generar el PDF: ${e.message}`
+  } finally {
+    descargando.value = { ...descargando.value, [o.id]: false }
+  }
+}
+
 const pedidosFiltrados = computed(() =>
   pedidos.value.filter(p => {
     const q = busqueda.value.toLowerCase()
@@ -312,7 +349,8 @@ const pedidosFiltrados = computed(() =>
 @keyframes orbDrift3 { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px,30px) scale(0.9); } }
 .bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(31,58,82,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(31,58,82,0.04) 1px, transparent 1px); background-size: 40px 40px; }
 
-.main { flex: 1; padding: 28px 30px; overflow-y: auto; position: relative; z-index: 1; }
+/* .main ya NO limita su propio scroll: la página completa se desplaza con el scroll del navegador */
+.main { flex: 1; padding: 28px 30px; position: relative; z-index: 1; }
 
 /* ── HERO HEADER ── */
 .page-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; opacity: 0; transform: translateY(-16px); transition: opacity 0.5s ease, transform 0.5s ease; }
@@ -329,27 +367,40 @@ const pedidosFiltrados = computed(() =>
 .title-char { display: inline-block; opacity: 0; transform: translateY(12px); animation: charReveal 0.4s ease forwards; }
 @keyframes charReveal { to { opacity: 1; transform: translateY(0); } }
 .hero-sub { font-size: 13px; color: #6b7280; margin: 4px 0 0 0; }
-.hero-filters-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
-.search-box { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: white; border: 1.5px solid #e5e7eb; border-radius: 10px; transition: border-color 0.2s, box-shadow 0.2s; width: 220px; }
-.search-box.search-focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.search-ico { width: 16px; height: 16px; color: #9ca3af; flex-shrink: 0; }
-.search-box input { border: none; outline: none; width: 100%; font-size: 14px; color: #374151; background: transparent; }
-.search-box input::placeholder { color: #9ca3af; }
-.select-wrapper { position: relative; display: inline-flex; align-items: center; }
-.select { padding: 9px 32px 9px 12px; border-radius: 10px; border: 1.5px solid #e5e7eb; font-size: 14px; background: white; appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; transition: border-color 0.2s; }
-.select:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.select-arrow { position: absolute; right: 10px; width: 14px; height: 14px; color: #6b7280; pointer-events: none; }
 
-/* ── STATS ── */
-.stats-grid { display: flex; gap: 18px; margin-bottom: 28px; }
-.stat-card { background: white; flex: 1; padding: 20px 20px 20px 24px; border-radius: 14px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.45s ease, transform 0.45s ease, box-shadow 0.2s; }
+/* ── STATS (ahora son botones filtro) ── */
+.stats-grid { display: flex; gap: 18px; margin-bottom: 20px; }
+.stat-card {
+  background: white; flex: 1; padding: 20px 20px 20px 24px; border-radius: 14px;
+  border: 1px solid #e5e7eb; position: relative; overflow: hidden;
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 0.45s ease, transform 0.45s ease, box-shadow 0.2s, border-color 0.2s;
+  text-align: left; cursor: pointer; font-family: inherit;
+}
 .stats-visible .stat-card { opacity: 1; transform: translateY(0); }
 .stat-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.09); transform: translateY(-3px) !important; }
+.stat-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stat-card-active { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 .stat-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
 .stat-icon-bg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); opacity: 0.07; }
 .stat-icon-bg svg { width: 52px; height: 52px; }
 .stat-card h3 { font-size: 13px; color: #6b7280; font-weight: 500; margin: 0 0 10px 0; }
 .stat-card p { font-size: 30px; font-weight: 800; margin: 0; line-height: 1; }
+
+/* ── BARRA DE BÚSQUEDA (arriba de las cards de órdenes) ── */
+.search-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.search-box { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: white; border: 1.5px solid #e5e7eb; border-radius: 10px; transition: border-color 0.2s, box-shadow 0.2s; width: 280px; max-width: 100%; }
+.search-box.search-focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
+.search-ico { width: 16px; height: 16px; color: #9ca3af; flex-shrink: 0; }
+.search-box input { border: none; outline: none; width: 100%; font-size: 14px; color: #374151; background: transparent; }
+.search-box input::placeholder { color: #9ca3af; }
+.clear-filter-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb;
+  background: white; color: #374151; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.clear-filter-btn:hover { background: #f9fafb; border-color: #d1d5db; }
 
 /* ── CONTENEDOR ORDENES ── */
 .orders-container { background: white; border-radius: 14px; border: 1px solid #e5e7eb; overflow: hidden; opacity: 0; transform: translateY(16px); transition: opacity 0.45s ease, transform 0.45s ease; }
@@ -398,8 +449,9 @@ const pedidosFiltrados = computed(() =>
 .pct-completo { color: #15803d; }
 .progress-bg { width: 100%; height: 10px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
 .progress-fill { height: 100%; background: #1f3a52; border-radius: 999px; transition: width 1.1s cubic-bezier(0.4,0,0.2,1); }
-.progress-fill.fill-green  { background: linear-gradient(90deg, #15803d, #4ade80); }
-.progress-fill.fill-orange { background: linear-gradient(90deg, #1d4ed8, #60a5fa); }
+.progress-fill.fill-blue  { background: #2563eb; }
+.progress-fill.fill-green { background: #16a34a; }
+.progress-fill.fill-red   { background: #dc2626; }
 .progress-milestones { display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: #d1d5db; }
 
 /* ESTADO BANNERS */
@@ -407,6 +459,25 @@ const pedidosFiltrados = computed(() =>
 .estado-banner.completada { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 .estado-banner.proceso    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 .estado-banner.retrasada  { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+/* ── BOTÓN DESCARGAR PDF ── */
+.btn-pdf {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-top: 12px; padding: 9px 16px;
+  background: #1f3a52; color: white; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+.btn-pdf:hover:not(:disabled) { background: #16283a; box-shadow: 0 4px 12px rgba(31,58,82,0.25); transform: translateY(-1px); }
+.btn-pdf:active:not(:disabled) { transform: translateY(0); }
+.btn-pdf-disabled, .btn-pdf:disabled {
+  background: #e5e7eb; color: #9ca3af; cursor: not-allowed;
+  box-shadow: none; transform: none;
+}
+.btn-pdf-spinner {
+  width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite;
+}
 
 /* ── ESTADOS VACIOS / CARGA ── */
 .loading-wrap { display: flex; flex-direction: column; align-items: center; padding: 80px 0; gap: 16px; color: #9ca3af; font-size: 14px; position: relative; z-index: 1; }
@@ -421,5 +492,5 @@ const pedidosFiltrados = computed(() =>
 .row-enter-from, .row-leave-to { opacity: 0; transform: translateY(8px); }
 
 @media (max-width: 1100px) { .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); } }
-@media (max-width: 800px)  { .main { padding: 20px 16px; } .order-meta { grid-template-columns: 1fr 1fr; } .page-hero { flex-direction: column; align-items: flex-start; } .hero-filters-wrap { width: 100%; } .search-box { flex: 1; width: auto; } }
+@media (max-width: 800px)  { .main { padding: 20px 16px; } .order-meta { grid-template-columns: 1fr 1fr; } .search-box { width: 100%; } }
 </style>
