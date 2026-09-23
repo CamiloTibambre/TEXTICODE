@@ -66,8 +66,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
             </svg>
           </div>
-          <h3>Usuarios conectados</h3>
-          <p style="color:#1f3a52">{{ statsConectados }}</p>
+          <h3>{{ esAdmin ? 'Usuarios conectados' : 'Estado vinculación' }}</h3>
+          <p style="color:#1f3a52">{{ esAdmin ? statsConectados : (status.connected ? 'Vinculado' : 'Sin vincular') }}</p>
         </div>
         <div class="stat-card" style="transition-delay:80ms">
           <div class="stat-accent" style="background:#16a34a"></div>
@@ -260,6 +260,15 @@
                 <span class="badge-rendimiento" :class="user.Google_Email ? 'alto' : 'bajo'" style="font-size:11px">
                   {{ user.Google_Email ? 'Google activo' : 'Sin vincular' }}
                 </span>
+                <button
+                  v-if="user.Google_Email"
+                  class="btn-unlink-user"
+                  title="Desvincular Google de este usuario"
+                  @click="desvincularUsuarioAdmin(user)"
+                  :disabled="working"
+                >
+                  Desvincular
+                </button>
               </div>
               <div v-if="!connectedUsers.length" class="empty-state">
                 <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
@@ -288,6 +297,7 @@ import {
   getGoogleUpcomingEvents,
   syncGoogleDeliveryEvents,
   unlinkGoogleCalendar,
+  unlinkGoogleUserAdmin,
 } from '../services/api'
 
 const auth        = useAuthStore()
@@ -411,6 +421,23 @@ async function cargarUsuariosGoogle() {
   }
 }
 
+async function desvincularUsuarioAdmin(user) {
+  if (!confirm(`¿Deseas desvincular Google Calendar del usuario ${user.Nombre_Completo}?`)) return
+  working.value = true
+  try {
+    await unlinkGoogleUserAdmin(user.Id_Usuario)
+    notify(`Cuenta de Google desvinculada para ${user.Nombre_Completo}`)
+    await cargarUsuariosGoogle()
+    if (user.Id_Usuario === auth.idUsuario) {
+      await cargarEstado()
+    }
+  } catch (e) {
+    notify(e.message, 'error')
+  } finally {
+    working.value = false
+  }
+}
+
 function formatDate(value) {
   if (!value) return 'Sin sincronizar'
   return new Date(value).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
@@ -418,7 +445,12 @@ function formatDate(value) {
 function formatEventDate(start) {
   const value = start?.dateTime || start?.date
   if (!value) return '—'
-  return new Date(value).toLocaleDateString('es-CO', { month: 'short', day: '2-digit' })
+  const isDateOnly = !value.includes('T')
+  return new Date(value).toLocaleDateString('es-CO', {
+    month: 'short',
+    day: '2-digit',
+    timeZone: isDateOnly ? 'UTC' : undefined,
+  })
 }
 
 onMounted(async () => {
@@ -537,6 +569,9 @@ onMounted(async () => {
 .badge-rendimiento { padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; }
 .badge-rendimiento.alto { background: #dcfce7; color: #15803d; }
 .badge-rendimiento.bajo { background: #fee2e2; color: #b91c1c; }
+.btn-unlink-user { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 7px; font-size: 11px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s; flex-shrink: 0; }
+.btn-unlink-user:hover:not(:disabled) { background: #fecaca; }
+.btn-unlink-user:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── BOTÓN GHOST ── */
 .btn-ghost-sm { display: flex; align-items: center; gap: 6px; background: transparent; color: #1f3a52; border: 1.5px solid #e5e7eb; padding: 7px 12px; border-radius: 9px; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color .2s, background .2s; }

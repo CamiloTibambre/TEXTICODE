@@ -152,6 +152,7 @@ export const getGoogleAuthUrl             = (action = 'link') => requestAuth(`/g
 export const getGoogleCalendarStatus      = ()                 => requestAuth('/google/status')
 export const updateGoogleCalendarSettings = (body)            => requestAuth('/google/settings', { method: 'PATCH', body: JSON.stringify(body) })
 export const unlinkGoogleCalendar         = ()                 => requestAuth('/google/unlink', { method: 'DELETE' })
+export const unlinkGoogleUserAdmin        = (idUsuario)        => requestAuth(`/google/unlink-user/${idUsuario}`, { method: 'DELETE' })
 export const syncGoogleDeliveryEvents     = ()                 => requestAuth('/google/sync/delivery-events', { method: 'POST' })
 export const getGoogleUpcomingEvents      = ()                 => requestAuth('/google/events/upcoming')
 export const getGoogleConnectedUsers      = ()                 => requestAuth('/google/connected-users')

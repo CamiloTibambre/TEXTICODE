@@ -363,21 +363,57 @@ export async function getConnectedGoogleRow(userId) {
   return rows[0]
 }
 
+function extractDateStr(val) {
+  if (!val) return null
+  if (typeof val === 'string') {
+    const m = val.match(/^(\d{4}-\d{2}-\d{2})/)
+    if (m) return m[1]
+  }
+  if (val instanceof Date) {
+    const year = val.getFullYear()
+    const month = String(val.getMonth() + 1).padStart(2, '0')
+    const day = String(val.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  return null
+}
+
+function addOneDayStr(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d + 1))
+  const nextY = dt.getUTCFullYear()
+  const nextM = String(dt.getUTCMonth() + 1).padStart(2, '0')
+  const nextD = String(dt.getUTCDate()).padStart(2, '0')
+  return `${nextY}-${nextM}-${nextD}`
+}
+
 export async function getUserOrders(auth) {
   const user = await getUserForAuth(auth.id)
   if (!user) return []
+
+  const operarioSubquery = `
+    COALESCE(
+      o."Nombre_Completo",
+      (SELECT string_agg(DISTINCT uop."Nombre_Completo", ', ')
+       FROM orden_operario oo2
+       INNER JOIN usuario uop ON uop."Id_Usuario" = oo2."Id_Operario"
+       WHERE oo2."Id_Orden" = op."Id_Orden")
+    ) AS "Operario"
+  `
 
   if (Number(user.Id_Rol) === 1) {
     const { rows } = await db.query(
       `SELECT op."Id_Orden", op."Producto", op."Descripcion", op."Cantidad",
               op."Prioridad", op."Estado", op."Fecha_Limite", op."Fecha_Creacion",
-              c."Nombre_Completo" AS "Cliente", o."Nombre_Completo" AS "Operario"
+              c."Nombre_Completo" AS "Cliente",
+              ${operarioSubquery}
        FROM orden_produccion op
        LEFT JOIN usuario c ON c."Id_Usuario" = op."Id_Cliente"
        LEFT JOIN usuario o ON o."Id_Usuario" = op."Id_Operario"
-       WHERE op."Fecha_Limite" >= CURRENT_DATE
+       WHERE op."Fecha_Limite" IS NOT NULL
+         AND (op."Estado" IN ('En Proceso', 'Retrasada') OR op."Fecha_Limite" >= CURRENT_DATE - INTERVAL '30 days')
        ORDER BY op."Fecha_Limite" ASC
-       LIMIT 50`
+       LIMIT 500`
     )
     return rows
   }
@@ -386,16 +422,27 @@ export async function getUserOrders(auth) {
     const { rows } = await db.query(
       `SELECT op."Id_Orden", op."Producto", op."Descripcion", op."Cantidad",
               op."Prioridad", op."Estado", op."Fecha_Limite", op."Fecha_Creacion",
-              c."Nombre_Completo" AS "Cliente", o."Nombre_Completo" AS "Operario"
+              c."Nombre_Completo" AS "Cliente",
+              ${operarioSubquery}
        FROM orden_produccion op
        LEFT JOIN usuario c ON c."Id_Usuario" = op."Id_Cliente"
        LEFT JOIN usuario o ON o."Id_Usuario" = op."Id_Operario"
-       WHERE (op."Id_Operario" = $1 OR EXISTS (
-         SELECT 1 FROM usuario_orden uo WHERE uo."Id_Orden" = op."Id_Orden" AND uo."Id_Usuario" = $2
-       )) AND op."Fecha_Limite" >= CURRENT_DATE
+       WHERE (
+         op."Id_Operario" = $1
+         OR EXISTS (
+           SELECT 1 FROM orden_operario oo
+           WHERE oo."Id_Orden" = op."Id_Orden" AND oo."Id_Operario" = $1
+         )
+         OR EXISTS (
+           SELECT 1 FROM usuario_orden uo
+           WHERE uo."Id_Orden" = op."Id_Orden" AND uo."Id_Usuario" = $1
+         )
+       )
+       AND op."Fecha_Limite" IS NOT NULL
+       AND (op."Estado" IN ('En Proceso', 'Retrasada') OR op."Fecha_Limite" >= CURRENT_DATE - INTERVAL '30 days')
        ORDER BY op."Fecha_Limite" ASC
-       LIMIT 50`,
-      [auth.id, auth.id]
+       LIMIT 500`,
+      [auth.id]
     )
     return rows
   }
@@ -403,22 +450,24 @@ export async function getUserOrders(auth) {
   const { rows } = await db.query(
     `SELECT op."Id_Orden", op."Producto", op."Descripcion", op."Cantidad",
             op."Prioridad", op."Estado", op."Fecha_Limite", op."Fecha_Creacion",
-            c."Nombre_Completo" AS "Cliente", o."Nombre_Completo" AS "Operario"
+            c."Nombre_Completo" AS "Cliente",
+            ${operarioSubquery}
      FROM orden_produccion op
      LEFT JOIN usuario c ON c."Id_Usuario" = op."Id_Cliente"
      LEFT JOIN usuario o ON o."Id_Usuario" = op."Id_Operario"
-     WHERE op."Id_Cliente" = $1 AND op."Fecha_Limite" >= CURRENT_DATE
+     WHERE op."Id_Cliente" = $1
+       AND op."Fecha_Limite" IS NOT NULL
+       AND (op."Estado" IN ('En Proceso', 'Retrasada') OR op."Fecha_Limite" >= CURRENT_DATE - INTERVAL '30 days')
      ORDER BY op."Fecha_Limite" ASC
-     LIMIT 50`,
+     LIMIT 500`,
     [auth.id]
   )
   return rows
 }
 
 function toGoogleEvent(order) {
-  const date = new Date(order.Fecha_Limite)
-  const end  = new Date(date)
-  end.setDate(end.getDate() + 1)
+  const startDateStr = extractDateStr(order.Fecha_Limite) || new Date().toISOString().slice(0, 10)
+  const endDateStr   = addOneDayStr(startDateStr)
 
   return {
     summary: `Texticode: entrega orden #${order.Id_Orden} — ${order.Producto || 'Producción'}`,
@@ -433,8 +482,8 @@ function toGoogleEvent(order) {
       `Operario: ${order.Operario || '—'}`,
       'Evento creado automáticamente desde Texticode.',
     ].join('\n'),
-    start: { date: date.toISOString().slice(0, 10) },
-    end:   { date: end.toISOString().slice(0, 10) },
+    start: { date: startDateStr },
+    end:   { date: endDateStr },
     reminders: {
       useDefault: false,
       overrides: [
@@ -501,9 +550,13 @@ router.get('/events/upcoming', requireAuth, async (req, res) => {
   try {
     const googleRow   = await getConnectedGoogleRow(req.auth.id)
     const accessToken = await refreshAccessToken(googleRow)
+
+    const startOfToday = new Date()
+    startOfToday.setHours(0, 0, 0, 0)
+
     const params = new URLSearchParams({
-      timeMin:      new Date().toISOString(),
-      maxResults:   String(req.query.limit || 10),
+      timeMin:      startOfToday.toISOString(),
+      maxResults:   String(req.query.limit || 100),
       singleEvents: 'true',
       orderBy:      'startTime',
       q:            'Texticode',
@@ -543,6 +596,13 @@ router.get('/connected-users', requireAuth, async (req, res) => {
      ORDER BY (g."Updated_At" IS NULL) ASC, g."Updated_At" DESC, u."Nombre_Completo" ASC`
   )
   res.json({ users: rows })
+})
+
+router.delete('/unlink-user/:idUsuario', requireAuth, async (req, res) => {
+  if (Number(req.auth.rol) !== 1) return res.status(403).json({ error: 'Solo administradores.' })
+  const { idUsuario } = req.params
+  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1', [idUsuario])
+  res.json({ mensaje: 'Cuenta de Google desvinculada por el administrador.' })
 })
 
 export default router

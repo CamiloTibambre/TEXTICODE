@@ -7,28 +7,274 @@ const router = express.Router()
 
 router.use(verificarApiKey)
 
-const LIMITE_ORDENES_SOBRECARGA = 5
-const LIMITE_ORDENES_DISPONIBLE = 2
+// ─────────────────────────────────────────────────────────────
+// Configuración de carga
+// ─────────────────────────────────────────────────────────────
+// Estados de ORDEN que cuentan como activos (solo para órdenes antiguas sin fases)
+const ESTADOS_ACTIVOS = ['En Proceso', 'Retrasada']
+const ESTADOS_ACTIVOS_SQL = ESTADOS_ACTIVOS.map(e => `'${e}'`).join(', ')
 
-// Órdenes de cada operario: fases pendientes (orden_operario) + órdenes legacy.
-const SQL_ORDENES_OP = `(
-  SELECT oo."Id_Operario", p."Id_Orden", p."Producto", p."Estado", p."Prioridad",
-         p."Fecha_Limite", p."Unidades", p."Unidades_Realizadas"
+// Estados de FASE que ya NO cuentan como carga.
+// Si tienes otros estados finales (ej. 'Cancelada'), agrégalos aquí.
+const ESTADOS_FASE_FINALIZADOS = ['Completada']
+const ESTADOS_FASE_FINALIZADOS_SQL = ESTADOS_FASE_FINALIZADOS.map(e => `'${e}'`).join(', ')
+
+// true  => una orden antigua sin fases cuenta como 1 unidad de carga
+// false => solo cuentan las fases
+const INCLUIR_ORDENES_SIN_FASES = true
+
+// Umbrales (modificables en memoria con PATCH /umbrales)
+// sobrecargado  => carga >= limite_sobrecarga
+// disponible    => carga <= limite_disponible
+const umbrales = {
+  limite_sobrecarga: 8,
+  limite_disponible: 2,
+}
+
+function clasificarCarga(carga) {
+  const n = Number(carga)
+  if (n >= umbrales.limite_sobrecarga) return 'sobrecargado'
+  if (n <= umbrales.limite_disponible) return 'disponible'
+  return 'normal'
+}
+
+// Cuántas unidades hay que mover para que el operario quede por debajo del límite
+// Ej: límite 5, carga 5 => 1 | carga 7 => 3
+function calcularExceso(carga) {
+  return Math.max(0, Number(carga) - (umbrales.limite_sobrecarga - 1))
+}
+
+// ─────────────────────────────────────────────────────────────
+// Unidades de carga: cada FASE activa + órdenes antiguas sin fases
+// ─────────────────────────────────────────────────────────────
+const ITEMS_CARGA_SQL = `
+  SELECT
+    oo."Id_Orden_Operario"                          AS "Id_Orden_Operario",
+    'fase'::text                                    AS tipo,
+    oo."Id_Orden"                                   AS "Id_Orden",
+    oo."Id_Operario"                                AS "Id_Operario",
+    oo."Numero_Fase"                                AS "Numero_Fase",
+    oo."Descripcion_Fase"                           AS "Descripcion_Fase",
+    oo."Estado_Fase"                                AS estado_item,
+    p."Producto"                                    AS "Producto",
+    p."Prioridad"                                   AS "Prioridad",
+    p."Fecha_Limite"                                AS "Fecha_Limite",
+    (p."Estado"::text = 'Retrasada' OR CURRENT_DATE > p."Fecha_Limite") AS vencida
   FROM orden_operario oo
-  JOIN orden_produccion p ON p."Id_Orden" = oo."Id_Orden"
-  WHERE oo."Estado_Fase" <> 'Completada'
-  UNION
-  SELECT p."Id_Operario", p."Id_Orden", p."Producto", p."Estado", p."Prioridad",
-         p."Fecha_Limite", p."Unidades", p."Unidades_Realizadas"
+  INNER JOIN orden_produccion p ON p."Id_Orden" = oo."Id_Orden"
+  WHERE oo."Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
+    AND p."Estado"::text <> 'Completada'
+  ${INCLUIR_ORDENES_SIN_FASES ? `
+  UNION ALL
+  SELECT
+    NULL::int,
+    'orden'::text,
+    p."Id_Orden",
+    p."Id_Operario",
+    NULL::int,
+    NULL::text,
+    p."Estado"::text,
+    p."Producto",
+    p."Prioridad",
+    p."Fecha_Limite",
+    (p."Estado"::text = 'Retrasada' OR CURRENT_DATE > p."Fecha_Limite")
   FROM orden_produccion p
   WHERE p."Id_Operario" IS NOT NULL
-    AND NOT EXISTS (
-      SELECT 1 FROM orden_operario x
-      WHERE x."Id_Orden" = p."Id_Orden" AND x."Id_Operario" = p."Id_Operario"
-    )
-)`
+    AND p."Estado"::text IN (${ESTADOS_ACTIVOS_SQL})
+    AND NOT EXISTS (SELECT 1 FROM orden_operario x WHERE x."Id_Orden" = p."Id_Orden")
+  ` : ''}
+`
 
+// Orden en que se reasignan: vencidas primero, luego prioridad y fecha límite
+const ORDEN_ITEMS_SQL = `
+  vencida DESC,
+  CASE "Prioridad"::text WHEN 'Alta' THEN 1 WHEN 'Media' THEN 2 WHEN 'Baja' THEN 3 ELSE 4 END ASC,
+  "Fecha_Limite" ASC,
+  "Numero_Fase" ASC NULLS LAST
+`
+
+// Operarios activos con su carga (opcionalmente uno solo)
+async function obtenerOperarios(idOperario = null) {
+  const params = []
+  let filtro = ''
+  if (idOperario !== null) {
+    params.push(idOperario)
+    filtro = `AND u."Id_Usuario" = $1`
+  }
+
+  const { rows } = await db.query(`
+    WITH items AS (${ITEMS_CARGA_SQL})
+    SELECT
+      u."Id_Usuario",
+      u."Nombre_Completo",
+      u."Nombre_Usuario",
+      u."Correo",
+      u."Telefono",
+      COUNT(i."Id_Operario")::int                                     AS ordenes_activas,
+      COUNT(i."Id_Operario") FILTER (WHERE i.tipo = 'fase')::int      AS fases_activas,
+      COUNT(i."Id_Operario") FILTER (WHERE i.vencida)::int            AS ordenes_vencidas,
+      COUNT(i."Id_Operario") FILTER (WHERE i."Prioridad"::text = 'Alta')::int AS ordenes_alta_prioridad
+    FROM usuario u
+    INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+    LEFT JOIN items i ON i."Id_Operario" = u."Id_Usuario"
+    WHERE u."Estado" = 'activo' ${filtro}
+    GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono"
+    ORDER BY ordenes_activas DESC, u."Nombre_Completo"
+  `, params)
+
+  return rows.map(o => ({ ...o, estado_carga: clasificarCarga(o.ordenes_activas) }))
+}
+
+// Calcula las sugerencias de reasignación (por fase)
+async function calcularSugerencias() {
+  const operarios = await obtenerOperarios()
+  const sobrecargados = operarios.filter(o => o.estado_carga === 'sobrecargado')
+  const disponibles   = operarios.filter(o => o.estado_carga === 'disponible')
+
+  if (sobrecargados.length === 0 || disponibles.length === 0) {
+    return { sobrecargados, disponibles, sugerencias: [] }
+  }
+
+  const { rows: items } = await db.query(`
+    WITH items AS (${ITEMS_CARGA_SQL})
+    SELECT * FROM items
+    WHERE "Id_Operario" = ANY($1::int[])
+    ORDER BY "Id_Operario", ${ORDEN_ITEMS_SQL}
+  `, [sobrecargados.map(o => o.Id_Usuario)])
+
+  // Carga proyectada de cada disponible, para repartir sin sobrecargarlos
+  const cargaProyectada = new Map(disponibles.map(d => [d.Id_Usuario, d.ordenes_activas]))
+  const sugerencias = []
+
+  for (const operario of sobrecargados) {
+    const exceso = calcularExceso(operario.ordenes_activas)
+    const aMover = items.filter(i => i.Id_Operario === operario.Id_Usuario).slice(0, exceso)
+    const movimientos = []
+
+    for (const item of aMover) {
+      // Disponible con menos carga proyectada
+      const destino = [...disponibles].sort(
+        (a, b) => cargaProyectada.get(a.Id_Usuario) - cargaProyectada.get(b.Id_Usuario)
+      )[0]
+
+      // Si el destino ya llegaría al límite, no hay más capacidad
+      if (cargaProyectada.get(destino.Id_Usuario) + 1 >= umbrales.limite_sobrecarga) break
+      cargaProyectada.set(destino.Id_Usuario, cargaProyectada.get(destino.Id_Usuario) + 1)
+
+      movimientos.push({
+        tipo:               item.tipo,
+        Id_Orden_Operario:  item.Id_Orden_Operario,
+        Id_Orden:           item.Id_Orden,
+        Numero_Fase:        item.Numero_Fase,
+        Descripcion_Fase:   item.Descripcion_Fase,
+        Producto:           item.Producto,
+        Prioridad:          item.Prioridad,
+        vencida:            Boolean(item.vencida),
+        Fecha_Limite:       item.Fecha_Limite,
+        desde_operario:     { id: operario.Id_Usuario, nombre: operario.Nombre_Completo },
+        hacia_operario:     { id: destino.Id_Usuario,  nombre: destino.Nombre_Completo },
+      })
+    }
+
+    if (movimientos.length > 0) {
+      sugerencias.push({
+        operario_sobrecargado: {
+          id:              operario.Id_Usuario,
+          nombre:          operario.Nombre_Completo,
+          ordenes_activas: operario.ordenes_activas,
+        },
+        exceso_ordenes: exceso,
+        movimientos,
+      })
+    }
+  }
+
+  return { sobrecargados, disponibles, sugerencias }
+}
+
+// Mueve UNA fase (o una orden antigua sin fases) a otro operario
+async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino }) {
+  if (!Id_Operario_Destino || (!Id_Orden_Operario && !Id_Orden)) {
+    return { status: 400, error: 'Se requiere Id_Orden_Operario (fase) o Id_Orden, y Id_Operario_Destino' }
+  }
+
+  const { rows: destino } = await db.query(`
+    SELECT u."Id_Usuario", u."Nombre_Completo"
+    FROM usuario u
+    INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+    WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
+  `, [Id_Operario_Destino])
+
+  if (destino.length === 0) {
+    return { status: 404, error: `No se encontró un operario activo con id ${Id_Operario_Destino}` }
+  }
+
+  // Reasignar una FASE
+  if (Id_Orden_Operario) {
+    const { rows: fase } = await db.query(`
+      SELECT oo."Id_Orden_Operario", oo."Id_Orden", oo."Id_Operario", oo."Numero_Fase", oo."Descripcion_Fase", p."Producto"
+      FROM orden_operario oo
+      INNER JOIN orden_produccion p ON p."Id_Orden" = oo."Id_Orden"
+      WHERE oo."Id_Orden_Operario" = $1
+        AND oo."Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
+    `, [Id_Orden_Operario])
+
+    if (fase.length === 0) {
+      return { status: 404, error: `No se encontró una fase activa con id ${Id_Orden_Operario}` }
+    }
+
+    await db.query(
+      `UPDATE orden_operario SET "Id_Operario" = $1, updated_at = NOW() WHERE "Id_Orden_Operario" = $2`,
+      [Id_Operario_Destino, Id_Orden_Operario]
+    )
+
+    return {
+      status: 200,
+      mensaje: `Fase ${fase[0].Numero_Fase} de la orden #${fase[0].Id_Orden} reasignada a ${destino[0].Nombre_Completo}`,
+      data: {
+        tipo:              'fase',
+        Id_Orden_Operario: Number(Id_Orden_Operario),
+        Id_Orden:          fase[0].Id_Orden,
+        Numero_Fase:       fase[0].Numero_Fase,
+        Producto:          fase[0].Producto,
+        operario_anterior: fase[0].Id_Operario,
+        operario_nuevo:    { id: destino[0].Id_Usuario, nombre: destino[0].Nombre_Completo },
+      }
+    }
+  }
+
+  // Reasignar una ORDEN antigua sin fases
+  const { rows: orden } = await db.query(`
+    SELECT "Id_Orden", "Id_Operario", "Producto"
+    FROM orden_produccion
+    WHERE "Id_Orden" = $1 AND "Estado"::text IN (${ESTADOS_ACTIVOS_SQL})
+  `, [Id_Orden])
+
+  if (orden.length === 0) {
+    return { status: 404, error: `No se encontró una orden activa con id ${Id_Orden}` }
+  }
+
+  await db.query(
+    `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2`,
+    [Id_Operario_Destino, Id_Orden]
+  )
+
+  return {
+    status: 200,
+    mensaje: `Orden #${Id_Orden} reasignada a ${destino[0].Nombre_Completo}`,
+    data: {
+      tipo:              'orden',
+      Id_Orden:          Number(Id_Orden),
+      Producto:          orden[0].Producto,
+      operario_anterior: orden[0].Id_Operario,
+      operario_nuevo:    { id: destino[0].Id_Usuario, nombre: destino[0].Nombre_Completo },
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // GET /api/carga-trabajo
+// ─────────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
     await actualizarOrdenesRetrasadas()
@@ -43,48 +289,7 @@ router.get('/', async (req, res) => {
       })
     }
 
-    const { rows: operarios } = await db.query(`
-      SELECT
-        u."Id_Usuario",
-        u."Nombre_Completo",
-        u."Nombre_Usuario",
-        u."Correo",
-        u."Telefono",
-
-        COUNT(
-          CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') THEN 1 END
-        ) AS ordenes_activas,
-
-        COUNT(
-          CASE WHEN (op."Estado" = 'Retrasada' OR (op."Estado" = 'En Proceso' AND CURRENT_DATE > op."Fecha_Limite"))
-          THEN 1 END
-        ) AS ordenes_vencidas,
-
-        COUNT(
-          CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada')
-               AND op."Prioridad" = 'Alta'
-          THEN 1 END
-        ) AS ordenes_alta_prioridad
-
-      FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-      LEFT JOIN ${SQL_ORDENES_OP} op ON op."Id_Operario" = u."Id_Usuario"
-      WHERE u."Estado" = 'activo'
-      GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono"
-      ORDER BY ordenes_activas DESC
-    `)
-
-    let data = operarios.map(op => {
-      let estado_carga
-      if (op.ordenes_activas > LIMITE_ORDENES_SOBRECARGA) {
-        estado_carga = 'sobrecargado'
-      } else if (op.ordenes_activas <= LIMITE_ORDENES_DISPONIBLE) {
-        estado_carga = 'disponible'
-      } else {
-        estado_carga = 'normal'
-      }
-      return { ...op, estado_carga }
-    })
+    let data = await obtenerOperarios()
 
     if (estado) {
       data = data.filter(o => o.estado_carga === estado)
@@ -104,81 +309,20 @@ router.get('/', async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────
 // GET /api/carga-trabajo/sugerencias
+// ─────────────────────────────────────────────────────────────
 router.get('/sugerencias', async (req, res) => {
   try {
     await actualizarOrdenesRetrasadas()
 
-    const { rows: operarios } = await db.query(`
-      SELECT
-        u."Id_Usuario",
-        u."Nombre_Completo",
-        COUNT(
-          CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') THEN 1 END
-        ) AS ordenes_activas
-      FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-      LEFT JOIN ${SQL_ORDENES_OP} op ON op."Id_Operario" = u."Id_Usuario"
-      WHERE u."Estado" = 'activo'
-      GROUP BY u."Id_Usuario", u."Nombre_Completo"
-    `)
-
-    const sobrecargados = operarios.filter(o => o.ordenes_activas > LIMITE_ORDENES_SOBRECARGA)
-    const disponibles   = operarios.filter(o => o.ordenes_activas <= LIMITE_ORDENES_DISPONIBLE)
+    const { sobrecargados, disponibles, sugerencias } = await calcularSugerencias()
 
     if (sobrecargados.length === 0) {
       return res.json({ ok: true, mensaje: 'No hay operarios sobrecargados en este momento', sugerencias: [] })
     }
     if (disponibles.length === 0) {
       return res.json({ ok: true, mensaje: 'Hay operarios sobrecargados pero ninguno tiene capacidad disponible', sugerencias: [] })
-    }
-
-    const sugerencias = []
-
-    for (const operario of sobrecargados) {
-      const { rows: ordenes } = await db.query(`
-        SELECT
-          "Id_Orden", "Producto", "Estado", "Prioridad", "Fecha_Limite",
-          "Unidades", "Unidades_Realizadas",
-          CASE WHEN ("Estado" = 'Retrasada' OR CURRENT_DATE > "Fecha_Limite") THEN true ELSE false END AS vencida,
-          CASE "Prioridad"
-            WHEN 'Alta'  THEN 1
-            WHEN 'Media' THEN 2
-            WHEN 'Baja'  THEN 3
-            ELSE 4
-          END AS orden_prioridad
-        FROM ${SQL_ORDENES_OP} t
-        WHERE "Id_Operario" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')
-        ORDER BY vencida DESC, orden_prioridad ASC, "Fecha_Limite" ASC
-      `, [operario.Id_Usuario])
-
-      const exceso = Math.max(0, operario.ordenes_activas - LIMITE_ORDENES_SOBRECARGA)
-      const ordenesAReasignar = ordenes.slice(0, exceso)
-
-      const movimientos = ordenesAReasignar.map((orden, idx) => {
-        const destino = disponibles[idx % disponibles.length]
-        return {
-          Id_Orden:       orden.Id_Orden,
-          Producto:       orden.Producto,
-          Prioridad:      orden.Prioridad,
-          vencida:        Boolean(orden.vencida),
-          Fecha_Limite:   orden.Fecha_Limite,
-          desde_operario: { id: operario.Id_Usuario, nombre: operario.Nombre_Completo },
-          hacia_operario: { id: destino.Id_Usuario,  nombre: destino.Nombre_Completo },
-        }
-      })
-
-      if (movimientos.length > 0) {
-        sugerencias.push({
-          operario_sobrecargado: {
-            id:              operario.Id_Usuario,
-            nombre:          operario.Nombre_Completo,
-            ordenes_activas: operario.ordenes_activas,
-          },
-          exceso_ordenes: exceso,
-          movimientos,
-        })
-      }
     }
 
     res.json({
@@ -192,7 +336,9 @@ router.get('/sugerencias', async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────
 // GET /api/carga-trabajo/operarios/:id
+// ─────────────────────────────────────────────────────────────
 router.get('/operarios/:id', async (req, res) => {
   try {
     const { id } = req.params
@@ -203,42 +349,21 @@ router.get('/operarios/:id', async (req, res) => {
 
     await actualizarOrdenesRetrasadas()
 
-    const { rows } = await db.query(`
-      SELECT
-        u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono",
-        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') THEN 1 END) AS ordenes_activas,
-        COUNT(CASE WHEN (op."Estado" = 'Retrasada' OR (op."Estado" = 'En Proceso' AND CURRENT_DATE > op."Fecha_Limite")) THEN 1 END) AS ordenes_vencidas,
-        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') AND op."Prioridad" = 'Alta' THEN 1 END) AS ordenes_alta_prioridad
-      FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-      LEFT JOIN ${SQL_ORDENES_OP} op ON op."Id_Operario" = u."Id_Usuario"
-      WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
-      GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono"
-    `, [id])
-
-    if (rows.length === 0) {
+    const operarios = await obtenerOperarios(Number(id))
+    if (operarios.length === 0) {
       return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
     }
 
-    const operario = rows[0]
-    let estado_carga
-    if (operario.ordenes_activas > LIMITE_ORDENES_SOBRECARGA) estado_carga = 'sobrecargado'
-    else if (operario.ordenes_activas <= LIMITE_ORDENES_DISPONIBLE) estado_carga = 'disponible'
-    else estado_carga = 'normal'
-
-    const { rows: ordenes } = await db.query(`
-      SELECT
-        "Id_Orden", "Producto", "Estado", "Prioridad",
-        "Unidades", "Unidades_Realizadas", "Fecha_Limite",
-        CASE WHEN ("Estado" = 'Retrasada' OR CURRENT_DATE > "Fecha_Limite") THEN true ELSE false END AS vencida
-      FROM ${SQL_ORDENES_OP} t
-      WHERE "Id_Operario" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')
-      ORDER BY CASE "Prioridad" WHEN 'Alta' THEN 1 WHEN 'Media' THEN 2 ELSE 3 END ASC, "Fecha_Limite" ASC
-    `, [id])
+    const { rows: detalle } = await db.query(`
+      WITH items AS (${ITEMS_CARGA_SQL})
+      SELECT * FROM items
+      WHERE "Id_Operario" = $1
+      ORDER BY ${ORDEN_ITEMS_SQL}
+    `, [Number(id)])
 
     res.json({
       ok: true,
-      data: { ...operario, estado_carga, ordenes_activas_detalle: ordenes }
+      data: { ...operarios[0], ordenes_activas_detalle: detalle }
     })
   } catch (error) {
     console.error('[carga-trabajo] GET /operarios/:id', error)
@@ -246,58 +371,46 @@ router.get('/operarios/:id', async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────
 // POST /api/carga-trabajo/reasignar
+// Body: { Id_Orden_Operario, Id_Operario_Destino }   (fase)
+//   o   { Id_Orden, Id_Operario_Destino }            (orden antigua sin fases)
+// ─────────────────────────────────────────────────────────────
 router.post('/reasignar', async (req, res) => {
   try {
-    const { Id_Orden, Id_Operario_Destino } = req.body
-
-    if (!Id_Orden || !Id_Operario_Destino) {
-      return res.status(400).json({ ok: false, mensaje: 'Se requieren Id_Orden e Id_Operario_Destino' })
-    }
-
-    const { rows: orden } = await db.query(`
-      SELECT "Id_Orden", "Id_Operario", "Producto", "Estado"
-      FROM orden_produccion
-      WHERE "Id_Orden" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')
-    `, [Id_Orden])
-
-    if (orden.length === 0) {
-      return res.status(404).json({ ok: false, mensaje: `No se encontró una orden activa con id ${Id_Orden}` })
-    }
-
-    const { rows: operario } = await db.query(`
-      SELECT u."Id_Usuario", u."Nombre_Completo"
-      FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-      WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
-    `, [Id_Operario_Destino])
-
-    if (operario.length === 0) {
-      return res.status(404).json({ ok: false, mensaje: `No se encontró un operario activo con id ${Id_Operario_Destino}` })
-    }
-
-    await db.query(
-      `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2`,
-      [Id_Operario_Destino, Id_Orden]
-    )
-
-    res.json({
-      ok: true,
-      mensaje: `Orden #${Id_Orden} reasignada correctamente a ${operario[0].Nombre_Completo}`,
-      data: {
-        Id_Orden,
-        Producto:          orden[0].Producto,
-        operario_anterior: orden[0].Id_Operario,
-        operario_nuevo:    { id: operario[0].Id_Usuario, nombre: operario[0].Nombre_Completo }
-      }
-    })
+    const r = await reasignarItem(req.body)
+    if (r.error) return res.status(r.status).json({ ok: false, mensaje: r.error })
+    res.json({ ok: true, mensaje: r.mensaje, data: r.data })
   } catch (error) {
     console.error('[carga-trabajo] POST /reasignar', error)
-    res.status(500).json({ ok: false, mensaje: 'Error al reasignar la orden' })
+    res.status(500).json({ ok: false, mensaje: 'Error al reasignar' })
   }
 })
 
+// PATCH /api/carga-trabajo/fases/:id/operario  (reasignar una fase por su id)
+router.patch('/fases/:id/operario', async (req, res) => {
+  try {
+    const { id } = req.params
+    if (isNaN(id)) {
+      return res.status(400).json({ ok: false, mensaje: 'El id de la fase debe ser un número válido' })
+    }
+
+    const r = await reasignarItem({
+      Id_Orden_Operario:   Number(id),
+      Id_Operario_Destino: req.body.Id_Operario_Destino
+    })
+    if (r.error) return res.status(r.status).json({ ok: false, mensaje: r.error })
+    res.json({ ok: true, mensaje: r.mensaje, data: r.data })
+  } catch (error) {
+    console.error('[carga-trabajo] PATCH /fases/:id/operario', error)
+    res.status(500).json({ ok: false, mensaje: 'Error al reasignar la fase' })
+  }
+})
+
+// ─────────────────────────────────────────────────────────────
 // POST /api/carga-trabajo/reasignar-multiple
+// Body: { movimientos: [{ Id_Orden_Operario | Id_Orden, Id_Operario_Destino }] }
+// ─────────────────────────────────────────────────────────────
 router.post('/reasignar-multiple', async (req, res) => {
   try {
     const { movimientos } = req.body
@@ -310,30 +423,15 @@ router.post('/reasignar-multiple', async (req, res) => {
     const errores    = []
 
     for (const mov of movimientos) {
-      const { Id_Orden, Id_Operario_Destino } = mov
-
-      if (!Id_Orden || !Id_Operario_Destino) {
-        errores.push({ Id_Orden, error: 'Faltan Id_Orden o Id_Operario_Destino' })
-        continue
-      }
-
       try {
-        const { rows: orden } = await db.query(
-          `SELECT "Id_Orden", "Producto" FROM orden_produccion WHERE "Id_Orden" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')`,
-          [Id_Orden]
-        )
-        if (orden.length === 0) {
-          errores.push({ Id_Orden, error: 'Orden no encontrada o no está activa' })
-          continue
+        const r = await reasignarItem(mov)
+        if (r.error) {
+          errores.push({ Id_Orden_Operario: mov.Id_Orden_Operario, Id_Orden: mov.Id_Orden, error: r.error })
+        } else {
+          resultados.push({ ...r.data, ok: true })
         }
-
-        await db.query(
-          `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2`,
-          [Id_Operario_Destino, Id_Orden]
-        )
-        resultados.push({ Id_Orden, Producto: orden[0].Producto, Id_Operario_Destino, ok: true })
       } catch {
-        errores.push({ Id_Orden, error: 'Error al procesar esta orden' })
+        errores.push({ Id_Orden_Operario: mov.Id_Orden_Operario, Id_Orden: mov.Id_Orden, error: 'Error al procesar este movimiento' })
       }
     }
 
@@ -350,22 +448,14 @@ router.post('/reasignar-multiple', async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────
 // POST /api/carga-trabajo/aplicar-sugerencias
+// ─────────────────────────────────────────────────────────────
 router.post('/aplicar-sugerencias', async (req, res) => {
   try {
-    const { rows: operarios } = await db.query(`
-      SELECT
-        u."Id_Usuario", u."Nombre_Completo",
-        COUNT(CASE WHEN op."Estado" IN ('En Proceso', 'Retrasada') THEN 1 END) AS ordenes_activas
-      FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-      LEFT JOIN ${SQL_ORDENES_OP} op ON op."Id_Operario" = u."Id_Usuario"
-      WHERE u."Estado" = 'activo'
-      GROUP BY u."Id_Usuario", u."Nombre_Completo"
-    `)
+    await actualizarOrdenesRetrasadas()
 
-    const sobrecargados = operarios.filter(o => o.ordenes_activas > LIMITE_ORDENES_SOBRECARGA)
-    const disponibles   = operarios.filter(o => o.ordenes_activas <= LIMITE_ORDENES_DISPONIBLE)
+    const { sobrecargados, disponibles, sugerencias } = await calcularSugerencias()
 
     if (sobrecargados.length === 0) {
       return res.json({ ok: true, mensaje: 'No hay operarios sobrecargados', aplicados: 0 })
@@ -377,33 +467,23 @@ router.post('/aplicar-sugerencias', async (req, res) => {
     let aplicados = 0
     const movimientos = []
 
-    for (const operario of sobrecargados) {
-      const { rows: ordenes } = await db.query(`
-        SELECT "Id_Orden", "Producto", "Prioridad", "Fecha_Limite",
-          CASE WHEN CURRENT_DATE > "Fecha_Limite" THEN true ELSE false END AS vencida,
-          CASE "Prioridad" WHEN 'Alta' THEN 1 WHEN 'Media' THEN 2 ELSE 3 END AS orden_prioridad
-        FROM orden_produccion
-        WHERE "Id_Operario" = $1 AND "Estado" IN ('En Proceso', 'Retrasada')
-        ORDER BY vencida DESC, orden_prioridad ASC, "Fecha_Limite" ASC
-      `, [operario.Id_Usuario])
-
-      const exceso = Math.max(0, operario.ordenes_activas - LIMITE_ORDENES_SOBRECARGA)
-      const aReasignar = ordenes.slice(0, exceso)
-
-      for (let i = 0; i < aReasignar.length; i++) {
-        const orden   = aReasignar[i]
-        const destino = disponibles[i % disponibles.length]
-
-        await db.query(
-          `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2`,
-          [destino.Id_Usuario, orden.Id_Orden]
-        )
+    for (const sugerencia of sugerencias) {
+      for (const mov of sugerencia.movimientos) {
+        const r = await reasignarItem({
+          Id_Orden_Operario:   mov.tipo === 'fase' ? mov.Id_Orden_Operario : undefined,
+          Id_Orden:            mov.tipo === 'orden' ? mov.Id_Orden : undefined,
+          Id_Operario_Destino: mov.hacia_operario.id,
+        })
+        if (r.error) continue
 
         movimientos.push({
-          Id_Orden:       orden.Id_Orden,
-          Producto:       orden.Producto,
-          desde_operario: operario.Nombre_Completo,
-          hacia_operario: destino.Nombre_Completo,
+          tipo:              mov.tipo,
+          Id_Orden_Operario: mov.Id_Orden_Operario,
+          Id_Orden:          mov.Id_Orden,
+          Numero_Fase:       mov.Numero_Fase,
+          Producto:          mov.Producto,
+          desde_operario:    mov.desde_operario.nombre,
+          hacia_operario:    mov.hacia_operario.nombre,
         })
         aplicados++
       }
@@ -416,29 +496,28 @@ router.post('/aplicar-sugerencias', async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────
 // PATCH /api/carga-trabajo/umbrales
-let umbrales = {
-  limite_sobrecarga: LIMITE_ORDENES_SOBRECARGA,
-  limite_disponible: LIMITE_ORDENES_DISPONIBLE,
-}
-
+// ─────────────────────────────────────────────────────────────
 router.patch('/umbrales', async (req, res) => {
   try {
     const { limite_sobrecarga, limite_disponible } = req.body
 
-    if (limite_sobrecarga !== undefined) {
-      if (!Number.isInteger(limite_sobrecarga) || limite_sobrecarga < 1) {
-        return res.status(400).json({ ok: false, mensaje: 'limite_sobrecarga debe ser un entero positivo' })
-      }
-      umbrales.limite_sobrecarga = limite_sobrecarga
+    const nuevoSobrecarga = limite_sobrecarga !== undefined ? limite_sobrecarga : umbrales.limite_sobrecarga
+    const nuevoDisponible = limite_disponible !== undefined ? limite_disponible : umbrales.limite_disponible
+
+    if (!Number.isInteger(nuevoSobrecarga) || nuevoSobrecarga < 1) {
+      return res.status(400).json({ ok: false, mensaje: 'limite_sobrecarga debe ser un entero positivo' })
+    }
+    if (!Number.isInteger(nuevoDisponible) || nuevoDisponible < 0) {
+      return res.status(400).json({ ok: false, mensaje: 'limite_disponible debe ser un entero >= 0' })
+    }
+    if (nuevoDisponible >= nuevoSobrecarga) {
+      return res.status(400).json({ ok: false, mensaje: 'limite_disponible debe ser menor que limite_sobrecarga' })
     }
 
-    if (limite_disponible !== undefined) {
-      if (!Number.isInteger(limite_disponible) || limite_disponible < 0) {
-        return res.status(400).json({ ok: false, mensaje: 'limite_disponible debe ser un entero >= 0' })
-      }
-      umbrales.limite_disponible = limite_disponible
-    }
+    umbrales.limite_sobrecarga = nuevoSobrecarga
+    umbrales.limite_disponible = nuevoDisponible
 
     res.json({ ok: true, mensaje: 'Umbrales actualizados', umbrales })
   } catch (error) {
@@ -447,7 +526,10 @@ router.patch('/umbrales', async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────
 // PATCH /api/carga-trabajo/ordenes/:id/operario
+// (reasigna la orden completa; se mantiene por compatibilidad)
+// ─────────────────────────────────────────────────────────────
 router.patch('/ordenes/:id/operario', async (req, res) => {
   try {
     const { id } = req.params
@@ -500,7 +582,9 @@ router.patch('/ordenes/:id/operario', async (req, res) => {
   }
 })
 
+// ─────────────────────────────────────────────────────────────
 // PATCH /api/carga-trabajo/operarios/:id/estado
+// ─────────────────────────────────────────────────────────────
 router.patch('/operarios/:id/estado', async (req, res) => {
   try {
     const { id } = req.params
