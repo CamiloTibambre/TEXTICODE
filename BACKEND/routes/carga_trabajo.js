@@ -192,7 +192,14 @@ async function calcularSugerencias() {
   return { sobrecargados, disponibles, sugerencias }
 }
 
-// Mueve UNA fase (o una orden antigua sin fases) a otro operario
+// Mueve UNA fase (o una orden completa) a otro operario.
+// Si se pasa Id_Orden_Operario -> reasigna solo esa fase.
+// Si se pasa Id_Orden          -> reasigna TODA la orden:
+//   - si la orden tiene fases activas, se reasignan todas esas fases
+//     (esto es lo que realmente mueve la carga, ya que la carga se
+//     calcula por fase cuando la orden las tiene — ver ITEMS_CARGA_SQL).
+//   - si la orden no tiene fases (orden antigua), se reasigna el
+//     campo Id_Operario de orden_produccion como respaldo.
 async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino }) {
   if (!Id_Operario_Destino || (!Id_Orden_Operario && !Id_Orden)) {
     return { status: 400, error: 'Se requiere Id_Orden_Operario (fase) o Id_Orden, y Id_Operario_Destino' }
@@ -209,7 +216,7 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
     return { status: 404, error: `No se encontró un operario activo con id ${Id_Operario_Destino}` }
   }
 
-  // Reasignar una FASE
+  // Reasignar una FASE puntual
   if (Id_Orden_Operario) {
     const { rows: fase } = await db.query(`
       SELECT oo."Id_Orden_Operario", oo."Id_Orden", oo."Id_Operario", oo."Numero_Fase", oo."Descripcion_Fase", p."Producto"
@@ -243,7 +250,7 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
     }
   }
 
-  // Reasignar una ORDEN antigua sin fases
+  // Reasignar una ORDEN completa
   const { rows: orden } = await db.query(`
     SELECT "Id_Orden", "Id_Operario", "Producto"
     FROM orden_produccion
@@ -254,6 +261,39 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
     return { status: 404, error: `No se encontró una orden activa con id ${Id_Orden}` }
   }
 
+  // ¿Esta orden ya tiene fases activas registradas?
+  const { rows: fasesActivas } = await db.query(`
+    SELECT "Id_Orden_Operario", "Id_Operario"
+    FROM orden_operario
+    WHERE "Id_Orden" = $1
+      AND "Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
+  `, [Id_Orden])
+
+  if (fasesActivas.length > 0) {
+    // La orden tiene fases: hay que mover TODAS las fases activas,
+    // porque la carga de trabajo se calcula por fase en este caso.
+    await db.query(`
+      UPDATE orden_operario
+      SET "Id_Operario" = $1, updated_at = NOW()
+      WHERE "Id_Orden" = $2
+        AND "Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
+    `, [Id_Operario_Destino, Id_Orden])
+
+    return {
+      status: 200,
+      mensaje: `${fasesActivas.length} fase(s) de la orden #${Id_Orden} reasignadas a ${destino[0].Nombre_Completo}`,
+      data: {
+        tipo:               'orden_con_fases',
+        Id_Orden:           Number(Id_Orden),
+        Producto:           orden[0].Producto,
+        fases_reasignadas:  fasesActivas.length,
+        operarios_anteriores: [...new Set(fasesActivas.map(f => f.Id_Operario))],
+        operario_nuevo:     { id: destino[0].Id_Usuario, nombre: destino[0].Nombre_Completo },
+      }
+    }
+  }
+
+  // La orden no tiene fases (orden antigua): se reasigna el campo de la orden.
   await db.query(
     `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2`,
     [Id_Operario_Destino, Id_Orden]
@@ -373,8 +413,10 @@ router.get('/operarios/:id', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // POST /api/carga-trabajo/reasignar
-// Body: { Id_Orden_Operario, Id_Operario_Destino }   (fase)
-//   o   { Id_Orden, Id_Operario_Destino }            (orden antigua sin fases)
+// Body: { Id_Orden_Operario, Id_Operario_Destino }   (fase puntual)
+//   o   { Id_Orden, Id_Operario_Destino }            (orden completa:
+//        mueve todas sus fases activas, o el campo de la orden si no
+//        tiene fases)
 // ─────────────────────────────────────────────────────────────
 router.post('/reasignar', async (req, res) => {
   try {
@@ -528,7 +570,9 @@ router.patch('/umbrales', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────
 // PATCH /api/carga-trabajo/ordenes/:id/operario
-// (reasigna la orden completa; se mantiene por compatibilidad)
+// (reasigna la orden completa; se mantiene por compatibilidad.
+//  Ahora delega en reasignarItem() para no divergir del comportamiento
+//  de POST /reasignar: si la orden tiene fases, se mueven todas las fases.)
 // ─────────────────────────────────────────────────────────────
 router.patch('/ordenes/:id/operario', async (req, res) => {
   try {
@@ -542,40 +586,9 @@ router.patch('/ordenes/:id/operario', async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'Se requiere Id_Operario_Destino' })
     }
 
-    const { rows: orden } = await db.query(
-      `SELECT "Id_Orden", "Id_Operario", "Producto", "Estado" FROM orden_produccion WHERE "Id_Orden" = $1`,
-      [id]
-    )
-    if (orden.length === 0) {
-      return res.status(404).json({ ok: false, mensaje: `No se encontró la orden #${id}` })
-    }
-
-    const { rows: operario } = await db.query(`
-      SELECT u."Id_Usuario", u."Nombre_Completo"
-      FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
-      WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
-    `, [Id_Operario_Destino])
-
-    if (operario.length === 0) {
-      return res.status(404).json({ ok: false, mensaje: `No se encontró el operario con id ${Id_Operario_Destino}` })
-    }
-
-    await db.query(
-      `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2`,
-      [Id_Operario_Destino, id]
-    )
-
-    res.json({
-      ok: true,
-      mensaje: `Orden #${id} reasignada a ${operario[0].Nombre_Completo}`,
-      data: {
-        Id_Orden:          Number(id),
-        Producto:          orden[0].Producto,
-        operario_anterior: orden[0].Id_Operario,
-        operario_nuevo:    { id: operario[0].Id_Usuario, nombre: operario[0].Nombre_Completo }
-      }
-    })
+    const r = await reasignarItem({ Id_Orden: Number(id), Id_Operario_Destino })
+    if (r.error) return res.status(r.status).json({ ok: false, mensaje: r.error })
+    res.json({ ok: true, mensaje: r.mensaje, data: r.data })
   } catch (error) {
     console.error('[carga-trabajo] PATCH /ordenes/:id/operario', error)
     res.status(500).json({ ok: false, mensaje: 'Error al reasignar la orden' })
