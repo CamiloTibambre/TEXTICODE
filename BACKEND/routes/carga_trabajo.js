@@ -26,9 +26,16 @@ const INCLUIR_ORDENES_SIN_FASES = true
 // Umbrales (modificables en memoria con PATCH /umbrales)
 // sobrecargado  => carga >= limite_sobrecarga
 // disponible    => carga <= limite_disponible
+// ⚠️ AJUSTADO: limite_disponible subió de 2 a 4. Con 2, un operario con
+// carga normal (ej. 3 fases activas, como Daniel) quedaba clasificado
+// como "normal" y por lo tanto NUNCA aparecía en la lista de
+// "disponibles" para reasignación, aunque tuviera capacidad de sobra
+// frente a alguien con 8. Ajusta este número según cuántas fases
+// activas consideres razonable como "tiene espacio libre" en tu
+// operación real.
 const umbrales = {
   limite_sobrecarga: 8,
-  limite_disponible: 2,
+  limite_disponible: 4,
 }
 
 function clasificarCarga(carga) {
