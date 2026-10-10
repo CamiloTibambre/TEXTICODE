@@ -1,6 +1,10 @@
 import { Router } from 'express'
 import pool from '../db.js'
 import bcrypt from 'bcryptjs'
+import { requireAuth } from '../middleware/auth.js'
+import { requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
+import { signAuthToken } from '../middleware/auth.js'
+import { processLogin } from '../services/auth.service.js'
 
 const router = Router()
 
@@ -27,7 +31,7 @@ function validarContrasena(contrasena) {
 }
 
 // GET todos los usuarios (con nombre de rol)
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
@@ -43,7 +47,7 @@ router.get('/', async (req, res) => {
 })
 
 // GET un usuario por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, requireSelfParamOrRoles('id', 'admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
@@ -61,46 +65,61 @@ router.get('/:id', async (req, res) => {
   }
 })
 
-// POST login — compara con bcrypt
+// POST login — compartido con auth.service.js
 router.post('/login', async (req, res) => {
-  const { correo, contrasena } = req.body
-  if (!correo || !contrasena)
+  const { correo, contrasena, idEmpresa, Id_Empresa } = req.body
+  const identificador = correo || req.body.usuario || req.body.nombreUsuario
+
+  if (!identificador || !contrasena)
     return res.status(400).json({ error: 'Correo y contraseña son requeridos' })
 
   try {
-    const { rows } = await pool.query(`
-      SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
-             u."Correo", u."Contrasena", u."Estado", r."Nombre_Rol" AS "Rol"
-      FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol"
-      WHERE (u."Correo" = $1 OR u."Nombre_Usuario" = $1) AND u."Estado" = 'activo'
-    `, [correo])
+    const result = await processLogin(pool, {
+      identificador,
+      contrasena,
+      idEmpresaDeseada: idEmpresa || Id_Empresa || null,
+    })
 
-    if (rows.length === 0)
-      return res.status(401).json({ error: 'Credenciales incorrectas o usuario inactivo' })
-
-    const usuario = rows[0]
-
-    let passwordValida = false
-    if (usuario.Contrasena.startsWith('$2')) {
-      passwordValida = await bcrypt.compare(contrasena, usuario.Contrasena)
-    } else {
-      passwordValida = (contrasena === usuario.Contrasena)
+    if (result.type === 'requires_selection') {
+      return res.status(200).json({
+        requiresEmpresaSelection: true,
+        selectionToken: result.selectionToken,
+        empresas: result.empresas,
+        usuario: result.usuario,
+      })
     }
 
-    if (!passwordValida)
-      return res.status(401).json({ error: 'Credenciales incorrectas o usuario inactivo' })
+    if (result.type === 'no_memberships') {
+      return res.status(403).json({
+        error: result.error,
+        code: 'NO_MEMBERSHIPS',
+        usuario: result.usuario,
+      })
+    }
 
-    const { Contrasena, ...usuarioSinPass } = usuario
-    res.json({ mensaje: 'Login exitoso', usuario: usuarioSinPass })
+    if (result.type === 'unauthorized_tenant') {
+      return res.status(403).json({
+        error: result.error,
+        code: 'TENANT_UNAUTHORIZED',
+      })
+    }
 
+    return res.status(200).json({
+      mensaje: 'Login exitoso',
+      token: result.token,
+      usuario: result.usuario,
+      ...(result.empresaActiva ? { empresaActiva: result.empresaActiva } : {}),
+    })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message })
+    }
+    return res.status(500).json({ error: err.message })
   }
 })
 
 // POST crear usuario — encripta la contraseña con bcrypt
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireRoles('admin'), async (req, res) => {
   const { Id_Rol, Nombre_Completo, Nombre_Usuario, Correo, Telefono, Estado, Contrasena } = req.body
   if (!Id_Rol || !Nombre_Completo || !Nombre_Usuario || !Correo || !Contrasena)
     return res.status(400).json({ error: 'Faltan campos obligatorios' })
@@ -129,7 +148,7 @@ router.post('/', async (req, res) => {
 })
 
 // PUT actualizar usuario — encripta la contraseña si se envía una nueva
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireAuth, requireSelfParamOrRoles('id', 'admin'), async (req, res) => {
   const { Id_Rol, Nombre_Completo, Nombre_Usuario, Correo, Telefono, Estado, Contrasena } = req.body
   const errorNombre = validarNombre(Nombre_Completo)
   if (errorNombre) return res.status(400).json({ error: errorNombre })
@@ -161,7 +180,7 @@ router.put('/:id', async (req, res) => {
 })
 
 // PATCH inactivar usuario (soft delete)
-router.patch('/:id/inactivar', async (req, res) => {
+router.patch('/:id/inactivar', requireAuth, requireRoles('admin'), async (req, res) => {
   try {
     const { rowCount } = await pool.query(
       `UPDATE usuario SET "Estado" = 'inactivo' WHERE "Id_Usuario" = $1`,
@@ -175,7 +194,7 @@ router.patch('/:id/inactivar', async (req, res) => {
 })
 
 // DELETE usuario
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAuth, requireRoles('admin'), async (req, res) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM usuario WHERE "Id_Usuario" = $1', [req.params.id])
     if (rowCount === 0) return res.status(404).json({ error: 'Usuario no encontrado' })

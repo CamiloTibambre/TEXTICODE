@@ -1,11 +1,12 @@
 import { Router } from 'express'
 import pool from '../db.js'
+import { hasRole, requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = Router()
 
 // GET todos los materiales (solo activos — un material "eliminado"
 // queda desactivado, no borrado, para no perder su historial)
-router.get('/', async (req, res) => {
+router.get('/', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT m.*,
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 // se debe) inventarle un stock, así que se excluye del resultado.
 // Colocado ANTES de "/:id" a propósito: si fuera después, Express
 // interpretaría "reportes" como si fuera un :id.
-router.get('/reportes/historial', async (req, res) => {
+router.get('/reportes/historial', requireRoles('admin'), async (req, res) => {
   const { periodo } = req.query // 'YYYY-MM'
   if (!periodo || !/^\d{4}-\d{2}$/.test(periodo)) {
     return res.status(400).json({ error: 'Parámetro periodo inválido, use el formato YYYY-MM' })
@@ -54,25 +55,25 @@ router.get('/reportes/historial', async (req, res) => {
   }
 })
 
-// GET material por ID
-router.get('/:id', async (req, res) => {
+// GET materiales visibles para un cliente autenticado
+router.get('/cliente/:idCliente', requireSelfParamOrRoles('idCliente', 'admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT m.*,
              u."Nombre_Completo" AS "Nombre_Cliente"
       FROM material m
       LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
-      WHERE m."Id_Material" = $1
-    `, [req.params.id])
-    if (rows.length === 0) return res.status(404).json({ error: 'Material no encontrado' })
-    res.json(rows[0])
+      WHERE m."Activo" = true AND m."Id_Cliente" = $1
+      ORDER BY m."Nombre_Material"
+    `, [req.params.idCliente])
+    res.json(rows)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
 // GET materiales con stock bajo
-router.get('/alertas/stock-bajo', async (req, res) => {
+router.get('/alertas/stock-bajo', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT m.*,
@@ -88,10 +89,30 @@ router.get('/alertas/stock-bajo', async (req, res) => {
   }
 })
 
+// GET material por ID
+router.get('/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT m.*,
+             u."Nombre_Completo" AS "Nombre_Cliente"
+      FROM material m
+      LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
+      WHERE m."Id_Material" = $1
+    `, [req.params.id])
+    if (rows.length === 0) return res.status(404).json({ error: 'Material no encontrado' })
+    if (!hasRole(req.auth, ['admin']) && String(rows[0].Id_Cliente) !== String(req.auth.id)) {
+      return res.status(403).json({ error: 'No tienes permisos para este material.' })
+    }
+    res.json(rows[0])
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // GET historial de movimientos de un material puntual (útil para una
 // futura pantalla de "ver detalle" del material, no la usa el reporte
 // de inventario pero queda lista).
-router.get('/:id/movimientos', async (req, res) => {
+router.get('/:id/movimientos', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT * FROM material_movimiento
@@ -105,7 +126,7 @@ router.get('/:id/movimientos', async (req, res) => {
 })
 
 // POST crear material
-router.post('/', async (req, res) => {
+router.post('/', requireRoles('admin'), async (req, res) => {
   const { Nombre_Material, Categoria, Stock_Actual, Unidad, Stock_Minimo, Stock_Maximo, Id_Cliente } = req.body
   if (!Nombre_Material || !Categoria || !Unidad)
     return res.status(400).json({ error: 'Faltan campos obligatorios' })
@@ -152,7 +173,7 @@ router.post('/', async (req, res) => {
 })
 
 // PUT actualizar material
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRoles('admin'), async (req, res) => {
   const { Nombre_Material, Categoria, Stock_Actual, Unidad, Stock_Minimo, Stock_Maximo, Id_Cliente } = req.body
 
   const client = await pool.connect()
@@ -230,7 +251,7 @@ router.put('/:id', async (req, res) => {
 // Inventario (igual que antes), pero un reporte de un mes anterior que
 // lo incluía lo sigue mostrando tal como estaba en ese momento, y los
 // meses posteriores a la baja lo muestran con 0 — que es lo real.
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRoles('admin'), async (req, res) => {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')

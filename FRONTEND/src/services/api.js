@@ -3,33 +3,24 @@
 // Colócalo en: texticode-vue/src/services/api.js
 
 const BASE    = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-const API_KEY = 'texticode-2026'
 
 async function request(url, options = {}) {
+  const { headers = {}, ...rest } = options
   const res = await fetch(`${BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
+    ...rest,
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+      ...headers,
+    },
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Error en la API')
   return data
 }
 
-// Peticiones con API Key (para endpoints protegidos de eficiencia)
-async function requestWithKey(url, options = {}) {
-  const res = await fetch(`${BASE}${url}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-    },
-    ...options,
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.mensaje || data.error || 'Error en la API')
-  return data
-}
 // ── MATERIALES POR CLIENTE (vista de Alertas) ─────────────
-export const getMaterialesPorCliente = (idCliente) => request(`/practica/clientes/${idCliente}/materiales`)
+export const getMaterialesPorCliente = (idCliente) => request(`/materiales/cliente/${idCliente}`)
 
 // ── USUARIOS ──────────────────────────────────────────────
 export const getUsuarios        = ()         => request('/usuarios')
@@ -104,18 +95,18 @@ export async function getEficienciaOperarios(filtros = {}) {
   if (filtros.limite)      params.append('limite',      filtros.limite)
   if (filtros.periodo)     params.append('periodo',     filtros.periodo)
   const query = params.toString() ? `?${params}` : ''
-  const json = await requestWithKey(`/eficiencia/operarios${query}`)
+  const json = await request(`/eficiencia/operarios${query}`)
   return json.data
 }
 
 export async function getEficienciaOperario(id) {
-  const json = await requestWithKey(`/eficiencia/operarios/${id}`)
+  const json = await request(`/eficiencia/operarios/${id}`)
   return json.data
 }
 
 // ── OBSERVACIONES DE OPERARIOS ────────────────────────────
 export async function crearObservacion(body) {
-  const json = await requestWithKey('/eficiencia/observaciones', {
+  const json = await request('/eficiencia/observaciones', {
     method: 'POST',
     body: JSON.stringify(body),
   })
@@ -123,7 +114,7 @@ export async function crearObservacion(body) {
 }
 
 export async function getObservacionesOperario(id) {
-  const json = await requestWithKey(`/eficiencia/observaciones/${id}`)
+  const json = await request(`/eficiencia/observaciones/${id}`)
   return json.data
 }
 
@@ -160,15 +151,15 @@ export const getGoogleConnectedUsers      = ()                 => requestAuth('/
 // ── CARGA DE TRABAJO ─────────────────────────────────────
 export async function getCargaTrabajo(estado = '') {
   const query = estado ? `?estado=${encodeURIComponent(estado)}` : ''
-  return requestWithKey(`/carga-trabajo${query}`)
+  return request(`/carga-trabajo${query}`)
 }
 
 export async function getSugerenciasCargaTrabajo() {
-  return requestWithKey('/carga-trabajo/sugerencias')
+  return request('/carga-trabajo/sugerencias')
 }
 
 export async function reasignarOrdenPorCarga(body) {
-  return requestWithKey('/carga-trabajo/reasignar', {
+  return request('/carga-trabajo/reasignar', {
     method: 'POST',
     body: JSON.stringify(body),
   })

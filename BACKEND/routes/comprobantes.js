@@ -1,10 +1,11 @@
 import { Router } from 'express'
 import pool from '../db.js'
+import { hasRole, requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = Router()
 
 // GET todos los comprobantes
-router.get('/', async (req, res) => {
+router.get('/', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT c.*,
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 })
 
 // GET comprobantes de un cliente específico
-router.get('/cliente/:idCliente', async (req, res) => {
+router.get('/cliente/:idCliente', requireSelfParamOrRoles('idCliente', 'admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT c.*,
@@ -72,6 +73,9 @@ router.get('/:id', async (req, res) => {
     `, [req.params.id])
 
     if (rows.length === 0) return res.status(404).json({ error: 'Comprobante no encontrado' })
+    if (!hasRole(req.auth, ['admin']) && String(rows[0].Id_Cliente) !== String(req.auth.id)) {
+      return res.status(403).json({ error: 'No tienes permisos para este comprobante.' })
+    }
     res.json(rows[0])
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -79,7 +83,7 @@ router.get('/:id', async (req, res) => {
 })
 
 // POST crear comprobante
-router.post('/', async (req, res) => {
+router.post('/', requireRoles('admin'), async (req, res) => {
   const { Id_Usuario, Id_Orden, Estado, Fecha_Limite } = req.body
   if (!Id_Usuario || !Id_Orden)
     return res.status(400).json({ error: 'Id_Usuario e Id_Orden son obligatorios' })
@@ -115,7 +119,7 @@ router.post('/', async (req, res) => {
 })
 
 // PUT actualizar estado del comprobante
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRoles('admin'), async (req, res) => {
   const { Estado, Fecha_Limite } = req.body
   try {
     const { rowCount } = await pool.query(`
@@ -130,7 +134,7 @@ router.put('/:id', async (req, res) => {
 })
 
 // DELETE comprobante
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRoles('admin'), async (req, res) => {
   try {
     const { rowCount } = await pool.query('DELETE FROM comprobantes WHERE "Id_Comprobante" = $1', [req.params.id])
     if (rowCount === 0) return res.status(404).json({ error: 'Comprobante no encontrado' })

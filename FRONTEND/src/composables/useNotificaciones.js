@@ -19,11 +19,16 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
+function authHeaders() {
+  const token = localStorage.getItem('jwt_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 // ─── Helper interno ────────────────────────────────────────────────────────────
 async function postJSON(endpoint, body) {
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body:    JSON.stringify(body),
   });
   const data = await res.json();
@@ -118,7 +123,7 @@ export function useNotificaciones() {
     const url = fecha
       ? `${API_BASE}/notificaciones/estadisticas?fecha=${fecha}`
       : `${API_BASE}/notificaciones/estadisticas`;
-    const res  = await fetch(url);
+    const res  = await fetch(url, { headers: authHeaders() });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     return data.estadisticas;

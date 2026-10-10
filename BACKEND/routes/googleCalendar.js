@@ -1,15 +1,16 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import db from '../db.js'
+import { env } from '../config/env.js'
+import { getBearerToken, requireAuth, signAuthToken, verifyAuthToken } from '../middleware/auth.js'
+import { requireRoles } from '../middleware/roles.js'
 
 const router = express.Router()
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'cambia_este_secreto_seguro'
-const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h'
-const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const GOOGLE_REDIRECT_URI  = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/google/callback'
-const FRONTEND_URL         = process.env.FRONTEND_URL || 'http://localhost:5173'
+const GOOGLE_CLIENT_ID     = env.googleClientId
+const GOOGLE_CLIENT_SECRET = env.googleClientSecret
+const GOOGLE_REDIRECT_URI  = env.googleRedirectUri
+const FRONTEND_URL         = env.frontendUrl
 const ALLOW_DIFFERENT_EMAILS = process.env.GOOGLE_ALLOW_DIFFERENT_EMAILS === 'true'
 
 const GOOGLE_SCOPES = [
@@ -30,29 +31,8 @@ export function requireGoogleConfig(res) {
   return true
 }
 
-function getBearerToken(req) {
-  const header = req.headers.authorization || ''
-  return header.startsWith('Bearer ') ? header.slice(7) : null
-}
-
-export function requireAuth(req, res, next) {
-  const token = getBearerToken(req)
-  if (!token) return res.status(401).json({ error: 'Sesión requerida.' })
-
-  try {
-    req.auth = jwt.verify(token, JWT_SECRET)
-    return next()
-  } catch {
-    return res.status(401).json({ error: 'Sesión inválida o expirada.' })
-  }
-}
-
 function buildAppToken(user) {
-  return jwt.sign(
-    { id: user.Id_Usuario, rol: user.Id_Rol, usuario: user.Nombre_Usuario },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES }
-  )
+  return signAuthToken(user)
 }
 
 function normalizeGoogleToken(tokens = {}) {
@@ -225,14 +205,14 @@ router.get('/auth-url', async (req, res) => {
     const token = getBearerToken(req)
     if (!token) return res.status(401).json({ error: 'Inicia sesión para vincular Google.' })
     try {
-      const auth = jwt.verify(token, JWT_SECRET)
+      const auth = verifyAuthToken(token)
       statePayload = { action, id: auth.id }
     } catch {
       return res.status(401).json({ error: 'Sesión inválida o expirada.' })
     }
   }
 
-  const state = jwt.sign(statePayload, JWT_SECRET, { expiresIn: '10m' })
+  const state = jwt.sign(statePayload, env.jwtSecret, { expiresIn: '10m' })
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   url.searchParams.set('client_id',              GOOGLE_CLIENT_ID)
   url.searchParams.set('redirect_uri',           GOOGLE_REDIRECT_URI)
@@ -255,7 +235,7 @@ router.get('/callback', async (req, res) => {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET)
       throw new Error('Google OAuth no está configurado en el servidor.')
 
-    const payload      = jwt.verify(state, JWT_SECRET)
+    const payload      = jwt.verify(state, env.jwtSecret)
     const tokenPayload = await exchangeCodeForTokens(code)
     const profile      = await getGoogleProfile(tokenPayload.access_token)
 
@@ -583,7 +563,7 @@ router.get('/events/upcoming', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/connected-users', requireAuth, async (req, res) => {
+router.get('/connected-users', requireAuth, requireRoles('admin'), async (req, res) => {
   if (Number(req.auth.rol) !== 1) return res.status(403).json({ error: 'Solo administradores.' })
   await ensureGoogleSchema()
   const { rows } = await db.query(
@@ -598,7 +578,7 @@ router.get('/connected-users', requireAuth, async (req, res) => {
   res.json({ users: rows })
 })
 
-router.delete('/unlink-user/:idUsuario', requireAuth, async (req, res) => {
+router.delete('/unlink-user/:idUsuario', requireAuth, requireRoles('admin'), async (req, res) => {
   if (Number(req.auth.rol) !== 1) return res.status(403).json({ error: 'Solo administradores.' })
   const { idUsuario } = req.params
   await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1', [idUsuario])

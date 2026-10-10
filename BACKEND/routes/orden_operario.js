@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import pool from '../db.js'
 import { notificarCambioEstado } from '../services/emailService.js'
+import { hasRole, requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = Router()
 
@@ -95,7 +96,7 @@ async function recalcularProgresoOrden(client, idOrden) {
 
 // POST crear fase/operario para una orden.
 // Varios operarios pueden compartir el mismo Numero_Fase.
-router.post('/', async (req, res) => {
+router.post('/', requireRoles('admin'), async (req, res) => {
   const { Id_Orden, Id_Operario, Numero_Fase, Descripcion_Fase } = req.body
   const idOrden = toPositiveInt(Id_Orden)
   const idOperario = toPositiveInt(Id_Operario)
@@ -133,7 +134,7 @@ router.post('/', async (req, res) => {
 })
 
 // GET fases de una orden, ordenadas por Numero_Fase
-router.get('/orden/:idOrden', async (req, res) => {
+router.get('/orden/:idOrden', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT oo.*, u."Nombre_Completo" AS "Nombre_Operario"
@@ -149,7 +150,7 @@ router.get('/orden/:idOrden', async (req, res) => {
 })
 
 // GET fases asignadas a un operario en todas las ordenes
-router.get('/operario/:idOperario', async (req, res) => {
+router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
@@ -188,7 +189,7 @@ router.get('/operario/:idOperario', async (req, res) => {
 })
 
 // GET historial persistente de fases completadas de un operario.
-router.get('/operario/:idOperario/historial', async (req, res) => {
+router.get('/operario/:idOperario/historial', requireSelfParamOrRoles('idOperario', 'admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT
@@ -220,7 +221,7 @@ router.get('/operario/:idOperario/historial', async (req, res) => {
 })
 
 // PUT editar numero y/o descripcion de fase
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRoles('admin'), async (req, res) => {
   const { Numero_Fase, Descripcion_Fase } = req.body
   const numeroFase = Numero_Fase == null ? null : toPositiveInt(Numero_Fase)
 
@@ -302,7 +303,7 @@ router.put('/:id', async (req, res) => {
 })
 
 // DELETE quitar fase de una orden
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRoles('admin'), async (req, res) => {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -352,6 +353,11 @@ router.patch('/:id/completar', async (req, res) => {
     }
 
     const fase = faseResult.rows[0]
+    if (!hasRole(req.auth, ['admin']) && Number(fase.Id_Operario) !== Number(req.auth.id)) {
+      await client.query('ROLLBACK')
+      return res.status(403).json({ error: 'No tienes permisos para completar esta fase.' })
+    }
+
     const cantidadTotal = Number(fase.Cantidad) || 0
 
     // Operarios que comparten esta misma fase (incluido el actual).

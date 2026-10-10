@@ -1,16 +1,31 @@
 import express from 'express'
 import db from '../db.js'
+import { env } from '../config/env.js'
+import { requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = express.Router()
+
+if (env.nodeEnv === 'production') {
+  router.use((req, res) => {
+    res.status(404).json({ mensaje: 'Rutas de práctica no disponibles.' })
+  })
+} else {
+  router.use(requireRoles('admin'))
+}
 
 // ─────────────────────────────────────────
 // PATH PARAMS
 // ─────────────────────────────────────────
 
 // 1. Obtener usuario por ID
-router.get('/usuarios/:Id_Usuario', async (req, res) => {
+router.get('/usuarios/:Id_Usuario', requireSelfParamOrRoles('Id_Usuario', 'admin'), async (req, res) => {
   const { Id_Usuario } = req.params
-  const { rows } = await db.query('SELECT * FROM usuario WHERE "Id_Usuario" = $1', [Id_Usuario])
+  const { rows } = await db.query(`
+    SELECT "Id_Usuario", "Id_Rol", "Nombre_Completo", "Nombre_Usuario",
+           "Correo", "Telefono", "Estado", "Fecha_Registro"
+    FROM usuario
+    WHERE "Id_Usuario" = $1
+  `, [Id_Usuario])
   if (rows.length === 0) return res.status(404).json({ mensaje: 'Usuario no encontrado' })
   res.json(rows[0])
 })
@@ -103,7 +118,10 @@ router.get('/usuarios', async (req, res) => {
   const { page = 1, limit = 5 } = req.query
   const offset = (parseInt(page) - 1) * parseInt(limit)
   const { rows } = await db.query(
-    'SELECT * FROM usuario LIMIT $1 OFFSET $2',
+    `SELECT "Id_Usuario", "Id_Rol", "Nombre_Completo", "Nombre_Usuario",
+            "Correo", "Telefono", "Estado", "Fecha_Registro"
+     FROM usuario
+     LIMIT $1 OFFSET $2`,
     [parseInt(limit), offset]
   )
   res.json(rows)

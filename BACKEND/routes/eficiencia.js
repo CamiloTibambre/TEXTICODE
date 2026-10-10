@@ -1,12 +1,9 @@
 import express from 'express'
 import db from '../db.js'
-import verificarApiKey from '../apiKey.js'
 import { actualizarOrdenesRetrasadas } from './ordenes.js'
 import { calcularRendimiento } from '../services/rendimiento.js'
 
 const router = express.Router()
-
-router.use(verificarApiKey)
 
 // ---------------------------------------------------------------
 // Órdenes de cada operario: une las fases (orden_operario) con las

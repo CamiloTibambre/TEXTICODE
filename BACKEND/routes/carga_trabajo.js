@@ -1,11 +1,8 @@
 import express from 'express'
 import db from '../db.js'
-import verificarApiKey from '../apiKey.js'
 import { actualizarOrdenesRetrasadas } from './ordenes.js'
 
 const router = express.Router()
-
-router.use(verificarApiKey)
 
 // ─────────────────────────────────────────────────────────────
 // Configuración de carga

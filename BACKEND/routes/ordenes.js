@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import pool from '../db.js'
+import { hasRole, requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = Router()
 
@@ -18,7 +19,7 @@ export async function actualizarOrdenesRetrasadas() {
 }
 
 // GET todas las órdenes
-router.get('/', async (req, res) => {
+router.get('/', requireRoles('admin'), async (req, res) => {
   console.log('🔥 SE EJECUTÓ GET /ORDENES')
 
   try {
@@ -46,7 +47,7 @@ router.get('/', async (req, res) => {
 })
 
 // GET órdenes asignadas a un operario
-router.get('/operario/:idOperario', async (req, res) => {
+router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin'), async (req, res) => {
   try {
     await actualizarOrdenesRetrasadas()
 
@@ -77,7 +78,7 @@ router.get('/operario/:idOperario', async (req, res) => {
 })
 
 // GET órdenes de un cliente
-router.get('/cliente/:idCliente', async (req, res) => {
+router.get('/cliente/:idCliente', requireSelfParamOrRoles('idCliente', 'admin'), async (req, res) => {
   try {
     await actualizarOrdenesRetrasadas()
 
@@ -116,14 +117,32 @@ router.get('/:id', async (req, res) => {
       WHERE op."Id_Orden" = $1
     `, [req.params.id])
     if (rows.length === 0) return res.status(404).json({ error: 'Orden no encontrada' })
-    res.json(rows[0])
+    const orden = rows[0]
+    if (!hasRole(req.auth, ['admin'])) {
+      const asignacion = await pool.query(`
+        SELECT 1
+        FROM orden_operario
+        WHERE "Id_Orden" = $1 AND "Id_Operario" = $2
+        UNION
+        SELECT 1
+        FROM usuario_orden
+        WHERE "Id_Orden" = $1 AND "Id_Usuario" = $2
+        LIMIT 1
+      `, [req.params.id, req.auth.id])
+      const autorizado =
+        String(orden.Id_Cliente) === String(req.auth.id) ||
+        String(orden.Id_Operario) === String(req.auth.id) ||
+        asignacion.rows.length > 0
+      if (!autorizado) return res.status(403).json({ error: 'No tienes permisos para esta orden.' })
+    }
+    res.json(orden)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
 // GET órdenes por estado
-router.get('/estado/:estado', async (req, res) => {
+router.get('/estado/:estado', requireRoles('admin'), async (req, res) => {
   const estadosValidos = ['En Proceso', 'Completada', 'Retrasada']
   if (!estadosValidos.includes(req.params.estado))
     return res.status(400).json({ error: 'Estado inválido' })
@@ -148,7 +167,7 @@ router.get('/estado/:estado', async (req, res) => {
 })
 
 // POST crear orden
-router.post('/', async (req, res) => {
+router.post('/', requireRoles('admin'), async (req, res) => {
   const {
     Id_Cliente, Id_Material, Id_Operario,
     Producto, Descripcion, Cantidad,
@@ -193,7 +212,7 @@ router.post('/', async (req, res) => {
   }
 })
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRoles('admin'), async (req, res) => {
   const {
     Id_Cliente, Id_Material, Id_Operario, Producto, Descripcion,
     Cantidad, Prioridad, Fecha_Limite, Estado,
@@ -253,7 +272,7 @@ router.put('/:id', async (req, res) => {
 })
 
 // DELETE orden
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRoles('admin'), async (req, res) => {
   try {
     const { rowCount } = await pool.query(
       'DELETE FROM orden_produccion WHERE "Id_Orden" = $1',

@@ -1,10 +1,11 @@
 import { Router } from 'express'
 import pool from '../db.js'
+import { requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = Router()
 
 // GET operarios asignados a una orden
-router.get('/orden/:idOrden', async (req, res) => {
+router.get('/orden/:idOrden', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT uo.*, u."Nombre_Completo", u."Correo"
@@ -19,7 +20,7 @@ router.get('/orden/:idOrden', async (req, res) => {
 })
 
 // GET órdenes asignadas a un usuario
-router.get('/usuario/:idUsuario', async (req, res) => {
+router.get('/usuario/:idUsuario', requireSelfParamOrRoles('idUsuario', 'admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT uo.*, op."Descripcion", op."Estado", op."Fecha_Limite", op."Prioridad"
@@ -34,7 +35,7 @@ router.get('/usuario/:idUsuario', async (req, res) => {
 })
 
 // POST asignar usuario a orden
-router.post('/', async (req, res) => {
+router.post('/', requireRoles('admin'), async (req, res) => {
   const { Id_Usuario, Id_Orden, Funcion } = req.body
   if (!Id_Usuario || !Id_Orden)
     return res.status(400).json({ error: 'Id_Usuario e Id_Orden son obligatorios' })
@@ -53,7 +54,7 @@ router.post('/', async (req, res) => {
 })
 
 // DELETE desasignar usuario de una orden
-router.delete('/:idUsuario/:idOrden', async (req, res) => {
+router.delete('/:idUsuario/:idOrden', requireRoles('admin'), async (req, res) => {
   try {
     const { rowCount } = await pool.query(`
       DELETE FROM usuario_orden WHERE "Id_Usuario"=$1 AND "Id_Orden"=$2
