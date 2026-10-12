@@ -36,7 +36,7 @@ BEGIN
   SELECT count(*) INTO v_count FROM public.orden_produccion op
    WHERE op."Id_Cliente" IS NULL OR NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=op."Id_Cliente")
       OR NOT EXISTS (SELECT 1 FROM public.material m WHERE m."Id_Material"=op."Id_Material")
-      OR (op."Id_Operario" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=op."Id_Operario" AND lower(trim(coalesce(u."Estado",'activo'))) <> 'inactivo'));
+      OR (op."Id_Operario" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=op."Id_Operario" AND lower(trim(coalesce(u."Estado"::text,'activo'))) <> 'inactivo'));
   IF v_count>0 THEN RAISE EXCEPTION 'PRECHECK public.orden_produccion: % filas tienen cliente/material huérfano u operario sin membresía activa prevista.',v_count; END IF;
 
   SELECT count(*) INTO v_count FROM public.material_movimiento mm
@@ -51,7 +51,7 @@ BEGIN
 
   SELECT count(*) INTO v_count FROM public.orden_operario oo
    WHERE NOT EXISTS (SELECT 1 FROM public.orden_produccion op WHERE op."Id_Orden"=oo."Id_Orden")
-      OR NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=oo."Id_Operario" AND lower(trim(coalesce(u."Estado",'activo'))) <> 'inactivo');
+      OR NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=oo."Id_Operario" AND lower(trim(coalesce(u."Estado"::text,'activo'))) <> 'inactivo');
   IF v_count>0 THEN RAISE EXCEPTION 'PRECHECK public.orden_operario: % filas tienen orden huérfana u operario sin membresía activa prevista.',v_count; END IF;
 
   SELECT count(*) INTO v_count FROM public.usuario_orden uo
@@ -66,12 +66,12 @@ BEGIN
 
   SELECT count(*) INTO v_count FROM public.observacion_operario ob
    WHERE (ob."Id_Orden" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.orden_produccion op WHERE op."Id_Orden"=ob."Id_Orden"))
-      OR NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=ob."Id_Admin" AND lower(trim(coalesce(u."Estado",'activo'))) <> 'inactivo')
-      OR NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=ob."Id_Operario" AND lower(trim(coalesce(u."Estado",'activo'))) <> 'inactivo');
+      OR NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=ob."Id_Admin" AND lower(trim(coalesce(u."Estado"::text,'activo'))) <> 'inactivo')
+      OR NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=ob."Id_Operario" AND lower(trim(coalesce(u."Estado"::text,'activo'))) <> 'inactivo');
   IF v_count>0 THEN RAISE EXCEPTION 'PRECHECK public.observacion_operario: % filas tienen orden huérfana o administrador/operario sin membresía activa prevista.',v_count; END IF;
 
   SELECT count(*) INTO v_count FROM public.google_calendar_tokens gct
-   WHERE NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=gct."Id_Usuario" AND lower(trim(coalesce(u."Estado",'activo'))) <> 'inactivo')
+   WHERE NOT EXISTS (SELECT 1 FROM public.usuario u WHERE u."Id_Usuario"=gct."Id_Usuario" AND lower(trim(coalesce(u."Estado"::text,'activo'))) <> 'inactivo')
       OR gct."Id_Usuario" IN (SELECT "Id_Usuario" FROM public.google_calendar_tokens GROUP BY "Id_Usuario" HAVING count(*)>1);
   IF v_count>0 THEN RAISE EXCEPTION 'PRECHECK public.google_calendar_tokens: % filas tienen usuario sin membresía principal activa prevista o Id_Usuario duplicado.',v_count; END IF;
 END $$;
@@ -145,7 +145,7 @@ SELECT
   e."Id_Empresa",
   COALESCE(u."Id_Rol", 3),
   CASE
-    WHEN LOWER(TRIM(COALESCE(u."Estado", 'activo'))) = 'inactivo' THEN 'inactivo'
+    WHEN LOWER(TRIM(COALESCE(u."Estado"::text, 'activo'))) = 'inactivo' THEN 'inactivo'
     ELSE 'activo'
   END,
   true

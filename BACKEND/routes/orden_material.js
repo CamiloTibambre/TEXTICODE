@@ -53,7 +53,7 @@ router.post('/', async (req, res) => {
     }
 
     await client.query(`
-      INSERT INTO orden_material ("Id_Orden", "Id_Producto", "Cantidad", "Id_Empresa")
+      INSERT INTO orden_material ("Id_Orden", "Id_Producto", "Cantidad_Usada", "Id_Empresa")
       VALUES ($1, $2, $3, $4)
     `, [Id_Orden, Id_Producto, Cantidad_Usada, empresaId])
 
@@ -95,7 +95,7 @@ router.put('/:idOrden/:idProducto', async (req, res) => {
     await client.query('BEGIN')
 
     const actual = await client.query(`
-      SELECT "Cantidad" AS "Cantidad_Usada" FROM orden_material
+      SELECT "Cantidad_Usada" FROM orden_material
       WHERE "Id_Orden" = $1 AND "Id_Producto" = $2 AND "Id_Empresa" = $3
       FOR UPDATE
     `, [req.params.idOrden, req.params.idProducto, empresaId])
@@ -123,7 +123,7 @@ router.put('/:idOrden/:idProducto', async (req, res) => {
     }
 
     const { rowCount } = await client.query(`
-      UPDATE orden_material SET "Cantidad"=$1
+      UPDATE orden_material SET "Cantidad_Usada"=$1
       WHERE "Id_Orden"=$2 AND "Id_Producto"=$3 AND "Id_Empresa"=$4
     `, [Cantidad_Usada, req.params.idOrden, req.params.idProducto, empresaId])
 
@@ -167,7 +167,7 @@ router.delete('/:idOrden/:idProducto', async (req, res) => {
     const del = await client.query(`
       DELETE FROM orden_material
       WHERE "Id_Orden"=$1 AND "Id_Producto"=$2 AND "Id_Empresa"=$3
-      RETURNING "Cantidad" AS "Cantidad_Usada"
+      RETURNING "Cantidad_Usada"
     `, [req.params.idOrden, req.params.idProducto, empresaId])
 
     if (del.rowCount === 0) {

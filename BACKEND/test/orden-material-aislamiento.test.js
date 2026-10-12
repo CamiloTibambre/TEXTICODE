@@ -37,7 +37,7 @@ const pool = {
         }
         if (/^(INSERT|UPDATE|DELETE)\b/i.test(sql.trim())) state.pendingWrites.push(sql.trim())
         if (sql.includes('SELECT "Stock_Actual"')) return { rows: state.stockRows, rowCount: state.stockRows.length }
-        if (sql.includes('SELECT "Cantidad" AS "Cantidad_Usada"')) return { rows: state.allocationRows, rowCount: state.allocationRows.length }
+        if (sql.includes('SELECT "Cantidad_Usada"')) return { rows: state.allocationRows, rowCount: state.allocationRows.length }
         if (sql.includes('DELETE FROM orden_material')) {
           return { rows: state.deleteCount ? [{ Cantidad_Usada: 2 }] : [], rowCount: state.deleteCount }
         }
