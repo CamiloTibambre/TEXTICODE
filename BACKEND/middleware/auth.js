@@ -65,22 +65,54 @@ export async function requireAuth(req, res, next) {
   try {
     const payload = verifyAuthToken(token)
     const { default: db } = await import('../db.js')
-    const { rows } = await db.query(
-      `SELECT u."Id_Usuario", u."Nombre_Usuario", u."Nombre_Completo",
-              u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol"
-       FROM usuario u
-       INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
-       WHERE u."Id_Usuario" = $1
-       LIMIT 1`,
-      [payload.id]
-    )
+    const tokenEmpresaId = payload.empresa ?? null
+    let result
+    let legacySchema = false
+    try {
+      result = await db.query(
+        `SELECT u."Id_Usuario", u."Nombre_Usuario", u."Nombre_Completo",
+                u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol",
+                ue."Id_Empresa" AS "Membresia_Id_Empresa", e."Nombre_Empresa"
+         FROM usuario u
+         INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
+         LEFT JOIN usuario_empresa ue
+           ON ue."Id_Usuario" = u."Id_Usuario"
+          AND ue."Id_Empresa" = $2
+          AND ue."Estado" = 'activo'
+         LEFT JOIN empresa e
+           ON e."Id_Empresa" = ue."Id_Empresa"
+          AND e."Estado" = 'activa'
+         WHERE u."Id_Usuario" = $1
+         LIMIT 1`,
+        [payload.id, tokenEmpresaId]
+      )
+    } catch (err) {
+      // Compatibilidad: tokens sin empresa siguen válidos solo si el esquema legado no tiene membresías.
+      if (err.code !== '42P01') throw err
+      if (tokenEmpresaId !== null) {
+        return res.status(403).json({ error: 'Membresía empresarial inactiva o no autorizada.' })
+      }
+      legacySchema = true
+      result = await db.query(
+        `SELECT u."Id_Usuario", u."Nombre_Usuario", u."Nombre_Completo",
+                u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol"
+         FROM usuario u
+         INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
+         WHERE u."Id_Usuario" = $1
+         LIMIT 1`,
+        [payload.id]
+      )
+    }
 
-    const user = rows[0]
+    const user = result.rows[0]
     if (!user) return res.status(401).json({ error: 'Sesión inválida.' })
     if (user.Estado === 'inactivo') return res.status(403).json({ error: 'Usuario inactivo.' })
+    if (!legacySchema && (tokenEmpresaId === null || user.Membresia_Id_Empresa == null)) {
+      return res.status(403).json({ error: 'Membresía empresarial inactiva o no autorizada.' })
+    }
 
-    const activeEmpresaId = payload.empresa || null
-    const activeEmpresaNombre = payload.empresaNombre || null
+    const activeEmpresaId = legacySchema ? null : tokenEmpresaId
+    const activeEmpresaNombre = legacySchema ? null : user.Nombre_Empresa
     const activeRol = payload.rol || user.Id_Rol
     const activeRolNombre = payload.rolNombre || user.Rol
 

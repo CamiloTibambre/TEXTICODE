@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { signAuthToken, signSelectionToken, verifySelectionToken } from '../middleware/auth.js'
+import { signAuthToken, verifySelectionToken } from '../middleware/auth.js'
 
 /**
  * Sanitiza el objeto de usuario removiendo datos sensibles como la contraseña.
@@ -105,10 +105,10 @@ export async function getUserMemberships(dbClient, idUsuario) {
  * Flujo central de inicio de sesión con soporte multiempresa y compatibilidad con el esquema actual.
  *
  * @param {object} dbClient Cliente o pool de BD
- * @param {object} params { identificador, contrasena, idEmpresaDeseada }
+ * @param {object} params { identificador, contrasena }
  * @returns {Promise<object>} Resultado del login con tipo de respuesta
  */
-export async function processLogin(dbClient, { identificador, contrasena, idEmpresaDeseada = null }) {
+export async function processLogin(dbClient, { identificador, contrasena }) {
   const { user } = await authenticateCredentials(dbClient, { identificador, contrasena })
 
   const memberships = await getUserMemberships(dbClient, user.Id_Usuario)
@@ -134,42 +134,14 @@ export async function processLogin(dbClient, { identificador, contrasena, idEmpr
     }
   }
 
-  // 3. Si se solicitó una empresa específica en el login
-  if (idEmpresaDeseada !== null && idEmpresaDeseada !== undefined) {
-    const desiredId = Number(idEmpresaDeseada)
-    const membership = memberships.find(m => Number(m.Id_Empresa) === desiredId)
+  // La empresa proviene de la única membresía activa; nunca del cliente.
+  if (memberships.length === 1) return issueTenantSession(user, memberships[0])
 
-    if (!membership) {
-      return {
-        status: 'unauthorized_tenant',
-        type: 'unauthorized_tenant',
-        error: 'No tienes acceso a la empresa solicitada o está inactiva.',
-        usuario: user,
-      }
-    }
-
-    return issueTenantSession(user, membership)
-  }
-
-  // 4. Si el usuario pertenece exactamente a 1 empresa activa
-  if (memberships.length === 1) {
-    return issueTenantSession(user, memberships[0])
-  }
-
-  // 5. Si el usuario pertenece a múltiples empresas activas -> Se requiere selección
-  const selectionToken = signSelectionToken(user)
+  // La unicidad de usuario_empresa debe impedir este estado; fallar cerrado.
   return {
-    status: 'requires_selection',
-    type: 'requires_selection',
-    requiresEmpresaSelection: true,
-    selectionToken,
-    empresas: memberships.map(m => ({
-      Id_Empresa: m.Id_Empresa,
-      Nombre_Empresa: m.Nombre_Empresa,
-      Id_Rol: m.Id_Rol,
-      Rol: m.Rol,
-      Es_Principal: Boolean(m.Es_Principal),
-    })),
+    status: 'membership_invariant_violation',
+    type: 'membership_invariant_violation',
+    error: 'La cuenta no tiene una membresía empresarial única.',
     usuario: user,
   }
 }
@@ -178,16 +150,10 @@ export async function processLogin(dbClient, { identificador, contrasena, idEmpr
  * Resuelve la selección de empresa mediante selectionToken o sesión previa.
  *
  * @param {object} dbClient
- * @param {object} params { userId, selectionToken, idEmpresa }
+ * @param {object} params { userId, selectionToken }
  * @returns {Promise<object>}
  */
-export async function selectEmpresa(dbClient, { userId, selectionToken, idEmpresa }) {
-  if (!idEmpresa) {
-    const error = new Error('Debes indicar la empresa a seleccionar.')
-    error.statusCode = 400
-    throw error
-  }
-
+export async function selectEmpresa(dbClient, { userId, selectionToken }) {
   let resolvedUserId = userId
   let userBasicInfo = null
 
@@ -233,16 +199,13 @@ export async function selectEmpresa(dbClient, { userId, selectionToken, idEmpres
     throw error
   }
 
-  const targetId = Number(idEmpresa)
-  const selectedMembership = memberships.find(m => Number(m.Id_Empresa) === targetId)
-
-  if (!selectedMembership) {
-    const error = new Error('No tienes acceso a la empresa solicitada o está inactiva.')
-    error.statusCode = 403
+  if (memberships.length !== 1) {
+    const error = new Error('La cuenta no tiene una membresía empresarial única.')
+    error.statusCode = 409
     throw error
   }
 
-  return issueTenantSession(userBasicInfo, selectedMembership)
+  return issueTenantSession(userBasicInfo, memberships[0])
 }
 
 /**

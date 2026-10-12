@@ -6,7 +6,7 @@ import db       from '../db.js'
 import bcrypt   from 'bcryptjs'
 import { env } from '../config/env.js'
 import { signAuthToken } from '../middleware/auth.js'
-import { processLogin, selectEmpresa } from '../services/auth.service.js'
+import { getUserMemberships, processLogin, selectEmpresa } from '../services/auth.service.js'
 
 const router = express.Router()
 
@@ -29,7 +29,7 @@ if (env.sendgridApiKey) sgMail.setApiKey(env.sendgridApiKey)
 // POST /api/auth/login
 // ─────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
-  const { correo, contrasena, idEmpresa, Id_Empresa } = req.body
+  const { correo, contrasena } = req.body
   const identificador = correo || req.body.usuario || req.body.nombreUsuario
 
   if (!identificador || !contrasena) {
@@ -40,7 +40,6 @@ router.post('/login', async (req, res) => {
     const result = await processLogin(db, {
       identificador,
       contrasena,
-      idEmpresaDeseada: idEmpresa || Id_Empresa || null,
     })
 
     if (result.type === 'requires_selection') {
@@ -67,6 +66,10 @@ router.post('/login', async (req, res) => {
       })
     }
 
+    if (result.type === 'membership_invariant_violation') {
+      return res.status(409).json({ error: result.error, code: 'MEMBERSHIP_INVARIANT' })
+    }
+
     return res.status(200).json({
       token: result.token,
       usuario: result.usuario,
@@ -83,24 +86,18 @@ router.post('/login', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────
 // POST /api/auth/select-empresa
-// Permite seleccionar empresa mediante selectionToken o sesión
+// DEPRECADO: se conserva por compatibilidad, pero ignora la empresa del cliente.
 // ─────────────────────────────────────────────────────────
 router.post('/select-empresa', async (req, res) => {
-  const { idEmpresa, Id_Empresa, token } = req.body
-  const targetEmpresaId = idEmpresa || Id_Empresa
+  const { token } = req.body
   const headerToken = req.headers.authorization?.startsWith('Bearer ')
     ? req.headers.authorization.slice(7).trim()
     : null
   const selectionToken = token || headerToken
 
-  if (!targetEmpresaId) {
-    return res.status(400).json({ error: 'Debes indicar el Id_Empresa a seleccionar.' })
-  }
-
   try {
     const result = await selectEmpresa(db, {
       selectionToken,
-      idEmpresa: targetEmpresaId,
     })
 
     return res.status(200).json({
@@ -159,6 +156,22 @@ router.post('/google/mobile', async (req, res) => {
       return res.status(403).json({ error: 'Tu cuenta está inactiva. Contacta al administrador.' })
     }
 
+    const memberships = await getUserMemberships(db, user.Id_Usuario)
+    if (memberships?.length === 0) {
+      return res.status(403).json({ error: 'El usuario no tiene membresías activas.' })
+    }
+    if (memberships && memberships.length !== 1) {
+      return res.status(409).json({ error: 'La cuenta no tiene una membresía empresarial única.' })
+    }
+    const membership = memberships?.[0] || null
+    const sessionUser = membership ? {
+      ...user,
+      Id_Empresa: membership.Id_Empresa,
+      Empresa: membership.Nombre_Empresa,
+      Id_Rol: membership.Id_Rol,
+      Rol: membership.Rol,
+    } : user
+
     // 3) Si llegó serverAuthCode, vincula Calendar de una vez (no bloquea el login si falla)
     if (serverAuthCode) {
       try {
@@ -169,19 +182,21 @@ router.post('/google/mobile', async (req, res) => {
       }
     }
 
-    const token = signAuthToken(user)
+    const token = signAuthToken(sessionUser)
 
     return res.status(200).json({
       token,
       usuario: {
-        Id_Usuario:      user.Id_Usuario,
-        Nombre_Completo: user.Nombre_Completo,
-        Nombre_Usuario:  user.Nombre_Usuario,
-        Correo:          user.Correo,
-        Id_Rol:          user.Id_Rol,
-        Rol:             user.Rol,
-        Estado:          user.Estado,
+        Id_Usuario:      sessionUser.Id_Usuario,
+        Nombre_Completo: sessionUser.Nombre_Completo,
+        Nombre_Usuario:  sessionUser.Nombre_Usuario,
+        Correo:          sessionUser.Correo,
+        Id_Rol:          sessionUser.Id_Rol,
+        Rol:             sessionUser.Rol,
+        Estado:          sessionUser.Estado,
+        ...(membership ? { Id_Empresa: membership.Id_Empresa, Empresa: membership.Nombre_Empresa } : {}),
       },
+      ...(membership ? { empresaActiva: { Id_Empresa: membership.Id_Empresa, Nombre_Empresa: membership.Nombre_Empresa } } : {}),
     })
   } catch (err) {
     console.error('[auth/google/mobile]', err.message)
