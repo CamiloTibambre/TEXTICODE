@@ -8,8 +8,18 @@ BEGIN;
 
 -- Barreras previas de esquema y datos: todas corren antes del primer DDL/DML.
 DO $$
-DECLARE v_count bigint; v_duplicate_rows bigint;
+DECLARE v_count bigint; v_duplicate_users bigint;
 BEGIN
+  -- Si usuario_empresa ya existe, informar primero los usuarios con más de una membresía.
+  -- En la migración limpia la tabla se crea más abajo y se siembra una fila por usuario.
+  IF to_regclass('public.usuario_empresa') IS NOT NULL THEN
+    EXECUTE 'SELECT count(*) FROM (SELECT "Id_Usuario" FROM public.usuario_empresa GROUP BY "Id_Usuario" HAVING count(*) > 1) duplicate_users'
+      INTO v_duplicate_users;
+    IF v_duplicate_users > 0 THEN
+      RAISE EXCEPTION 'PRECHECK public.usuario_empresa: % usuarios tienen más de una membresía; se requiere una fila por usuario.',v_duplicate_users;
+    END IF;
+  END IF;
+
   SELECT (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND c.relname IN ('empresa','empresa_config','usuario_empresa'))
        + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('material','orden_produccion','material_movimiento','orden_material','orden_operario','usuario_orden','comprobantes','observacion_operario','google_calendar_tokens') AND column_name='Id_Empresa')
     INTO v_count;
@@ -100,9 +110,11 @@ CREATE TABLE IF NOT EXISTS public.usuario_empresa (
   "Es_Principal" BOOLEAN NOT NULL DEFAULT false,
   "Fecha_Registro" TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY ("Id_Usuario", "Id_Empresa"),
+  CONSTRAINT usuario_empresa_un_usuario_unique UNIQUE ("Id_Usuario"),
   CONSTRAINT usuario_empresa_estado_check CHECK ("Estado" IN ('activo', 'inactivo'))
 );
 
+-- Redundante bajo la regla de una fila por usuario; se conserva deliberadamente.
 CREATE UNIQUE INDEX IF NOT EXISTS usuario_empresa_principal_unique
   ON public.usuario_empresa ("Id_Usuario")
   WHERE "Es_Principal" = true;
