@@ -21,8 +21,6 @@ export async function actualizarOrdenesRetrasadas(empresaId) {
 
 // GET todas las órdenes
 router.get('/', requireRoles('admin'), async (req, res) => {
-  console.log('🔥 SE EJECUTÓ GET /ORDENES')
-
   try {
     await actualizarOrdenesRetrasadas(req.auth.empresaId)
 
@@ -38,8 +36,6 @@ router.get('/', requireRoles('admin'), async (req, res) => {
       WHERE op."Id_Empresa" = $1
       ORDER BY op."Fecha_Limite" ASC
     `, [req.auth.empresaId])
-
-    console.log('ORDENES:', rows)
 
     res.json(rows)
   } catch (err) {
