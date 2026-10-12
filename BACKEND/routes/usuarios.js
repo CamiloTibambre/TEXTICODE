@@ -8,6 +8,29 @@ import { processLogin } from '../services/auth.service.js'
 
 const router = Router()
 
+async function userHasSuperadminRole(idUsuario) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM usuario u
+     INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
+     WHERE u."Id_Usuario" = $1 AND lower(trim(r."Nombre_Rol")) = 'superadmin'
+     LIMIT 1`,
+    [idUsuario]
+  )
+  return rows.length > 0
+}
+
+async function roleIdIsSuperadmin(idRol) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM rol WHERE "Id_Rol" = $1 AND lower(trim("Nombre_Rol")) = 'superadmin' LIMIT 1`,
+    [idRol]
+  )
+  return rows.length > 0
+}
+
+function denySuperadminMutation(res) {
+  return res.status(403).json({ error: 'Solo el superadmin puede asignar o administrar ese usuario o rol.' })
+}
+
 // ── Validación de nombre (solo letras, espacios y tildes) ──
 function validarNombre(nombre) {
   if (!nombre || !nombre.trim()) return 'El nombre completo es requerido.'
@@ -80,6 +103,10 @@ router.post('/login', async (req, res) => {
       idEmpresaDeseada: idEmpresa || Id_Empresa || null,
     })
 
+    if (result.type === 'membership_invariant_violation') {
+      return res.status(409).json({ error: result.error, code: 'MEMBERSHIP_INVARIANT' })
+    }
+
     if (result.type === 'requires_selection') {
       return res.status(200).json({
         requiresEmpresaSelection: true,
@@ -131,6 +158,7 @@ router.post('/', requireAuth, requireRoles('admin'), async (req, res) => {
   if (errorPass) return res.status(400).json({ error: errorPass })
 
   try {
+    if (await roleIdIsSuperadmin(Id_Rol)) return denySuperadminMutation(res)
     const hash = await bcrypt.hash(Contrasena, 10)
 
     const { rows } = await pool.query(`
@@ -153,6 +181,9 @@ router.put('/:id', requireAuth, requireSelfParamOrRoles('id', 'admin'), async (r
   const errorNombre = validarNombre(Nombre_Completo)
   if (errorNombre) return res.status(400).json({ error: errorNombre })
   try {
+    if (await userHasSuperadminRole(req.params.id) || await roleIdIsSuperadmin(Id_Rol)) {
+      return denySuperadminMutation(res)
+    }
     if (Contrasena && Contrasena.trim() !== '') {
       const errorPass = validarContrasena(Contrasena)
       if (errorPass) return res.status(400).json({ error: errorPass })
@@ -182,6 +213,7 @@ router.put('/:id', requireAuth, requireSelfParamOrRoles('id', 'admin'), async (r
 // PATCH inactivar usuario (soft delete)
 router.patch('/:id/inactivar', requireAuth, requireRoles('admin'), async (req, res) => {
   try {
+    if (await userHasSuperadminRole(req.params.id)) return denySuperadminMutation(res)
     const { rowCount } = await pool.query(
       `UPDATE usuario SET "Estado" = 'inactivo' WHERE "Id_Usuario" = $1`,
       [req.params.id]
@@ -196,6 +228,7 @@ router.patch('/:id/inactivar', requireAuth, requireRoles('admin'), async (req, r
 // DELETE usuario
 router.delete('/:id', requireAuth, requireRoles('admin'), async (req, res) => {
   try {
+    if (await userHasSuperadminRole(req.params.id)) return denySuperadminMutation(res)
     const { rowCount } = await pool.query('DELETE FROM usuario WHERE "Id_Usuario" = $1', [req.params.id])
     if (rowCount === 0) return res.status(404).json({ error: 'Usuario no encontrado' })
     res.json({ mensaje: 'Usuario eliminado' })

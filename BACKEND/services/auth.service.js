@@ -113,6 +113,24 @@ export async function processLogin(dbClient, { identificador, contrasena }) {
 
   const memberships = await getUserMemberships(dbClient, user.Id_Usuario)
 
+  // El rol global superadmin solo se autentica sin membresía empresarial.
+  if (String(user.Rol || '').trim().toLowerCase() === 'superadmin') {
+    if (memberships === null || memberships.length === 0) {
+      return {
+        status: 'success',
+        type: 'authenticated',
+        token: signAuthToken(user),
+        usuario: user,
+      }
+    }
+    return {
+      status: 'membership_invariant_violation',
+      type: 'membership_invariant_violation',
+      error: 'La cuenta superadmin no debe tener membresías empresariales.',
+      usuario: user,
+    }
+  }
+
   // 1. Modo de compatibilidad / transición: Tablas multiempresa no existen en la BD todavía
   if (memberships === null) {
     const token = signAuthToken(user)

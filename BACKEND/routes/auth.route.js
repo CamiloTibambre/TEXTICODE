@@ -157,6 +157,14 @@ router.post('/google/mobile', async (req, res) => {
     }
 
     const memberships = await getUserMemberships(db, user.Id_Usuario)
+    if (String(user.Rol || '').trim().toLowerCase() === 'superadmin'
+      && (memberships === null || memberships.length === 0)) {
+      const token = signAuthToken(user)
+      return res.status(200).json({
+        token,
+        usuario: user,
+      })
+    }
     if (memberships?.length === 0) {
       return res.status(403).json({ error: 'El usuario no tiene membresías activas.' })
     }

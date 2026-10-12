@@ -107,6 +107,9 @@ export async function requireAuth(req, res, next) {
     const user = result.rows[0]
     if (!user) return res.status(401).json({ error: 'Sesión inválida.' })
     if (user.Estado === 'inactivo') return res.status(403).json({ error: 'Usuario inactivo.' })
+    if (String(user.Rol || '').trim().toLowerCase() === 'superadmin') {
+      return res.status(403).json({ error: 'El superadmin no tiene acceso a rutas operativas.' })
+    }
     if (!legacySchema && (tokenEmpresaId === null || user.Membresia_Id_Empresa == null)) {
       return res.status(403).json({ error: 'Membresía empresarial inactiva o no autorizada.' })
     }
@@ -137,5 +140,57 @@ export async function requireAuth(req, res, next) {
       return res.status(401).json({ error: 'Sesión expirada.' })
     }
     return res.status(401).json({ error: 'Sesión inválida.' })
+  }
+}
+
+export async function requireSuperadmin(req, res, next) {
+  const token = getBearerToken(req)
+  if (!token) return res.status(401).json({ error: 'Sesión requerida.' })
+
+  let payload
+  try {
+    payload = verifyAuthToken(token)
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') return res.status(401).json({ error: 'Sesión expirada.' })
+    return res.status(401).json({ error: 'Sesión inválida.' })
+  }
+
+  if (payload.empresa !== undefined && payload.empresa !== null) {
+    return res.status(403).json({ error: 'El superadmin debe autenticarse sin empresa.' })
+  }
+
+  try {
+    const { default: db } = await import('../db.js')
+    const { rows } = await db.query(
+      `SELECT u."Id_Usuario", u."Estado", r."Nombre_Rol" AS "Rol",
+              EXISTS (
+                SELECT 1 FROM usuario_empresa ue
+                WHERE ue."Id_Usuario" = u."Id_Usuario"
+              ) AS "Tiene_Membresias"
+       FROM usuario u
+       INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
+       WHERE u."Id_Usuario" = $1
+       LIMIT 1`,
+      [payload.id]
+    )
+    const user = rows[0]
+    if (!user || user.Estado === 'inactivo'
+      || String(user.Rol || '').trim().toLowerCase() !== 'superadmin'
+      || user.Tiene_Membresias === true) {
+      return res.status(403).json({ error: 'Solo el superadmin global puede administrar empresas.' })
+    }
+    req.auth = {
+      id: user.Id_Usuario,
+      rol: payload.rol,
+      rolNombre: user.Rol,
+      empresaId: null,
+      empresaNombre: null,
+      usuario: payload.usuario,
+      membresia: null,
+      user,
+    }
+    return next()
+  } catch (err) {
+    return res.status(403).json({ error: 'No se pudo verificar el rol superadmin en la base de datos.' })
   }
 }
