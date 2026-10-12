@@ -2,7 +2,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFile } from 'node:fs/promises'
 
-const state = { routes: new Map(), queries: [], rows: [], nextError: null, id: 101 }
+const state = {
+  routes: new Map(), queries: [], rows: [], nextError: null, errorAt: null,
+  id: 101, transactions: [], releaseCount: 0, mutationCount: 0,
+}
 const passthrough = (_req, _res, next) => next()
 const pool = {
   async query(sql, params = []) {
@@ -13,13 +16,25 @@ const pool = {
     return {
       async query(sql, params = []) {
         state.queries.push({ sql, params })
-        if (state.nextError) { const err = state.nextError; state.nextError = null; throw err }
+        const command = sql.trim().toUpperCase()
+        if (command === 'BEGIN' || command === 'COMMIT' || command === 'ROLLBACK') {
+          state.transactions.push(command)
+          return { rows: [], rowCount: 0 }
+        }
+        if (state.errorAt && sql.includes(state.errorAt)) {
+          const err = state.nextError || new Error('mock exception')
+          state.errorAt = null; state.nextError = null
+          throw err
+        }
         if (sql.includes('INSERT INTO material (')) return { rows: [{ Id_Material: state.id++ }], rowCount: 1 }
         if (sql.startsWith('SELECT "Stock_Actual"')) return { rows: state.rows, rowCount: state.rows.length }
-        if (sql.startsWith('UPDATE material')) return { rows: [], rowCount: state.rows.length }
+        if (sql.startsWith('UPDATE material')) {
+          state.mutationCount++
+          return { rows: [], rowCount: state.rows.length || 1 }
+        }
         return { rows: [], rowCount: 1 }
       },
-      release() {},
+      release() { state.releaseCount++ },
     }
   },
 }
@@ -47,8 +62,9 @@ for (const [from, to] of [
 globalThis.__materialesMocks = mocks
 await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}#${Math.random()}`)
 
-function reset({ rows = [], error = null } = {}) {
-  state.queries = []; state.rows = rows; state.nextError = error; state.id = 101
+function reset({ rows = [], error = null, errorAt = null } = {}) {
+  state.queries = []; state.rows = rows; state.nextError = error; state.errorAt = errorAt
+  state.id = 101; state.transactions = []; state.releaseCount = 0; state.mutationCount = 0
 }
 function res() {
   return { statusCode: 200, body: null, status(code) { this.statusCode = code; return this }, json(body) { this.body = body; return this } }
@@ -88,7 +104,7 @@ test('M3/M4: INSERT usa empresa del token; duplicado da 409 y nombre disponible 
   assert.equal(insert.params.at(-1), 42)
   assert.equal(success.statusCode, 201)
 
-  reset({ error: Object.assign(new Error('unique'), { code: '23505' }) })
+  reset({ errorAt: 'INSERT INTO material (', error: Object.assign(new Error('unique'), { code: '23505' }) })
   const duplicate = await call('POST /', { body })
   assert.equal(duplicate.statusCode, 409)
 
@@ -102,8 +118,11 @@ test('M5: PUT y DELETE de id ajeno devuelven 404 sin ejecutar cambios', async ()
     reset()
     const response = await call(key, { params: { id: '8' }, body: { Stock_Actual: 1 } })
     assert.equal(response.statusCode, 404)
-    assert.equal(state.queries.some(entry => entry.sql.startsWith('UPDATE material')), false)
-    assert.ok(state.queries[0].sql.includes('"Id_Empresa" = $2'))
+    const applicationQueries = state.queries.filter(entry => !['BEGIN', 'COMMIT', 'ROLLBACK'].includes(entry.sql.trim().toUpperCase()))
+    assert.equal(applicationQueries.length, 1)
+    assert.ok(applicationQueries[0].sql.includes('"Id_Empresa" = $2'))
+    assert.equal(applicationQueries[0].params.at(-1), 42)
+    assert.equal(state.mutationCount, 0)
   }
 })
 
@@ -125,3 +144,37 @@ test('M8: las suites de regresión existentes contienen P1–P8 y S1–S11', asy
   for (let i = 1; i <= 8; i++) assert.match(fase61, new RegExp(`P${i}:`))
   for (let i = 1; i <= 11; i++) assert.match(fase62, new RegExp(`S${i}:`))
 })
+
+const txRequests = {
+  post: { key: 'POST /', params: {}, body: { Nombre_Material: 'M', Categoria: 'C', Unidad: 'u', Stock_Actual: 2 } },
+  put: { key: 'PUT /:id', params: { id: '101' }, body: { Nombre_Material: 'M', Categoria: 'C', Unidad: 'u', Stock_Actual: 2, Stock_Minimo: 0, Stock_Maximo: 5 } },
+  delete: { key: 'DELETE /:id', params: { id: '101' }, body: {} },
+}
+
+async function checkTransaction(route, scenario) {
+  const setup = { rows: route === 'post' ? [] : [{ Stock_Actual: 1 }] }
+  if (scenario === '404') setup.rows = []
+  if (scenario === 'sql-error') {
+    setup.errorAt = route === 'post' || route === 'put' || route === 'delete'
+      ? 'INSERT INTO material_movimiento' : null
+    setup.error = Object.assign(new Error('simulated database error'), { code: '23503' })
+  }
+  if (scenario === 'exception') {
+    setup.errorAt = route === 'post' ? 'INSERT INTO material (' : 'UPDATE material'
+    setup.error = new Error('simulated exception')
+  }
+  reset(setup)
+  const item = txRequests[route]
+  const response = await call(item.key, { params: item.params, body: item.body })
+  const should404 = scenario === '404'
+  assert.equal(response.statusCode, should404 ? 404 : scenario === 'success' ? (route === 'post' ? 201 : 200) : scenario === 'sql-error' ? 400 : 500)
+  assert.equal(state.releaseCount, 1, `${route}/${scenario}: release una vez`)
+  assert.deepEqual(state.transactions, ['BEGIN', should404 || scenario !== 'success' ? 'ROLLBACK' : 'COMMIT'])
+}
+
+for (const route of ['post', 'put', 'delete']) {
+  test(`TX ${route.toUpperCase()} éxito: confirma transacción y libera una vez`, () => checkTransaction(route, 'success'))
+  if (route !== 'post') test(`TX ${route.toUpperCase()} 404: revierte y libera una vez`, () => checkTransaction(route, '404'))
+  test(`TX ${route.toUpperCase()} error SQL: revierte y libera una vez`, () => checkTransaction(route, 'sql-error'))
+  test(`TX ${route.toUpperCase()} excepción: revierte y libera una vez`, () => checkTransaction(route, 'exception'))
+}
