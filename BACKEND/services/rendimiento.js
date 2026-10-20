@@ -32,8 +32,13 @@ function construirVentanas(periodo, dias = 30) {
 
 export async function calcularRendimiento(
   pool,
-  { periodo, dias = 30 } = {}
+  { periodo, dias = 30, empresaId } = {}
 ) {
+  // Aislamiento multiempresa: sin empresa no se calcula nada (falla cerrado).
+  if (empresaId === undefined || empresaId === null) {
+    throw new Error('calcularRendimiento requiere empresaId.')
+  }
+
   const ventanas = construirVentanas(periodo, dias)
 
   const desde = ventanas[ventanas.length - 1].ini
@@ -67,6 +72,9 @@ export async function calcularRendimiento(
 
       JOIN orden_produccion o
         ON o."Id_Orden" = oo."Id_Orden"
+       AND o."Id_Empresa" = oo."Id_Empresa"
+
+      WHERE oo."Id_Empresa" = $3
     )
 
     SELECT
@@ -80,7 +88,7 @@ export async function calcularRendimiento(
     WHERE "Estado_Fase" = 'Completada'
       AND "Fecha_Completada" >= $1
       AND "Fecha_Completada" < $2
-  `, [desde, hasta])
+  `, [desde, hasta, empresaId])
 
   const ahora = new Date()
   const porOperario = new Map()

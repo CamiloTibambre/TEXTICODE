@@ -153,7 +153,7 @@ router.get('/operarios/:id', async (req, res) => {
       return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
     }
 
-    const mapa = await calcularRendimiento(db)
+    const mapa = await calcularRendimiento(db, { empresaId: req.auth.empresaId })
     const operario = aplicarRendimiento(rows[0], mapa.get(Number(id)))
 
     const { rows: ordenes } = await db.query(`
@@ -259,7 +259,7 @@ router.get('/operarios', async (req, res) => {
     `, [inicioPeriodo, req.auth.empresaId])
 
     // Rendimiento por baseline individual + tendencia
-    const mapa = await calcularRendimiento(db, { periodo })
+    const mapa = await calcularRendimiento(db, { periodo, empresaId: req.auth.empresaId })
     let resultado = rows
       .map(op => aplicarRendimiento(op, mapa.get(op.Id_Usuario)))
       .sort((a, b) => Number(b.prendas_por_dia) - Number(a.prendas_por_dia))
@@ -436,6 +436,7 @@ router.get('/operarios/:id/historial', async (req, res) => {
       ) AS con_problema
     FROM ${SQL_ORDENES_OP} op
     WHERE op."Id_Operario" = $1
+      AND op."Id_Empresa" = $2
       AND op."Fecha_Creacion" >= CURRENT_DATE - INTERVAL '${offsetInicio} days'
       AND op."Fecha_Creacion" <  CURRENT_DATE - INTERVAL '${offsetFin} days'
   `
@@ -454,10 +455,10 @@ router.get('/operarios/:id/historial', async (req, res) => {
       return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
     }
 
-    const { rows: actual }   = await db.query(sqlConteosPeriodo(dias, 0), [id])
-    const { rows: anterior } = await db.query(sqlConteosPeriodo(dias * 2, dias), [id])
+    const { rows: actual }   = await db.query(sqlConteosPeriodo(dias, 0), [id, req.auth.empresaId])
+    const { rows: anterior } = await db.query(sqlConteosPeriodo(dias * 2, dias), [id, req.auth.empresaId])
 
-    const m = (await calcularRendimiento(db, { dias })).get(Number(id))
+    const m = (await calcularRendimiento(db, { dias, empresaId: req.auth.empresaId })).get(Number(id))
 
     const ppd_actual   = m ? m.prendas_por_dia  : 0
     const ppd_anterior = m ? m.anterior_por_dia : 0

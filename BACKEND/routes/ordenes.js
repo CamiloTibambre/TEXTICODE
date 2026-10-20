@@ -293,6 +293,8 @@ router.delete('/:id', requireRoles('admin'), async (req, res) => {
     if (rowCount === 0) return res.status(404).json({ error: 'Orden no encontrada' })
     res.json({ mensaje: 'Orden eliminada' })
   } catch (err) {
+    if (err.code === '23503')
+      return res.status(409).json({ error: 'No se puede eliminar la orden porque tiene registros asociados.' })
     res.status(500).json({ error: err.message })
   }
 })
