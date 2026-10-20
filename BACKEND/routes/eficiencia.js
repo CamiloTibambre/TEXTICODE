@@ -5,6 +5,15 @@ import { calcularRendimiento } from '../services/rendimiento.js'
 
 const router = express.Router()
 
+// Todas las rutas de eficiencia trabajan con la empresa del token (req.auth.empresaId),
+// nunca con una empresa enviada por el cliente. Requiere que index.js monte este router tras requireAuth.
+router.use((req, res, next) => {
+  if (!req.auth?.empresaId) {
+    return res.status(403).json({ ok: false, mensaje: 'No tienes una empresa activa.' })
+  }
+  next()
+})
+
 // ---------------------------------------------------------------
 // Órdenes de cada operario: une las fases (orden_operario) con las
 // órdenes viejas que todavía tienen orden_produccion.Id_Operario.
@@ -105,7 +114,7 @@ router.get('/operarios/:id', async (req, res) => {
   }
 
   try {
-    await actualizarOrdenesRetrasadas()
+    await actualizarOrdenesRetrasadas(req.auth.empresaId)
 
     const { rows } = await db.query(`
       SELECT
@@ -134,10 +143,11 @@ router.get('/operarios/:id', async (req, res) => {
 
       FROM usuario u
       INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+      INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario" AND ue."Id_Empresa" = $2
       LEFT JOIN ${SQL_ORDENES_OP} op ON op."Id_Operario" = u."Id_Usuario"
       WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
       GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono"
-    `, [id])
+    `, [id, req.auth.empresaId])
 
     if (rows.length === 0) {
       return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
@@ -207,7 +217,7 @@ router.get('/operarios', async (req, res) => {
   }
 
   try {
-    await actualizarOrdenesRetrasadas()
+    await actualizarOrdenesRetrasadas(req.auth.empresaId)
 
     const { rows } = await db.query(`
       SELECT
@@ -234,6 +244,7 @@ router.get('/operarios', async (req, res) => {
 
       FROM usuario u
       INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+      INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario" AND ue."Id_Empresa" = $2
       LEFT JOIN ${SQL_ORDENES_OP} op
         ON op."Id_Operario" = u."Id_Usuario"
        AND (
@@ -245,7 +256,7 @@ router.get('/operarios', async (req, res) => {
            )
       WHERE u."Estado" = 'activo'
       GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario"
-    `, [inicioPeriodo])
+    `, [inicioPeriodo, req.auth.empresaId])
 
     // Rendimiento por baseline individual + tendencia
     const mapa = await calcularRendimiento(db, { periodo })
@@ -311,8 +322,10 @@ router.post('/observaciones', async (req, res) => {
     const { rows: operario } = await db.query(
       `SELECT u."Id_Usuario" FROM usuario u
        INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol"
+       INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario"
+         AND ue."Id_Empresa" = $2 AND ue."Estado" = 'activo'
        WHERE u."Id_Usuario" = $1 AND r."Nombre_Rol" = 'operario' AND u."Estado" = 'activo'`,
-      [Id_Operario]
+      [Id_Operario, req.auth.empresaId]
     )
     if (operario.length === 0) {
       return res.status(404).json({ ok: false, mensaje: 'Operario no encontrado o no activo' })
@@ -320,18 +333,20 @@ router.post('/observaciones', async (req, res) => {
 
     const { rows: orden } = await db.query(
       `SELECT x."Id_Orden" FROM ${SQL_ORDENES_OP} x
-       WHERE x."Id_Orden" = $1 AND x."Id_Operario" = $2`,
-      [Id_Orden, Id_Operario]
+       WHERE x."Id_Orden" = $1 AND x."Id_Operario" = $2
+         AND EXISTS (SELECT 1 FROM orden_produccion po
+                     WHERE po."Id_Orden" = x."Id_Orden" AND po."Id_Empresa" = $3)`,
+      [Id_Orden, Id_Operario, req.auth.empresaId]
     )
     if (orden.length === 0) {
       return res.status(400).json({ ok: false, mensaje: 'La orden no pertenece a este operario' })
     }
 
     const { rows: result } = await db.query(
-      `INSERT INTO observacion_operario ("Id_Operario", "Id_Orden", "Id_Admin", "Observacion")
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO observacion_operario ("Id_Operario", "Id_Orden", "Id_Admin", "Observacion", "Id_Empresa")
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING "Id_Observacion"`,
-      [Id_Operario, Id_Orden, Id_Admin, Observacion]
+      [Id_Operario, Id_Orden, Id_Admin, Observacion, req.auth.empresaId]
     )
 
     res.status(201).json({
@@ -341,6 +356,10 @@ router.post('/observaciones', async (req, res) => {
     })
   } catch (err) {
     console.error('Error en POST /eficiencia/observaciones:', err)
+    // La FK compuesta de la base rechaza un Id_Admin que no pertenece a esta empresa.
+    if (err.code === '23503') {
+      return res.status(400).json({ ok: false, mensaje: 'El administrador indicado no pertenece a tu empresa.' })
+    }
     res.status(500).json({ ok: false, mensaje: 'Error interno al registrar la observación' })
   }
 })
@@ -357,12 +376,12 @@ router.get('/observaciones/:id', async (req, res) => {
            u."Nombre_Completo" AS "Admin"
     FROM observacion_operario ob
     INNER JOIN usuario u ON ob."Id_Admin" = u."Id_Usuario"
-    WHERE ob."Id_Operario" = $1
+    WHERE ob."Id_Operario" = $1 AND ob."Id_Empresa" = $2
   `
-  const params = [id]
+  const params = [id, req.auth.empresaId]
 
   if (Id_Orden) {
-    sql += ` AND ob."Id_Orden" = $2`
+    sql += ` AND ob."Id_Orden" = $3`
     params.push(Id_Orden)
   }
 
@@ -426,8 +445,9 @@ router.get('/operarios/:id/historial', async (req, res) => {
       `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario"
        FROM usuario u
        INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+       INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario" AND ue."Id_Empresa" = $2
        WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'`,
-      [id]
+      [id, req.auth.empresaId]
     )
 
     if (operario.length === 0) {
@@ -488,15 +508,15 @@ router.delete('/observaciones/:id', async (req, res) => {
 
   try {
     const { rows: obs } = await db.query(
-      `SELECT "Id_Observacion" FROM observacion_operario WHERE "Id_Observacion" = $1`,
-      [id]
+      `SELECT "Id_Observacion" FROM observacion_operario WHERE "Id_Observacion" = $1 AND "Id_Empresa" = $2`,
+      [id, req.auth.empresaId]
     )
 
     if (obs.length === 0) {
       return res.status(404).json({ ok: false, mensaje: `No se encontró la observación con id ${id}` })
     }
 
-    await db.query(`DELETE FROM observacion_operario WHERE "Id_Observacion" = $1`, [id])
+    await db.query(`DELETE FROM observacion_operario WHERE "Id_Observacion" = $1 AND "Id_Empresa" = $2`, [id, req.auth.empresaId])
 
     res.json({ ok: true, mensaje: 'Observación eliminada correctamente' })
   } catch (err) {

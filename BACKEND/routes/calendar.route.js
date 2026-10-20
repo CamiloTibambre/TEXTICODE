@@ -18,8 +18,8 @@ const router = express.Router()
 router.get('/status', requireAuth, async (req, res) => {
   await ensureGoogleSchema()
   const { rows } = await db.query(
-    `SELECT "Google_Email" FROM google_calendar_tokens WHERE "Id_Usuario" = $1`,
-    [req.auth.id]
+    `SELECT "Google_Email" FROM google_calendar_tokens WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2`,
+    [req.auth.id, req.auth.empresaId]
   )
   const row = rows[0]
   res.json({ connected: !!row, calendarEmail: row?.Google_Email || null })
@@ -34,7 +34,7 @@ router.post('/connect', requireAuth, async (req, res) => {
   try {
     const tokenPayload = await exchangeMobileAuthCode(serverAuthCode)
     const profile = await getGoogleProfile(tokenPayload.access_token)
-    await upsertGoogleTokens(req.auth.id, profile, tokenPayload)
+    await upsertGoogleTokens(req.auth.id, profile, tokenPayload, req.auth.empresaId)
     res.json({ connected: true, calendarEmail: profile.email })
   } catch (err) {
     console.error('[calendar/connect]', err.message)
@@ -45,14 +45,14 @@ router.post('/connect', requireAuth, async (req, res) => {
 // DELETE /api/calendar/connect
 router.delete('/connect', requireAuth, async (req, res) => {
   await ensureGoogleSchema()
-  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1', [req.auth.id])
+  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2', [req.auth.id, req.auth.empresaId])
   res.json({ mensaje: 'Google Calendar desvinculado correctamente.' })
 })
 
 // POST /api/calendar/sync
 router.post('/sync', requireAuth, async (req, res) => {
   try {
-    const googleRow = await getConnectedGoogleRow(req.auth.id)
+    const googleRow = await getConnectedGoogleRow(req.auth.id, req.auth.empresaId)
     const orders = await getUserOrders(req.auth)
     const accessToken = await refreshAccessToken(googleRow)
 
@@ -65,8 +65,8 @@ router.post('/sync', requireAuth, async (req, res) => {
     }
 
     await db.query(
-      'UPDATE google_calendar_tokens SET "Last_Sync_At" = now(), "Updated_At" = now() WHERE "Id_Usuario" = $1',
-      [req.auth.id]
+      'UPDATE google_calendar_tokens SET "Last_Sync_At" = now(), "Updated_At" = now() WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2',
+      [req.auth.id, req.auth.empresaId]
     )
 
     res.json({ creados, actualizados, total: orders.length })
@@ -79,7 +79,7 @@ router.post('/sync', requireAuth, async (req, res) => {
 // POST /api/calendar/sync/:idOrden
 router.post('/sync/:idOrden', requireAuth, async (req, res) => {
   try {
-    const googleRow = await getConnectedGoogleRow(req.auth.id)
+    const googleRow = await getConnectedGoogleRow(req.auth.id, req.auth.empresaId)
     const orders = await getUserOrders(req.auth)
     const order = orders.find((o) => String(o.Id_Orden) === String(req.params.idOrden))
     if (!order) {
