@@ -4,6 +4,14 @@ import { actualizarOrdenesRetrasadas } from './ordenes.js'
 
 const router = express.Router()
 
+// Toda ruta de carga de trabajo opera sobre la empresa del token.
+router.use((req, res, next) => {
+  if (!req.auth?.empresaId) {
+    return res.status(403).json({ ok: false, mensaje: 'Se requiere una empresa activa.' })
+  }
+  next()
+})
+
 // ─────────────────────────────────────────────────────────────
 // Configuración de carga
 // ─────────────────────────────────────────────────────────────
@@ -30,28 +38,31 @@ const INCLUIR_ORDENES_SIN_FASES = true
 // frente a alguien con 8. Ajusta este número según cuántas fases
 // activas consideres razonable como "tiene espacio libre" en tu
 // operación real.
-const umbrales = {
-  limite_sobrecarga: 8,
-  limite_disponible: 4,
+// Los umbrales viven en memoria pero POR EMPRESA: una empresa no puede cambiar los de otra.
+const UMBRALES_POR_DEFECTO = { limite_sobrecarga: 8, limite_disponible: 4 }
+const umbralesPorEmpresa = new Map()
+
+function getUmbrales(empresaId) {
+  return umbralesPorEmpresa.get(String(empresaId)) || { ...UMBRALES_POR_DEFECTO }
 }
 
-function clasificarCarga(carga) {
+function clasificarCarga(carga, umb) {
   const n = Number(carga)
-  if (n >= umbrales.limite_sobrecarga) return 'sobrecargado'
-  if (n <= umbrales.limite_disponible) return 'disponible'
+  if (n >= umb.limite_sobrecarga) return 'sobrecargado'
+  if (n <= umb.limite_disponible) return 'disponible'
   return 'normal'
 }
 
 // Cuántas unidades hay que mover para que el operario quede por debajo del límite
 // Ej: límite 5, carga 5 => 1 | carga 7 => 3
-function calcularExceso(carga) {
-  return Math.max(0, Number(carga) - (umbrales.limite_sobrecarga - 1))
+function calcularExceso(carga, umb) {
+  return Math.max(0, Number(carga) - (umb.limite_sobrecarga - 1))
 }
 
 // ─────────────────────────────────────────────────────────────
 // Unidades de carga: cada FASE activa + órdenes antiguas sin fases
 // ─────────────────────────────────────────────────────────────
-const ITEMS_CARGA_SQL = `
+const itemsCargaSql = (e) => `
   SELECT
     oo."Id_Orden_Operario"                          AS "Id_Orden_Operario",
     'fase'::text                                    AS tipo,
@@ -65,8 +76,9 @@ const ITEMS_CARGA_SQL = `
     p."Fecha_Limite"                                AS "Fecha_Limite",
     (p."Estado"::text = 'Retrasada' OR CURRENT_DATE > p."Fecha_Limite") AS vencida
   FROM orden_operario oo
-  INNER JOIN orden_produccion p ON p."Id_Orden" = oo."Id_Orden"
-  WHERE oo."Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
+  INNER JOIN orden_produccion p ON p."Id_Orden" = oo."Id_Orden" AND p."Id_Empresa" = oo."Id_Empresa"
+  WHERE oo."Id_Empresa" = ${e}
+    AND oo."Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
     AND p."Estado"::text <> 'Completada'
   ${INCLUIR_ORDENES_SIN_FASES ? `
   UNION ALL
@@ -83,9 +95,10 @@ const ITEMS_CARGA_SQL = `
     p."Fecha_Limite",
     (p."Estado"::text = 'Retrasada' OR CURRENT_DATE > p."Fecha_Limite")
   FROM orden_produccion p
-  WHERE p."Id_Operario" IS NOT NULL
+  WHERE p."Id_Empresa" = ${e}
+    AND p."Id_Operario" IS NOT NULL
     AND p."Estado"::text IN (${ESTADOS_ACTIVOS_SQL})
-    AND NOT EXISTS (SELECT 1 FROM orden_operario x WHERE x."Id_Orden" = p."Id_Orden")
+    AND NOT EXISTS (SELECT 1 FROM orden_operario x WHERE x."Id_Orden" = p."Id_Orden" AND x."Id_Empresa" = p."Id_Empresa")
   ` : ''}
 `
 
@@ -97,17 +110,17 @@ const ORDEN_ITEMS_SQL = `
   "Numero_Fase" ASC NULLS LAST
 `
 
-// Operarios activos con su carga (opcionalmente uno solo)
-async function obtenerOperarios(idOperario = null) {
-  const params = []
+// Operarios activos DE LA EMPRESA con su carga (opcionalmente uno solo)
+async function obtenerOperarios(empresaId, idOperario = null) {
+  const params = [empresaId]
   let filtro = ''
   if (idOperario !== null) {
     params.push(idOperario)
-    filtro = `AND u."Id_Usuario" = $1`
+    filtro = `AND u."Id_Usuario" = $2`
   }
 
   const { rows } = await db.query(`
-    WITH items AS (${ITEMS_CARGA_SQL})
+    WITH items AS (${itemsCargaSql('$1')})
     SELECT
       u."Id_Usuario",
       u."Nombre_Completo",
@@ -119,19 +132,22 @@ async function obtenerOperarios(idOperario = null) {
       COUNT(i."Id_Operario") FILTER (WHERE i.vencida)::int            AS ordenes_vencidas,
       COUNT(i."Id_Operario") FILTER (WHERE i."Prioridad"::text = 'Alta')::int AS ordenes_alta_prioridad
     FROM usuario u
-    INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+    INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario" AND ue."Id_Empresa" = $1 AND ue."Estado" = 'activo'
+    INNER JOIN rol r ON ue."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
     LEFT JOIN items i ON i."Id_Operario" = u."Id_Usuario"
     WHERE u."Estado" = 'activo' ${filtro}
     GROUP BY u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo", u."Telefono"
     ORDER BY ordenes_activas DESC, u."Nombre_Completo"
   `, params)
 
-  return rows.map(o => ({ ...o, estado_carga: clasificarCarga(o.ordenes_activas) }))
+  const umb = getUmbrales(empresaId)
+  return rows.map(o => ({ ...o, estado_carga: clasificarCarga(o.ordenes_activas, umb) }))
 }
 
 // Calcula las sugerencias de reasignación (por fase)
-async function calcularSugerencias() {
-  const operarios = await obtenerOperarios()
+async function calcularSugerencias(empresaId) {
+  const umb = getUmbrales(empresaId)
+  const operarios = await obtenerOperarios(empresaId)
   const sobrecargados = operarios.filter(o => o.estado_carga === 'sobrecargado')
   const disponibles   = operarios.filter(o => o.estado_carga === 'disponible')
 
@@ -140,18 +156,18 @@ async function calcularSugerencias() {
   }
 
   const { rows: items } = await db.query(`
-    WITH items AS (${ITEMS_CARGA_SQL})
+    WITH items AS (${itemsCargaSql('$1')})
     SELECT * FROM items
-    WHERE "Id_Operario" = ANY($1::int[])
+    WHERE "Id_Operario" = ANY($2::int[])
     ORDER BY "Id_Operario", ${ORDEN_ITEMS_SQL}
-  `, [sobrecargados.map(o => o.Id_Usuario)])
+  `, [empresaId, sobrecargados.map(o => o.Id_Usuario)])
 
   // Carga proyectada de cada disponible, para repartir sin sobrecargarlos
   const cargaProyectada = new Map(disponibles.map(d => [d.Id_Usuario, d.ordenes_activas]))
   const sugerencias = []
 
   for (const operario of sobrecargados) {
-    const exceso = calcularExceso(operario.ordenes_activas)
+    const exceso = calcularExceso(operario.ordenes_activas, umb)
     const aMover = items.filter(i => i.Id_Operario === operario.Id_Usuario).slice(0, exceso)
     const movimientos = []
 
@@ -162,7 +178,7 @@ async function calcularSugerencias() {
       )[0]
 
       // Si el destino ya llegaría al límite, no hay más capacidad
-      if (cargaProyectada.get(destino.Id_Usuario) + 1 >= umbrales.limite_sobrecarga) break
+      if (cargaProyectada.get(destino.Id_Usuario) + 1 >= umb.limite_sobrecarga) break
       cargaProyectada.set(destino.Id_Usuario, cargaProyectada.get(destino.Id_Usuario) + 1)
 
       movimientos.push({
@@ -201,10 +217,10 @@ async function calcularSugerencias() {
 // Si se pasa Id_Orden          -> reasigna TODA la orden:
 //   - si la orden tiene fases activas, se reasignan todas esas fases
 //     (esto es lo que realmente mueve la carga, ya que la carga se
-//     calcula por fase cuando la orden las tiene — ver ITEMS_CARGA_SQL).
+//     calcula por fase cuando la orden las tiene — ver itemsCargaSql).
 //   - si la orden no tiene fases (orden antigua), se reasigna el
 //     campo Id_Operario de orden_produccion como respaldo.
-async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino }) {
+async function reasignarItem(empresaId, { Id_Orden_Operario, Id_Orden, Id_Operario_Destino }) {
   if (!Id_Operario_Destino || (!Id_Orden_Operario && !Id_Orden)) {
     return { status: 400, error: 'Se requiere Id_Orden_Operario (fase) o Id_Orden, y Id_Operario_Destino' }
   }
@@ -212,9 +228,10 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
   const { rows: destino } = await db.query(`
     SELECT u."Id_Usuario", u."Nombre_Completo"
     FROM usuario u
-    INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+    INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario" AND ue."Id_Empresa" = $2 AND ue."Estado" = 'activo'
+    INNER JOIN rol r ON ue."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
     WHERE u."Id_Usuario" = $1 AND u."Estado" = 'activo'
-  `, [Id_Operario_Destino])
+  `, [Id_Operario_Destino, empresaId])
 
   if (destino.length === 0) {
     return { status: 404, error: `No se encontró un operario activo con id ${Id_Operario_Destino}` }
@@ -225,18 +242,19 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
     const { rows: fase } = await db.query(`
       SELECT oo."Id_Orden_Operario", oo."Id_Orden", oo."Id_Operario", oo."Numero_Fase", oo."Descripcion_Fase", p."Producto"
       FROM orden_operario oo
-      INNER JOIN orden_produccion p ON p."Id_Orden" = oo."Id_Orden"
+      INNER JOIN orden_produccion p ON p."Id_Orden" = oo."Id_Orden" AND p."Id_Empresa" = oo."Id_Empresa"
       WHERE oo."Id_Orden_Operario" = $1
+        AND oo."Id_Empresa" = $2
         AND oo."Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
-    `, [Id_Orden_Operario])
+    `, [Id_Orden_Operario, empresaId])
 
     if (fase.length === 0) {
       return { status: 404, error: `No se encontró una fase activa con id ${Id_Orden_Operario}` }
     }
 
     await db.query(
-      `UPDATE orden_operario SET "Id_Operario" = $1, updated_at = NOW() WHERE "Id_Orden_Operario" = $2`,
-      [Id_Operario_Destino, Id_Orden_Operario]
+      `UPDATE orden_operario SET "Id_Operario" = $1, updated_at = NOW() WHERE "Id_Orden_Operario" = $2 AND "Id_Empresa" = $3`,
+      [Id_Operario_Destino, Id_Orden_Operario, empresaId]
     )
 
     return {
@@ -258,8 +276,8 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
   const { rows: orden } = await db.query(`
     SELECT "Id_Orden", "Id_Operario", "Producto"
     FROM orden_produccion
-    WHERE "Id_Orden" = $1 AND "Estado"::text IN (${ESTADOS_ACTIVOS_SQL})
-  `, [Id_Orden])
+    WHERE "Id_Orden" = $1 AND "Id_Empresa" = $2 AND "Estado"::text IN (${ESTADOS_ACTIVOS_SQL})
+  `, [Id_Orden, empresaId])
 
   if (orden.length === 0) {
     return { status: 404, error: `No se encontró una orden activa con id ${Id_Orden}` }
@@ -270,8 +288,9 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
     SELECT "Id_Orden_Operario", "Id_Operario"
     FROM orden_operario
     WHERE "Id_Orden" = $1
+      AND "Id_Empresa" = $2
       AND "Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
-  `, [Id_Orden])
+  `, [Id_Orden, empresaId])
 
   if (fasesActivas.length > 0) {
     // La orden tiene fases: hay que mover TODAS las fases activas,
@@ -280,8 +299,9 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
       UPDATE orden_operario
       SET "Id_Operario" = $1, updated_at = NOW()
       WHERE "Id_Orden" = $2
+        AND "Id_Empresa" = $3
         AND "Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
-    `, [Id_Operario_Destino, Id_Orden])
+    `, [Id_Operario_Destino, Id_Orden, empresaId])
 
     return {
       status: 200,
@@ -299,8 +319,8 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
 
   // La orden no tiene fases (orden antigua): se reasigna el campo de la orden.
   await db.query(
-    `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2`,
-    [Id_Operario_Destino, Id_Orden]
+    `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2 AND "Id_Empresa" = $3`,
+    [Id_Operario_Destino, Id_Orden, empresaId]
   )
 
   return {
@@ -321,7 +341,7 @@ async function reasignarItem({ Id_Orden_Operario, Id_Orden, Id_Operario_Destino 
 // ─────────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
-    await actualizarOrdenesRetrasadas()
+    await actualizarOrdenesRetrasadas(req.auth.empresaId)
 
     const { estado } = req.query
 
@@ -333,7 +353,7 @@ router.get('/', async (req, res) => {
       })
     }
 
-    let data = await obtenerOperarios()
+    let data = await obtenerOperarios(req.auth.empresaId)
 
     if (estado) {
       data = data.filter(o => o.estado_carga === estado)
@@ -358,9 +378,9 @@ router.get('/', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.get('/sugerencias', async (req, res) => {
   try {
-    await actualizarOrdenesRetrasadas()
+    await actualizarOrdenesRetrasadas(req.auth.empresaId)
 
-    const { sobrecargados, disponibles, sugerencias } = await calcularSugerencias()
+    const { sobrecargados, disponibles, sugerencias } = await calcularSugerencias(req.auth.empresaId)
 
     if (sobrecargados.length === 0) {
       return res.json({ ok: true, mensaje: 'No hay operarios sobrecargados en este momento', sugerencias: [] })
@@ -391,19 +411,19 @@ router.get('/operarios/:id', async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'El id debe ser un número válido' })
     }
 
-    await actualizarOrdenesRetrasadas()
+    await actualizarOrdenesRetrasadas(req.auth.empresaId)
 
-    const operarios = await obtenerOperarios(Number(id))
+    const operarios = await obtenerOperarios(req.auth.empresaId, Number(id))
     if (operarios.length === 0) {
       return res.status(404).json({ ok: false, mensaje: `No se encontró operario con id ${id}` })
     }
 
     const { rows: detalle } = await db.query(`
-      WITH items AS (${ITEMS_CARGA_SQL})
+      WITH items AS (${itemsCargaSql('$1')})
       SELECT * FROM items
-      WHERE "Id_Operario" = $1
+      WHERE "Id_Operario" = $2
       ORDER BY ${ORDEN_ITEMS_SQL}
-    `, [Number(id)])
+    `, [req.auth.empresaId, Number(id)])
 
     res.json({
       ok: true,
@@ -424,7 +444,7 @@ router.get('/operarios/:id', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.post('/reasignar', async (req, res) => {
   try {
-    const r = await reasignarItem(req.body)
+    const r = await reasignarItem(req.auth.empresaId, req.body)
     if (r.error) return res.status(r.status).json({ ok: false, mensaje: r.error })
     res.json({ ok: true, mensaje: r.mensaje, data: r.data })
   } catch (error) {
@@ -441,7 +461,7 @@ router.patch('/fases/:id/operario', async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'El id de la fase debe ser un número válido' })
     }
 
-    const r = await reasignarItem({
+    const r = await reasignarItem(req.auth.empresaId, {
       Id_Orden_Operario:   Number(id),
       Id_Operario_Destino: req.body.Id_Operario_Destino
     })
@@ -470,7 +490,7 @@ router.post('/reasignar-multiple', async (req, res) => {
 
     for (const mov of movimientos) {
       try {
-        const r = await reasignarItem(mov)
+        const r = await reasignarItem(req.auth.empresaId, mov)
         if (r.error) {
           errores.push({ Id_Orden_Operario: mov.Id_Orden_Operario, Id_Orden: mov.Id_Orden, error: r.error })
         } else {
@@ -499,9 +519,9 @@ router.post('/reasignar-multiple', async (req, res) => {
 // ─────────────────────────────────────────────────────────────
 router.post('/aplicar-sugerencias', async (req, res) => {
   try {
-    await actualizarOrdenesRetrasadas()
+    await actualizarOrdenesRetrasadas(req.auth.empresaId)
 
-    const { sobrecargados, disponibles, sugerencias } = await calcularSugerencias()
+    const { sobrecargados, disponibles, sugerencias } = await calcularSugerencias(req.auth.empresaId)
 
     if (sobrecargados.length === 0) {
       return res.json({ ok: true, mensaje: 'No hay operarios sobrecargados', aplicados: 0 })
@@ -515,7 +535,7 @@ router.post('/aplicar-sugerencias', async (req, res) => {
 
     for (const sugerencia of sugerencias) {
       for (const mov of sugerencia.movimientos) {
-        const r = await reasignarItem({
+        const r = await reasignarItem(req.auth.empresaId, {
           Id_Orden_Operario:   mov.tipo === 'fase' ? mov.Id_Orden_Operario : undefined,
           Id_Orden:            mov.tipo === 'orden' ? mov.Id_Orden : undefined,
           Id_Operario_Destino: mov.hacia_operario.id,
@@ -549,8 +569,9 @@ router.patch('/umbrales', async (req, res) => {
   try {
     const { limite_sobrecarga, limite_disponible } = req.body
 
-    const nuevoSobrecarga = limite_sobrecarga !== undefined ? limite_sobrecarga : umbrales.limite_sobrecarga
-    const nuevoDisponible = limite_disponible !== undefined ? limite_disponible : umbrales.limite_disponible
+    const actuales = getUmbrales(req.auth.empresaId)
+    const nuevoSobrecarga = limite_sobrecarga !== undefined ? limite_sobrecarga : actuales.limite_sobrecarga
+    const nuevoDisponible = limite_disponible !== undefined ? limite_disponible : actuales.limite_disponible
 
     if (!Number.isInteger(nuevoSobrecarga) || nuevoSobrecarga < 1) {
       return res.status(400).json({ ok: false, mensaje: 'limite_sobrecarga debe ser un entero positivo' })
@@ -562,8 +583,8 @@ router.patch('/umbrales', async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'limite_disponible debe ser menor que limite_sobrecarga' })
     }
 
-    umbrales.limite_sobrecarga = nuevoSobrecarga
-    umbrales.limite_disponible = nuevoDisponible
+    const umbrales = { limite_sobrecarga: nuevoSobrecarga, limite_disponible: nuevoDisponible }
+    umbralesPorEmpresa.set(String(req.auth.empresaId), umbrales)
 
     res.json({ ok: true, mensaje: 'Umbrales actualizados', umbrales })
   } catch (error) {
@@ -590,7 +611,7 @@ router.patch('/ordenes/:id/operario', async (req, res) => {
       return res.status(400).json({ ok: false, mensaje: 'Se requiere Id_Operario_Destino' })
     }
 
-    const r = await reasignarItem({ Id_Orden: Number(id), Id_Operario_Destino })
+    const r = await reasignarItem(req.auth.empresaId, { Id_Orden: Number(id), Id_Operario_Destino })
     if (r.error) return res.status(r.status).json({ ok: false, mensaje: r.error })
     res.json({ ok: true, mensaje: r.mensaje, data: r.data })
   } catch (error) {
@@ -619,14 +640,19 @@ router.patch('/operarios/:id/estado', async (req, res) => {
     const { rows: operario } = await db.query(`
       SELECT u."Id_Usuario", u."Nombre_Completo", u."Estado"
       FROM usuario u
-      INNER JOIN rol r ON u."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
+      INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario" AND ue."Id_Empresa" = $2
+      INNER JOIN rol r ON ue."Id_Rol" = r."Id_Rol" AND r."Nombre_Rol" = 'operario'
       WHERE u."Id_Usuario" = $1
-    `, [id])
+    `, [id, req.auth.empresaId])
 
     if (operario.length === 0) {
       return res.status(404).json({ ok: false, mensaje: `No se encontró el operario con id ${id}` })
     }
 
+    await db.query(
+      `UPDATE usuario_empresa SET "Estado" = $1 WHERE "Id_Usuario" = $2 AND "Id_Empresa" = $3`,
+      [Estado, id, req.auth.empresaId]
+    )
     await db.query(
       `UPDATE usuario SET "Estado" = $1 WHERE "Id_Usuario" = $2`,
       [Estado, id]
