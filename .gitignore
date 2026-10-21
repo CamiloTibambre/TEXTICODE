@@ -16,3 +16,7 @@ certs/*.crt
 # Certificados dentro del frontend
 texticode-vue/certs/*.key
 texticode-vue/certs/*.crt
+
+.env.docker
+DATABASE/docker/*.sql
+

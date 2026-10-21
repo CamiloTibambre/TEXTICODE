@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:17
+    container_name: texticode-db
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    ports:
+      - "5433:5432"
+    volumes:
+      - texticode_pgdata:/var/lib/postgresql/data
+      - ./DATABASE/docker:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./BACKEND
+    container_name: texticode-backend
+    restart: unless-stopped
+    env_file:
+      - ./BACKEND/.env
+    environment:
+      # Dentro de Docker la base se llama "db" y usa el puerto interno 5432
+      DATABASE_URL: postgresql://texticode:texticode_local_2026@db:5432/texticode
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  texticode_pgdata:
