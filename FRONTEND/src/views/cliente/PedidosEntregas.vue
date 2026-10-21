@@ -256,7 +256,7 @@ async function cargarOrdenes() {
   if (!auth.idUsuario) return
   cargando.value = true; errorMsg.value = ''
   try {
-    const res = await fetch(`${BASE}/ordenes/cliente/${auth.idUsuario}`)
+    const res = await fetch(`${BASE}/ordenes/cliente/${auth.idUsuario}`, { headers: auth.authHeader() })
     if (!res.ok) throw new Error(`Error ${res.status}`)
     const data = await res.json()
 
@@ -306,21 +306,66 @@ async function cargarOrdenes() {
 
 onMounted(cargarOrdenes)
 
+async function ensureJsPdf() {
+  if (window.jspdf?.jsPDF) return window.jspdf.jsPDF
+
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+    s.onload = resolve
+    s.onerror = reject
+    document.head.appendChild(s)
+  })
+
+  return window.jspdf?.jsPDF
+}
+
 async function descargarPDF(o) {
   if (o.estado !== 'Completada' || descargando.value[o.id]) return
   descargando.value = { ...descargando.value, [o.id]: true }
   try {
-    const res = await fetch(`${BASE}/ordenes/${o.id}/pdf`)
-    if (!res.ok) throw new Error(`Error ${res.status}`)
-    const blob = await res.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `orden-${o.id}.pdf`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    window.URL.revokeObjectURL(url)
+    const jsPDF = await ensureJsPdf()
+    if (!jsPDF) throw new Error('No se pudo cargar el generador PDF')
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const rows = [
+      ['Orden', `#${o.id}`],
+      ['Producto', o.nombre],
+      ['Estado', o.estado],
+      ['Prioridad', o.prioridad],
+      ['Material', o.material],
+      ['Cantidad', o.cantidad],
+      ['Unidades realizadas', o.realizadas],
+      ['Fecha de entrega', o.fechaEntrega],
+    ]
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(18)
+    doc.text('TEXTICODE', 20, 22)
+    doc.setFontSize(14)
+    doc.text('Comprobante de entrega', 20, 34)
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.text('Documento generado desde el portal del cliente.', 20, 42)
+
+    let y = 56
+    rows.forEach(([label, value]) => {
+      doc.setFont('helvetica', 'bold')
+      doc.text(`${label}:`, 20, y)
+      doc.setFont('helvetica', 'normal')
+      doc.text(String(value ?? '-'), 70, y)
+      y += 9
+    })
+
+    if (o.descripcion) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Descripcion:', 20, y + 4)
+      doc.setFont('helvetica', 'normal')
+      doc.text(doc.splitTextToSize(o.descripcion, 165), 20, y + 12)
+    }
+
+    doc.save(`orden-${o.id}.pdf`)
   } catch (e) {
     errorMsg.value = `No se pudo generar el PDF: ${e.message}`
   } finally {

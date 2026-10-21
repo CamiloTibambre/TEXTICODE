@@ -1,20 +1,21 @@
 import { Router } from 'express'
 import pool from '../db.js'
+import { hasRole, requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = Router()
 
 // GET todos los materiales (solo activos — un material "eliminado"
 // queda desactivado, no borrado, para no perder su historial)
-router.get('/', async (req, res) => {
+router.get('/', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT m.*,
              u."Nombre_Completo" AS "Nombre_Cliente"
       FROM material m
       LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
-      WHERE m."Activo" = true
+      WHERE m."Activo" = true AND m."Id_Empresa" = $1
       ORDER BY m."Nombre_Material"
-    `)
+    `, [req.auth.empresaId])
     res.json(rows)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 // se debe) inventarle un stock, así que se excluye del resultado.
 // Colocado ANTES de "/:id" a propósito: si fuera después, Express
 // interpretaría "reportes" como si fuera un :id.
-router.get('/reportes/historial', async (req, res) => {
+router.get('/reportes/historial', requireRoles('admin'), async (req, res) => {
   const { periodo } = req.query // 'YYYY-MM'
   if (!periodo || !/^\d{4}-\d{2}$/.test(periodo)) {
     return res.status(400).json({ error: 'Parámetro periodo inválido, use el formato YYYY-MM' })
@@ -44,10 +45,46 @@ router.get('/reportes/historial', async (req, res) => {
       INNER JOIN material_movimiento mv
         ON mv."Id_Material" = m."Id_Material"
        AND mv."Fecha" < (date_trunc('month', $1::date) + interval '1 month')
+       AND mv."Id_Empresa" = m."Id_Empresa"
       LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
+      WHERE m."Id_Empresa" = $2
       GROUP BY m."Id_Material", u."Nombre_Completo"
       ORDER BY m."Nombre_Material"
-    `, [`${periodo}-01`])
+    `, [`${periodo}-01`, req.auth.empresaId])
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET materiales visibles para un cliente autenticado
+router.get('/cliente/:idCliente', requireSelfParamOrRoles('idCliente', 'admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT m.*,
+             u."Nombre_Completo" AS "Nombre_Cliente"
+      FROM material m
+      LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
+      WHERE m."Activo" = true AND m."Id_Cliente" = $1 AND m."Id_Empresa" = $2
+      ORDER BY m."Nombre_Material"
+    `, [req.params.idCliente, req.auth.empresaId])
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// GET materiales con stock bajo
+router.get('/alertas/stock-bajo', requireRoles('admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT m.*,
+             u."Nombre_Completo" AS "Nombre_Cliente"
+      FROM material m
+      LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
+      WHERE m."Activo" = true AND m."Stock_Actual" <= m."Stock_Minimo" AND m."Id_Empresa" = $1
+      ORDER BY m."Stock_Actual" ASC
+    `, [req.auth.empresaId])
     res.json(rows)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -62,27 +99,13 @@ router.get('/:id', async (req, res) => {
              u."Nombre_Completo" AS "Nombre_Cliente"
       FROM material m
       LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
-      WHERE m."Id_Material" = $1
-    `, [req.params.id])
+      WHERE m."Id_Material" = $1 AND m."Id_Empresa" = $2
+    `, [req.params.id, req.auth.empresaId])
     if (rows.length === 0) return res.status(404).json({ error: 'Material no encontrado' })
+    if (!hasRole(req.auth, ['admin']) && String(rows[0].Id_Cliente) !== String(req.auth.id)) {
+      return res.status(403).json({ error: 'No tienes permisos para este material.' })
+    }
     res.json(rows[0])
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// GET materiales con stock bajo
-router.get('/alertas/stock-bajo', async (req, res) => {
-  try {
-    const { rows } = await pool.query(`
-      SELECT m.*,
-             u."Nombre_Completo" AS "Nombre_Cliente"
-      FROM material m
-      LEFT JOIN usuario u ON m."Id_Cliente" = u."Id_Usuario"
-      WHERE m."Activo" = true AND m."Stock_Actual" <= m."Stock_Minimo"
-      ORDER BY m."Stock_Actual" ASC
-    `)
-    res.json(rows)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -91,13 +114,13 @@ router.get('/alertas/stock-bajo', async (req, res) => {
 // GET historial de movimientos de un material puntual (útil para una
 // futura pantalla de "ver detalle" del material, no la usa el reporte
 // de inventario pero queda lista).
-router.get('/:id/movimientos', async (req, res) => {
+router.get('/:id/movimientos', requireRoles('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(`
       SELECT * FROM material_movimiento
-      WHERE "Id_Material" = $1
+      WHERE "Id_Material" = $1 AND "Id_Empresa" = $2
       ORDER BY "Fecha" DESC
-    `, [req.params.id])
+    `, [req.params.id, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -105,8 +128,10 @@ router.get('/:id/movimientos', async (req, res) => {
 })
 
 // POST crear material
-router.post('/', async (req, res) => {
+router.post('/', requireRoles('admin'), async (req, res) => {
   const { Nombre_Material, Categoria, Stock_Actual, Unidad, Stock_Minimo, Stock_Maximo, Id_Cliente } = req.body
+  // La empresa siempre proviene del contexto autenticado; se ignora cualquier valor del cliente.
+  const empresaId = req.auth.empresaId
   if (!Nombre_Material || !Categoria || !Unidad)
     return res.status(400).json({ error: 'Faltan campos obligatorios' })
 
@@ -115,8 +140,8 @@ router.post('/', async (req, res) => {
     await client.query('BEGIN')
 
     const { rows } = await client.query(`
-      INSERT INTO material ("Nombre_Material", "Categoria", "Stock_Actual", "Unidad", "Stock_Minimo", "Stock_Maximo", "Id_Cliente")
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO material ("Nombre_Material", "Categoria", "Stock_Actual", "Unidad", "Stock_Minimo", "Stock_Maximo", "Id_Cliente", "Id_Empresa")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING "Id_Material"
     `, [
       Nombre_Material,
@@ -126,6 +151,7 @@ router.post('/', async (req, res) => {
       Stock_Minimo  ?? 0,
       Stock_Maximo  ?? 0,
       Id_Cliente    || null,
+      empresaId,
     ])
     const idMaterial = rows[0].Id_Material
 
@@ -134,9 +160,9 @@ router.post('/', async (req, res) => {
     const stockInicial = Number(Stock_Actual ?? 0)
     if (stockInicial !== 0) {
       await client.query(`
-        INSERT INTO material_movimiento ("Id_Material", "Tipo", "Cantidad", "Nota")
-        VALUES ($1, 'Creacion', $2, 'Saldo inicial al crear el material')
-      `, [idMaterial, stockInicial])
+        INSERT INTO material_movimiento ("Id_Material", "Tipo", "Cantidad", "Nota", "Id_Empresa")
+        VALUES ($1, 'Creacion', $2, 'Saldo inicial al crear el material', $3)
+      `, [idMaterial, stockInicial, empresaId])
     }
 
     await client.query('COMMIT')
@@ -145,6 +171,8 @@ router.post('/', async (req, res) => {
     await client.query('ROLLBACK')
     if (err.code === '23505')
       return res.status(409).json({ error: 'Ya existe un material con ese nombre' })
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'La referencia indicada no existe o no pertenece a esta empresa' })
     res.status(500).json({ error: err.message })
   } finally {
     client.release()
@@ -152,8 +180,10 @@ router.post('/', async (req, res) => {
 })
 
 // PUT actualizar material
-router.put('/:id', async (req, res) => {
+router.put('/:id', requireRoles('admin'), async (req, res) => {
   const { Nombre_Material, Categoria, Stock_Actual, Unidad, Stock_Minimo, Stock_Maximo, Id_Cliente } = req.body
+  // Se ignoran empresaId e Id_Empresa enviados por el cliente.
+  const empresaId = req.auth.empresaId
 
   const client = await pool.connect()
   try {
@@ -163,8 +193,8 @@ router.put('/:id', async (req, res) => {
     // otra petición concurrente (p. ej. dos asignaciones de material
     // casi al mismo tiempo desde la app móvil).
     const prev = await client.query(
-      'SELECT "Stock_Actual" FROM material WHERE "Id_Material" = $1 FOR UPDATE',
-      [req.params.id]
+      'SELECT "Stock_Actual" FROM material WHERE "Id_Material" = $1 AND "Id_Empresa" = $2 FOR UPDATE',
+      [req.params.id, empresaId]
     )
     if (prev.rows.length === 0) {
       await client.query('ROLLBACK')
@@ -181,7 +211,7 @@ router.put('/:id', async (req, res) => {
           "Stock_Minimo"    = $5,
           "Stock_Maximo"    = $6,
           "Id_Cliente"      = $7
-      WHERE "Id_Material" = $8
+      WHERE "Id_Material" = $8 AND "Id_Empresa" = $9
     `, [
       Nombre_Material,
       Categoria,
@@ -191,7 +221,13 @@ router.put('/:id', async (req, res) => {
       Stock_Maximo,
       Id_Cliente || null,
       req.params.id,
+      empresaId,
     ])
+
+    if (rowCount === 0) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Material no encontrado' })
+    }
 
     // Bitácora: registramos la diferencia real de stock, sin importar
     // si vino de una edición manual en Gestión de Inventario (web) o
@@ -203,21 +239,23 @@ router.put('/:id', async (req, res) => {
     const delta = stockNuevo - stockAnterior
     if (!Number.isNaN(delta) && delta !== 0) {
       await client.query(`
-        INSERT INTO material_movimiento ("Id_Material", "Tipo", "Cantidad", "Nota")
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO material_movimiento ("Id_Material", "Tipo", "Cantidad", "Nota", "Id_Empresa")
+        VALUES ($1, $2, $3, $4, $5)
       `, [
         req.params.id,
         delta > 0 ? 'Entrada' : 'Salida',
         delta,
         'Ajuste de stock (edición manual o consumo en una orden)',
+        empresaId,
       ])
     }
 
     await client.query('COMMIT')
-    if (rowCount === 0) return res.status(404).json({ error: 'Material no encontrado' })
     res.json({ mensaje: 'Material actualizado' })
   } catch (err) {
     await client.query('ROLLBACK')
+    if (err.code === '23505') return res.status(409).json({ error: 'Ya existe un material con ese nombre' })
+    if (err.code === '23503') return res.status(400).json({ error: 'La referencia indicada no existe o no pertenece a esta empresa' })
     res.status(500).json({ error: err.message })
   } finally {
     client.release()
@@ -230,14 +268,15 @@ router.put('/:id', async (req, res) => {
 // Inventario (igual que antes), pero un reporte de un mes anterior que
 // lo incluía lo sigue mostrando tal como estaba en ese momento, y los
 // meses posteriores a la baja lo muestran con 0 — que es lo real.
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRoles('admin'), async (req, res) => {
+  const empresaId = req.auth.empresaId
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
     const prev = await client.query(
-      'SELECT "Stock_Actual" FROM material WHERE "Id_Material" = $1 AND "Activo" = true FOR UPDATE',
-      [req.params.id]
+      'SELECT "Stock_Actual" FROM material WHERE "Id_Material" = $1 AND "Activo" = true AND "Id_Empresa" = $2 FOR UPDATE',
+      [req.params.id, empresaId]
     )
     if (prev.rows.length === 0) {
       await client.query('ROLLBACK')
@@ -245,22 +284,27 @@ router.delete('/:id', async (req, res) => {
     }
     const stockActual = Number(prev.rows[0].Stock_Actual)
 
-    await client.query(
-      'UPDATE material SET "Activo" = false, "Stock_Actual" = 0 WHERE "Id_Material" = $1',
-      [req.params.id]
+    const { rowCount } = await client.query(
+      'UPDATE material SET "Activo" = false, "Stock_Actual" = 0 WHERE "Id_Material" = $1 AND "Id_Empresa" = $2',
+      [req.params.id, empresaId]
     )
+    if (rowCount === 0) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Material no encontrado' })
+    }
 
     if (stockActual !== 0) {
       await client.query(`
-        INSERT INTO material_movimiento ("Id_Material", "Tipo", "Cantidad", "Nota")
-        VALUES ($1, 'Salida', $2, 'Baja del material (eliminado desde Gestión de Inventario)')
-      `, [req.params.id, -stockActual])
+        INSERT INTO material_movimiento ("Id_Material", "Tipo", "Cantidad", "Nota", "Id_Empresa")
+        VALUES ($1, 'Salida', $2, 'Baja del material (eliminado desde Gestión de Inventario)', $3)
+      `, [req.params.id, -stockActual, empresaId])
     }
 
     await client.query('COMMIT')
     res.json({ mensaje: 'Material eliminado' })
   } catch (err) {
     await client.query('ROLLBACK')
+    if (err.code === '23503') return res.status(400).json({ error: 'La referencia indicada no existe o no pertenece a esta empresa' })
     res.status(500).json({ error: err.message })
   } finally {
     client.release()

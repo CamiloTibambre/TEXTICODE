@@ -885,8 +885,8 @@ const reasignando            = ref(null)
 
 const toast = ref({ visible: false, msg: '', type: 'success' })
 
-const BASE    = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-const API_KEY = import.meta.env.VITE_API_KEY || ''
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const authHeaders = () => auth.authHeader()
 
 // ── TOAST ──
 function mostrarToast(msg, type = 'success') {
@@ -949,7 +949,7 @@ async function verDetalleCarga(op) {
   modalCarga.value           = true
   cargandoCargaDetalle.value = true
   try {
-    const res  = await fetch(`${BASE}/carga-trabajo/operarios/${op.Id_Usuario}`, { headers: { 'x-api-key': API_KEY } })
+    const res  = await fetch(`${BASE}/carga-trabajo/operarios/${op.Id_Usuario}`, { headers: authHeaders() })
     const json = await res.json()
     if (json.ok) cargaDetalleOrdenes.value = json.data?.ordenes_activas_detalle || []
   } catch {
@@ -995,7 +995,7 @@ async function cargarHistorial(id, periodo) {
   periodoHistorial.value  = periodo
   historial.value         = null
   try {
-    const res  = await fetch(`${BASE}/eficiencia/operarios/${id}/historial?periodo=${periodo}`, { headers: { 'x-api-key': API_KEY } })
+    const res  = await fetch(`${BASE}/eficiencia/operarios/${id}/historial?periodo=${periodo}`, { headers: authHeaders() })
     const json = await res.json()
     if (json.ok) historial.value = json.data
   } catch { mostrarToast('Error al cargar el historial', 'danger') }
@@ -1010,7 +1010,7 @@ async function toggleObsOrden(orden) {
   if (obsXOrden[id] !== undefined) return
   cargandoObsOrden.value = true
   try {
-    const res  = await fetch(`${BASE}/eficiencia/observaciones/${operarioActivo.value.Id_Usuario}?Id_Orden=${id}`, { headers: { 'x-api-key': API_KEY } })
+    const res  = await fetch(`${BASE}/eficiencia/observaciones/${operarioActivo.value.Id_Usuario}?Id_Orden=${id}`, { headers: authHeaders() })
     const json = await res.json()
     obsXOrden[id] = json.data || []
   } catch { obsXOrden[id] = [] }
@@ -1025,12 +1025,12 @@ async function guardarObservacionOrden(orden) {
   try {
     const res = await fetch(`${BASE}/eficiencia/observaciones`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ Id_Operario: operarioActivo.value.Id_Usuario, Id_Admin: auth.idUsuario, Id_Orden: id, Observacion: texto })
     })
     if (!res.ok) throw new Error()
     nuevaObsXOrden[id] = ''
-    const res2  = await fetch(`${BASE}/eficiencia/observaciones/${operarioActivo.value.Id_Usuario}?Id_Orden=${id}`, { headers: { 'x-api-key': API_KEY } })
+    const res2  = await fetch(`${BASE}/eficiencia/observaciones/${operarioActivo.value.Id_Usuario}?Id_Orden=${id}`, { headers: authHeaders() })
     const json2 = await res2.json()
     obsXOrden[id] = json2.data || []
     mostrarToast(`Observación guardada en orden #${id}`)
@@ -1041,7 +1041,7 @@ async function guardarObservacionOrden(orden) {
 async function eliminarObservacion(idObservacion, idOrden) {
   if (!confirm('¿Eliminar esta observación? Esta acción no se puede deshacer.')) return
   try {
-    const res = await fetch(`${BASE}/eficiencia/observaciones/${idObservacion}`, { method: 'DELETE', headers: { 'x-api-key': API_KEY } })
+    const res = await fetch(`${BASE}/eficiencia/observaciones/${idObservacion}`, { method: 'DELETE', headers: authHeaders() })
     if (!res.ok) throw new Error()
     obsXOrden[idOrden] = obsXOrden[idOrden].filter(o => o.Id_Observacion !== idObservacion)
     if (operarioActivo.value && obsXOrden[idOrden].length === 0) {
@@ -1143,7 +1143,7 @@ async function seleccionarOperarioReasign(op) {
   ordenesReasignActivo.value   = []
   cargandoOrdenesReasign.value = true
   try {
-    const res  = await fetch(`${BASE}/carga-trabajo/operarios/${op.Id_Usuario}`, { headers: { 'x-api-key': API_KEY } })
+    const res  = await fetch(`${BASE}/carga-trabajo/operarios/${op.Id_Usuario}`, { headers: authHeaders() })
     const json = await res.json()
     if (json.ok) ordenesReasignActivo.value = json.data?.ordenes_activas_detalle || []
   } catch {

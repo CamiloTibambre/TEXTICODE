@@ -3,8 +3,10 @@ import express  from 'express'
 import crypto   from 'crypto'
 import sgMail   from '@sendgrid/mail'
 import db       from '../db.js'
-import jwt      from 'jsonwebtoken'
 import bcrypt   from 'bcryptjs'
+import { env } from '../config/env.js'
+import { signAuthToken } from '../middleware/auth.js'
+import { getUserMemberships, processLogin, selectEmpresa } from '../services/auth.service.js'
 
 const router = express.Router()
 
@@ -21,77 +23,92 @@ function validarContrasena(contrasena) {
   return null
 }
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-
-const JWT_SECRET  = process.env.JWT_SECRET  || 'cambia_este_secreto_seguro'
-const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h'
+if (env.sendgridApiKey) sgMail.setApiKey(env.sendgridApiKey)
 
 // ─────────────────────────────────────────────────────────
 // POST /api/auth/login
 // ─────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { correo, contrasena } = req.body
+  const identificador = correo || req.body.usuario || req.body.nombreUsuario
 
-  if (!correo || !contrasena) {
+  if (!identificador || !contrasena) {
     return res.status(400).json({ error: 'Completa todos los campos.' })
   }
 
   try {
-    const { rows } = await db.query(
-      `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
-              u."Correo", u."Contrasena", u."Estado", u."Id_Rol",
-              r."Nombre_Rol" AS "Rol"
-       FROM usuario u
-       INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
-       WHERE u."Correo" = $1 OR u."Nombre_Usuario" = $1
-       LIMIT 1`,
-      [correo]
-    )
-
-    if (rows.length === 0) {
-      return res.status(401).json({ error: 'Credenciales incorrectas.' })
-    }
-
-    const user = rows[0]
-
-    if (user.Estado === 'inactivo') {
-      return res.status(403).json({ error: 'Tu cuenta está inactiva. Contacta al administrador.' })
-    }
-
-    let passwordValida = false
-    const esHash = user.Contrasena.startsWith('$2')
-    if (esHash) {
-      passwordValida = await bcrypt.compare(contrasena, user.Contrasena)
-    } else {
-      passwordValida = (contrasena === user.Contrasena)
-    }
-
-    if (!passwordValida) {
-      return res.status(401).json({ error: 'Credenciales incorrectas.' })
-    }
-
-    const token = jwt.sign(
-      { id: user.Id_Usuario, rol: user.Id_Rol, usuario: user.Nombre_Usuario },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES }
-    )
-
-    return res.status(200).json({
-      token,
-      usuario: {
-        Id_Usuario:      user.Id_Usuario,
-        Nombre_Completo: user.Nombre_Completo,
-        Nombre_Usuario:  user.Nombre_Usuario,
-        Correo:          user.Correo,
-        Id_Rol:          user.Id_Rol,
-        Rol:             user.Rol,
-        Estado:          user.Estado,
-      },
+    const result = await processLogin(db, {
+      identificador,
+      contrasena,
     })
 
+    if (result.type === 'requires_selection') {
+      return res.status(200).json({
+        requiresEmpresaSelection: true,
+        selectionToken: result.selectionToken,
+        empresas: result.empresas,
+        usuario: result.usuario,
+      })
+    }
+
+    if (result.type === 'no_memberships') {
+      return res.status(403).json({
+        error: result.error,
+        code: 'NO_MEMBERSHIPS',
+        usuario: result.usuario,
+      })
+    }
+
+    if (result.type === 'unauthorized_tenant') {
+      return res.status(403).json({
+        error: result.error,
+        code: 'TENANT_UNAUTHORIZED',
+      })
+    }
+
+    if (result.type === 'membership_invariant_violation') {
+      return res.status(409).json({ error: result.error, code: 'MEMBERSHIP_INVARIANT' })
+    }
+
+    return res.status(200).json({
+      token: result.token,
+      usuario: result.usuario,
+      ...(result.empresaActiva ? { empresaActiva: result.empresaActiva } : {}),
+    })
   } catch (err) {
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({ error: err.message })
+    }
     console.error('Error en /login:', err)
     return res.status(500).json({ error: 'Error interno del servidor.' })
+  }
+})
+
+// ─────────────────────────────────────────────────────────
+// POST /api/auth/select-empresa
+// DEPRECADO: se conserva por compatibilidad, pero ignora la empresa del cliente.
+// ─────────────────────────────────────────────────────────
+router.post('/select-empresa', async (req, res) => {
+  const { token } = req.body
+  const headerToken = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7).trim()
+    : null
+  const selectionToken = token || headerToken
+
+  try {
+    const result = await selectEmpresa(db, {
+      selectionToken,
+    })
+
+    return res.status(200).json({
+      mensaje: 'Empresa seleccionada exitosamente',
+      token: result.token,
+      empresaActiva: result.empresaActiva,
+      usuario: result.usuario,
+    })
+  } catch (err) {
+    const status = err.statusCode || 500
+    return res.status(status).json({ error: err.message })
   }
 })
 
@@ -139,6 +156,30 @@ router.post('/google/mobile', async (req, res) => {
       return res.status(403).json({ error: 'Tu cuenta está inactiva. Contacta al administrador.' })
     }
 
+    const memberships = await getUserMemberships(db, user.Id_Usuario)
+    if (String(user.Rol || '').trim().toLowerCase() === 'superadmin'
+      && (memberships === null || memberships.length === 0)) {
+      const token = signAuthToken(user)
+      return res.status(200).json({
+        token,
+        usuario: user,
+      })
+    }
+    if (memberships?.length === 0) {
+      return res.status(403).json({ error: 'El usuario no tiene membresías activas.' })
+    }
+    if (memberships && memberships.length !== 1) {
+      return res.status(409).json({ error: 'La cuenta no tiene una membresía empresarial única.' })
+    }
+    const membership = memberships?.[0] || null
+    const sessionUser = membership ? {
+      ...user,
+      Id_Empresa: membership.Id_Empresa,
+      Empresa: membership.Nombre_Empresa,
+      Id_Rol: membership.Id_Rol,
+      Rol: membership.Rol,
+    } : user
+
     // 3) Si llegó serverAuthCode, vincula Calendar de una vez (no bloquea el login si falla)
     if (serverAuthCode) {
       try {
@@ -149,23 +190,21 @@ router.post('/google/mobile', async (req, res) => {
       }
     }
 
-    const token = jwt.sign(
-      { id: user.Id_Usuario, rol: user.Id_Rol, usuario: user.Nombre_Usuario },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES }
-    )
+    const token = signAuthToken(sessionUser)
 
     return res.status(200).json({
       token,
       usuario: {
-        Id_Usuario:      user.Id_Usuario,
-        Nombre_Completo: user.Nombre_Completo,
-        Nombre_Usuario:  user.Nombre_Usuario,
-        Correo:          user.Correo,
-        Id_Rol:          user.Id_Rol,
-        Rol:             user.Rol,
-        Estado:          user.Estado,
+        Id_Usuario:      sessionUser.Id_Usuario,
+        Nombre_Completo: sessionUser.Nombre_Completo,
+        Nombre_Usuario:  sessionUser.Nombre_Usuario,
+        Correo:          sessionUser.Correo,
+        Id_Rol:          sessionUser.Id_Rol,
+        Rol:             sessionUser.Rol,
+        Estado:          sessionUser.Estado,
+        ...(membership ? { Id_Empresa: membership.Id_Empresa, Empresa: membership.Nombre_Empresa } : {}),
       },
+      ...(membership ? { empresaActiva: { Id_Empresa: membership.Id_Empresa, Nombre_Empresa: membership.Nombre_Empresa } } : {}),
     })
   } catch (err) {
     console.error('[auth/google/mobile]', err.message)
@@ -178,7 +217,7 @@ router.post('/google/mobile', async (req, res) => {
 // ─────────────────────────────────────────────────────────
 router.post('/recuperar-contrasena', async (req, res) => {
   const { email } = req.body
-  console.log('[recuperar-contrasena] REQUEST recibido, correo:', email, 'origen:', req.headers['user-agent'])
+  console.log('[recuperar-contrasena] solicitud recibida')
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     console.log('[recuperar-contrasena] correo con formato inválido, se corta aquí')
@@ -196,7 +235,7 @@ router.post('/recuperar-contrasena', async (req, res) => {
     console.log('[recuperar-contrasena] filas encontradas en usuario:', rows.length)
 
     if (!rows.length) {
-      console.log('[recuperar-contrasena] correo no registrado, responde 200 genérico SIN enviar correo')
+      console.log('[recuperar-contrasena] solicitud procesada')
       return res.status(200).json({ mensaje: 'Si el correo está registrado, recibirás el enlace.' })
     }
 
@@ -213,13 +252,12 @@ router.post('/recuperar-contrasena', async (req, res) => {
       [usuario.Id_Usuario, token, expiracion]
     )
 
-    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'
-    const enlace = `${FRONTEND_URL}/cambiar-contrasena?token=${token}`
-    console.log('[recuperar-contrasena] token generado, llamando a sgMail.send() para', usuario.Correo)
+    const enlace = `${env.frontendUrl}/cambiar-contrasena?token=${token}`
+    console.log('[recuperar-contrasena] token generado, enviando correo')
 
     const sgResponse = await sgMail.send({
       to:      usuario.Correo,
-      from:    process.env.SENDGRID_FROM_EMAIL,
+      from:    env.sendgridFromEmail,
       subject: 'Texticode — Cambiar contraseña',
       html: `
         <!DOCTYPE html>

@@ -384,7 +384,7 @@
 import { ref, computed, onMounted } from 'vue'
 import AppSidebar from '../../components/AppSidebar.vue'
 import { useAuthStore } from '../../stores/auth'
-import { getUsuario, actualizarUsuario, getOrdenesDeCliente, getComprobantes } from '../../services/api'
+import { getUsuario, actualizarUsuario, getOrdenesDeCliente, getComprobantesPorCliente } from '../../services/api'
  
 const auth = useAuthStore()
  
@@ -476,7 +476,7 @@ async function cargarDatos() {
     try {
       const [dataOrdenes, dataComprobantes] = await Promise.all([
         getOrdenesDeCliente(auth.idUsuario),
-        getComprobantes(),
+        getComprobantesPorCliente(auth.idUsuario),
       ])
       const mapaComp = {}
       dataComprobantes.forEach(c => { mapaComp[c.Id_Orden] = c })

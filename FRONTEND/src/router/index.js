@@ -21,6 +21,9 @@ const routes = [
   { path: '/admin/eficiencia',  name: 'AdminEficiencia',  component: () => import('../views/admin/EficienciaOperarios.vue'), meta: { rol: 'admin' } },
   { path: '/admin/google-calendar', name: 'AdminGoogleCalendar', component: () => import('../views/GoogleCalendarView.vue'), meta: { rol: 'admin' } },
 
+  // SUPERADMIN (global, sin empresa)
+  { path: '/superadmin/empresas', name: 'SuperadminEmpresas', component: () => import('../views/superadmin/GestionEmpresas.vue'), meta: { rol: 'superadmin' } },
+
   // OPERARIO
   { path: '/operario/cuenta',  name: 'OperarioCuenta',  component: () => import('../views/operario/CuentaPersonal.vue'),  meta: { rol: 'operario' } },
   { path: '/operario/tareas',  name: 'OperarioTareas',  component: () => import('../views/operario/TareasAsignadas.vue'), meta: { rol: 'operario' } },
@@ -64,6 +67,7 @@ router.beforeEach((to) => {
   }
 
   if ((to.name === 'Login' || to.name === 'Landing') && auth.estaLogueado) {
+    if (rol === 'superadmin') return { name: 'SuperadminEmpresas' }
     if (rol === 'admin')    return { name: 'AdminUsuarios' }
     if (rol === 'operario') return { name: 'OperarioCuenta' }
     if (rol === 'cliente')  return { name: 'ClienteCuenta' }

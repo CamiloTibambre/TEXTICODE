@@ -246,6 +246,7 @@ import { useAuthStore } from '../../stores/auth'
 
 const auth = useAuthStore()
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const authHeaders = () => auth.authHeader()
 
 const tabActivo    = ref('activas')
 const modalVisible = ref(false)
@@ -279,12 +280,12 @@ onMounted(async () => {
   if (!auth.idUsuario) { cargando.value = false; setTimeout(() => { mounted.value = true }, 80); return }
 
   try {
-    const fasesRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`)
+    const fasesRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`, { headers: authHeaders() })
     if (!fasesRes.ok) throw new Error('No se pudieron cargar las fases')
     const data = await fasesRes.json()
     let dataHistorial = []
     try {
-      const historialRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}/historial`)
+      const historialRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}/historial`, { headers: authHeaders() })
       if (historialRes.ok) dataHistorial = await historialRes.json()
     } catch {
       // El historial no impide que las fases activas se muestren.
@@ -343,7 +344,7 @@ async function enviarReporte() {
   try {
     const putRes = await fetch(`${BASE}/orden-operario/${o.idReal}/completar`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({ Nota_Operario: reporte.value.nota }),
     })
     if (!putRes.ok) throw new Error(`No se pudo completar la fase: ${putRes.status}`)

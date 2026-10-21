@@ -1,7 +1,9 @@
 import express from 'express'
 import cors from 'cors'
-import dotenv from 'dotenv'
-dotenv.config()
+import { env, validateEnv } from './config/env.js'
+import { requireAuth } from './middleware/auth.js'
+import { requireRoles } from './middleware/roles.js'
+import { checkDatabaseConnection } from './db.js'
 
 import usuariosRouter       from './routes/usuarios.js'
 import materialesRouter     from './routes/materiales.js'
@@ -18,6 +20,7 @@ import eficienciaRouter     from './routes/eficiencia.js'
 import cargaTrabajoRoutes   from './routes/carga_trabajo.js'
 import googleCalendarRouter from './routes/googleCalendar.js'
 import calendarRouter       from './routes/calendar.route.js'
+import empresasRouter       from './routes/empresas.js'
 
 const app = express()
 
@@ -30,19 +33,24 @@ app.use(cors({
 }))
 app.use(express.json({ limit: '10mb' }))
 
+app.get('/health', async (req, res) => {
+  res.json({ ok: true, service: 'texticode-api' })
+})
+
 app.use('/api/usuarios',         usuariosRouter)
-app.use('/api/materiales',       materialesRouter)
-app.use('/api/ordenes',          ordenesRouter)
-app.use('/api/comprobantes',     comprobantesRouter)
-app.use('/api/roles',            rolesRouter)
-app.use('/api/orden-material',   ordenMaterialRouter)
-app.use('/api/orden-operario',   ordenOperarioRouter)
-app.use('/api/usuario-orden',    usuarioOrdenRouter)
-app.use('/api/notificaciones',   notificacionesRouter)
+app.use('/api/materiales',       requireAuth, materialesRouter)
+app.use('/api/ordenes',          requireAuth, ordenesRouter)
+app.use('/api/comprobantes',     requireAuth, comprobantesRouter)
+app.use('/api/roles',            requireAuth, requireRoles('admin'), rolesRouter)
+app.use('/api/orden-material',   requireAuth, requireRoles('admin'), ordenMaterialRouter)
+app.use('/api/orden-operario',   requireAuth, ordenOperarioRouter)
+app.use('/api/usuario-orden',    requireAuth, usuarioOrdenRouter)
+app.use('/api/notificaciones',   requireAuth, requireRoles('admin'), notificacionesRouter)
 app.use('/api/auth',             authRouter)
-app.use('/api/practica',         practicaRouter)
-app.use('/api/eficiencia',       eficienciaRouter)
-app.use('/api/carga-trabajo',    cargaTrabajoRoutes)
+app.use('/api/empresas',         empresasRouter)
+app.use('/api/practica',         requireAuth, practicaRouter)
+app.use('/api/eficiencia',       requireAuth, requireRoles('admin'), eficienciaRouter)
+app.use('/api/carga-trabajo',    requireAuth, requireRoles('admin'), cargaTrabajoRoutes)
 app.use('/api/google',           googleCalendarRouter)
 app.use('/api/calendar',         calendarRouter)
 
@@ -82,8 +90,25 @@ app.get('/', (req, res) => {
   })
 })
 
-const PORT = process.env.PORT || 3001
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
-})
+const PORT = env.port
+
+export { app }
+
+export async function startServer() {
+  validateEnv()
+  try {
+    await checkDatabaseConnection()
+  } catch (err) {
+    console.error('❌ Error conectando a Supabase:', err.message)
+    process.exit(1)
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
+  })
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  startServer()
+}
 

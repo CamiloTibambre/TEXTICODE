@@ -1,15 +1,16 @@
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import db from '../db.js'
+import { env } from '../config/env.js'
+import { getBearerToken, requireAuth, signAuthToken, verifyAuthToken } from '../middleware/auth.js'
+import { requireRoles } from '../middleware/roles.js'
 
 const router = express.Router()
 
-const JWT_SECRET  = process.env.JWT_SECRET  || 'cambia_este_secreto_seguro'
-const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h'
-const GOOGLE_CLIENT_ID     = process.env.GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const GOOGLE_REDIRECT_URI  = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/google/callback'
-const FRONTEND_URL         = process.env.FRONTEND_URL || 'http://localhost:5173'
+const GOOGLE_CLIENT_ID     = env.googleClientId
+const GOOGLE_CLIENT_SECRET = env.googleClientSecret
+const GOOGLE_REDIRECT_URI  = env.googleRedirectUri
+const FRONTEND_URL         = env.frontendUrl
 const ALLOW_DIFFERENT_EMAILS = process.env.GOOGLE_ALLOW_DIFFERENT_EMAILS === 'true'
 
 const GOOGLE_SCOPES = [
@@ -30,29 +31,8 @@ export function requireGoogleConfig(res) {
   return true
 }
 
-function getBearerToken(req) {
-  const header = req.headers.authorization || ''
-  return header.startsWith('Bearer ') ? header.slice(7) : null
-}
-
-export function requireAuth(req, res, next) {
-  const token = getBearerToken(req)
-  if (!token) return res.status(401).json({ error: 'Sesión requerida.' })
-
-  try {
-    req.auth = jwt.verify(token, JWT_SECRET)
-    return next()
-  } catch {
-    return res.status(401).json({ error: 'Sesión inválida o expirada.' })
-  }
-}
-
 function buildAppToken(user) {
-  return jwt.sign(
-    { id: user.Id_Usuario, rol: user.Id_Rol, usuario: user.Nombre_Usuario },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRES }
-  )
+  return signAuthToken(user)
 }
 
 function normalizeGoogleToken(tokens = {}) {
@@ -65,28 +45,19 @@ function normalizeGoogleToken(tokens = {}) {
   }
 }
 
-export async function ensureGoogleSchema() {
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS google_calendar_tokens (
-      "Id_Usuario"         int          NOT NULL,
-      "Google_Id"          varchar(255) DEFAULT NULL,
-      "Google_Email"       varchar(255) DEFAULT NULL,
-      "Access_Token"       text         NOT NULL,
-      "Refresh_Token"      text         DEFAULT NULL,
-      "Scope"              text         DEFAULT NULL,
-      "Token_Type"         varchar(50)  DEFAULT NULL,
-      "Expiry_Date"        bigint       DEFAULT NULL,
-      "Calendar_Id"        varchar(255) NOT NULL DEFAULT 'primary',
-      "Sync_Enabled"       boolean      NOT NULL DEFAULT true,
-      "Last_Login_Google"  timestamp    DEFAULT NULL,
-      "Last_Sync_At"       timestamp    DEFAULT NULL,
-      "Created_At"         timestamp    NOT NULL DEFAULT now(),
-      "Updated_At"         timestamp    NOT NULL DEFAULT now(),
-      PRIMARY KEY ("Id_Usuario"),
-      CONSTRAINT fk_google_calendar_usuario
-        FOREIGN KEY ("Id_Usuario") REFERENCES usuario("Id_Usuario") ON DELETE CASCADE
-    )
-  `)
+// El esquema de google_calendar_tokens lo gestiona la migración multiempresa
+// (PK compuesta Id_Usuario + Id_Empresa). Se conserva la función para no romper los imports.
+export async function ensureGoogleSchema() {}
+
+// Empresa activa del usuario (su única membresía). Devuelve null si no tiene.
+export async function resolverEmpresaDeUsuario(userId) {
+  const { rows } = await db.query(
+    `SELECT "Id_Empresa" FROM usuario_empresa
+     WHERE "Id_Usuario" = $1 AND "Estado" = 'activo'
+     LIMIT 1`,
+    [userId]
+  )
+  return rows[0]?.Id_Empresa ?? null
 }
 
 // Flujo WEB: intercambio de code por tokens, CON redirect_uri
@@ -162,23 +133,25 @@ export async function refreshAccessToken(row) {
          "Scope"        = COALESCE($3, "Scope"),
          "Token_Type"   = COALESCE($4, "Token_Type"),
          "Updated_At"   = now()
-     WHERE "Id_Usuario" = $5`,
-    [data.access_token, expiryDate, data.scope || null, data.token_type || null, row.Id_Usuario]
+     WHERE "Id_Usuario" = $5 AND "Id_Empresa" = $6`,
+    [data.access_token, expiryDate, data.scope || null, data.token_type || null, row.Id_Usuario, row.Id_Empresa]
   )
   return data.access_token
 }
 
-export async function upsertGoogleTokens(userId, profile, tokenPayload) {
-  await ensureGoogleSchema()
+export async function upsertGoogleTokens(userId, profile, tokenPayload, idEmpresa = null) {
+  // Si quien llama no indica la empresa, se toma de la membresía activa del usuario.
+  const empresaId = idEmpresa ?? await resolverEmpresaDeUsuario(userId)
+  if (!empresaId) throw new Error('Tu usuario no pertenece a ninguna empresa activa.')
   const tokens = normalizeGoogleToken(tokenPayload)
 
   await db.query(
     `INSERT INTO google_calendar_tokens
-       ("Id_Usuario", "Google_Id", "Google_Email",
+       ("Id_Usuario", "Id_Empresa", "Google_Id", "Google_Email",
         "Access_Token", "Refresh_Token", "Scope", "Token_Type", "Expiry_Date",
         "Calendar_Id", "Sync_Enabled", "Last_Login_Google", "Updated_At")
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'primary', true, now(), now())
-     ON CONFLICT ("Id_Usuario") DO UPDATE SET
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'primary', true, now(), now())
+     ON CONFLICT ("Id_Usuario", "Id_Empresa") DO UPDATE SET
        "Google_Id"         = EXCLUDED."Google_Id",
        "Google_Email"      = EXCLUDED."Google_Email",
        "Access_Token"      = EXCLUDED."Access_Token",
@@ -189,7 +162,7 @@ export async function upsertGoogleTokens(userId, profile, tokenPayload) {
        "Last_Login_Google" = now(),
        "Sync_Enabled"      = true,
        "Updated_At"        = now()`,
-    [userId, profile.id, profile.email,
+    [userId, empresaId, profile.id, profile.email,
      tokens.accessToken, tokens.refreshToken, tokens.scope, tokens.tokenType, tokens.expiryDate]
   )
 }
@@ -225,14 +198,20 @@ router.get('/auth-url', async (req, res) => {
     const token = getBearerToken(req)
     if (!token) return res.status(401).json({ error: 'Inicia sesión para vincular Google.' })
     try {
-      const auth = jwt.verify(token, JWT_SECRET)
+      const auth = verifyAuthToken(token)
+      // Revalida que el usuario siga con membresía activa (y en la misma empresa del token).
+      const empresaActual = await resolverEmpresaDeUsuario(auth.id)
+      const empresaToken = auth.empresaId ?? auth.Id_Empresa ?? null
+      if (!empresaActual || (empresaToken && String(empresaActual) !== String(empresaToken))) {
+        return res.status(403).json({ error: 'Tu usuario no tiene una empresa activa.' })
+      }
       statePayload = { action, id: auth.id }
     } catch {
       return res.status(401).json({ error: 'Sesión inválida o expirada.' })
     }
   }
 
-  const state = jwt.sign(statePayload, JWT_SECRET, { expiresIn: '10m' })
+  const state = jwt.sign(statePayload, env.jwtSecret, { expiresIn: '10m' })
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
   url.searchParams.set('client_id',              GOOGLE_CLIENT_ID)
   url.searchParams.set('redirect_uri',           GOOGLE_REDIRECT_URI)
@@ -255,7 +234,7 @@ router.get('/callback', async (req, res) => {
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET)
       throw new Error('Google OAuth no está configurado en el servidor.')
 
-    const payload      = jwt.verify(state, JWT_SECRET)
+    const payload      = jwt.verify(state, env.jwtSecret)
     const tokenPayload = await exchangeCodeForTokens(code)
     const profile      = await getGoogleProfile(tokenPayload.access_token)
 
@@ -278,9 +257,12 @@ router.get('/callback', async (req, res) => {
     await ensureGoogleSchema()
     const { rows } = await db.query(
       `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
-              u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol"
+              u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol",
+              g."Id_Empresa"
        FROM google_calendar_tokens g
        INNER JOIN usuario u ON u."Id_Usuario" = g."Id_Usuario"
+       INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = g."Id_Usuario"
+         AND ue."Id_Empresa" = g."Id_Empresa" AND ue."Estado" = 'activo'
        INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
        WHERE (g."Google_Id" = $1 OR g."Google_Email" = $2)
        LIMIT 1`,
@@ -294,14 +276,14 @@ router.get('/callback', async (req, res) => {
     if (user.Estado === 'inactivo')
       throw new Error('Tu cuenta está inactiva. Contacta al administrador.')
 
-    await upsertGoogleTokens(user.Id_Usuario, profile, tokenPayload)
-    const appToken = buildAppToken(user)
+    await upsertGoogleTokens(user.Id_Usuario, profile, tokenPayload, user.Id_Empresa)
+    // El token de la app debe llevar la empresa del usuario (igual que el login normal).
+    const appToken = buildAppToken({ ...user, empresaId: user.Id_Empresa })
     const url = new URL('/google-auth/callback', FRONTEND_URL)
     url.searchParams.set('status',  'login')
     url.searchParams.set('token',   appToken)
     url.searchParams.set('usuario', Buffer.from(JSON.stringify({ ...user, rol: (user.Rol || '').toLowerCase() })).toString('base64url'))
     console.log('🟢 [login] FRONTEND_URL:', FRONTEND_URL)
-    console.log('🟢 [login] Redirigiendo a:', url.toString())
     return res.redirect(url.toString())
 
   } catch (err) {
@@ -316,8 +298,8 @@ router.get('/status', requireAuth, async (req, res) => {
     `SELECT "Google_Email", "Scope", "Calendar_Id", "Sync_Enabled",
             "Last_Login_Google", "Last_Sync_At", "Updated_At"
      FROM google_calendar_tokens
-     WHERE "Id_Usuario" = $1`,
-    [req.auth.id]
+     WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2`,
+    [req.auth.id, req.auth.empresaId]
   )
   const row = rows[0]
   res.json({
@@ -335,7 +317,7 @@ router.get('/status', requireAuth, async (req, res) => {
 })
 
 router.delete('/unlink', requireAuth, async (req, res) => {
-  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1', [req.auth.id])
+  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2', [req.auth.id, req.auth.empresaId])
   res.json({ mensaje: 'Cuenta de Google desvinculada correctamente.' })
 })
 
@@ -346,17 +328,18 @@ router.patch('/settings', requireAuth, async (req, res) => {
   await db.query(
     `UPDATE google_calendar_tokens
      SET "Sync_Enabled" = $1, "Calendar_Id" = $2, "Updated_At" = now()
-     WHERE "Id_Usuario" = $3`,
-    [syncEnabled, calendarId, req.auth.id]
+     WHERE "Id_Usuario" = $3 AND "Id_Empresa" = $4`,
+    [syncEnabled, calendarId, req.auth.id, req.auth.empresaId]
   )
   res.json({ mensaje: 'Preferencias de Google Calendar actualizadas.' })
 })
 
-export async function getConnectedGoogleRow(userId) {
-  await ensureGoogleSchema()
+export async function getConnectedGoogleRow(userId, idEmpresa = null) {
   const { rows } = await db.query(
-    'SELECT * FROM google_calendar_tokens WHERE "Id_Usuario" = $1 LIMIT 1',
-    [userId]
+    `SELECT * FROM google_calendar_tokens
+     WHERE "Id_Usuario" = $1 AND ($2::int IS NULL OR "Id_Empresa" = $2::int)
+     LIMIT 1`,
+    [userId, idEmpresa]
   )
   if (!rows.length) throw new Error('Primero vincula tu cuenta con Google Calendar.')
   if (!rows[0].Sync_Enabled) throw new Error('La sincronización con Google Calendar está desactivada.')
@@ -410,10 +393,12 @@ export async function getUserOrders(auth) {
        FROM orden_produccion op
        LEFT JOIN usuario c ON c."Id_Usuario" = op."Id_Cliente"
        LEFT JOIN usuario o ON o."Id_Usuario" = op."Id_Operario"
-       WHERE op."Fecha_Limite" IS NOT NULL
+       WHERE op."Id_Empresa" = $1
+         AND op."Fecha_Limite" IS NOT NULL
          AND (op."Estado" IN ('En Proceso', 'Retrasada') OR op."Fecha_Limite" >= CURRENT_DATE - INTERVAL '30 days')
        ORDER BY op."Fecha_Limite" ASC
-       LIMIT 500`
+       LIMIT 500`,
+      [auth.empresaId]
     )
     return rows
   }
@@ -438,11 +423,12 @@ export async function getUserOrders(auth) {
            WHERE uo."Id_Orden" = op."Id_Orden" AND uo."Id_Usuario" = $1
          )
        )
+       AND op."Id_Empresa" = $2
        AND op."Fecha_Limite" IS NOT NULL
        AND (op."Estado" IN ('En Proceso', 'Retrasada') OR op."Fecha_Limite" >= CURRENT_DATE - INTERVAL '30 days')
        ORDER BY op."Fecha_Limite" ASC
        LIMIT 500`,
-      [auth.id]
+      [auth.id, auth.empresaId]
     )
     return rows
   }
@@ -456,11 +442,12 @@ export async function getUserOrders(auth) {
      LEFT JOIN usuario c ON c."Id_Usuario" = op."Id_Cliente"
      LEFT JOIN usuario o ON o."Id_Usuario" = op."Id_Operario"
      WHERE op."Id_Cliente" = $1
+       AND op."Id_Empresa" = $2
        AND op."Fecha_Limite" IS NOT NULL
        AND (op."Estado" IN ('En Proceso', 'Retrasada') OR op."Fecha_Limite" >= CURRENT_DATE - INTERVAL '30 days')
      ORDER BY op."Fecha_Limite" ASC
      LIMIT 500`,
-    [auth.id]
+    [auth.id, auth.empresaId]
   )
   return rows
 }
@@ -526,7 +513,7 @@ export async function createOrUpdateCalendarEvent(accessToken, calendarId, order
 
 router.post('/sync/delivery-events', requireAuth, async (req, res) => {
   try {
-    const googleRow    = await getConnectedGoogleRow(req.auth.id)
+    const googleRow    = await getConnectedGoogleRow(req.auth.id, req.auth.empresaId)
     const orders       = await getUserOrders(req.auth)
     const accessToken  = await refreshAccessToken(googleRow)
     const results      = []
@@ -536,8 +523,8 @@ router.post('/sync/delivery-events', requireAuth, async (req, res) => {
     }
 
     await db.query(
-      'UPDATE google_calendar_tokens SET "Last_Sync_At" = now(), "Updated_At" = now() WHERE "Id_Usuario" = $1',
-      [req.auth.id]
+      'UPDATE google_calendar_tokens SET "Last_Sync_At" = now(), "Updated_At" = now() WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2',
+      [req.auth.id, req.auth.empresaId]
     )
     res.json({ mensaje: 'Entregas sincronizadas con Google Calendar.', total: results.length, results })
   } catch (err) {
@@ -548,7 +535,7 @@ router.post('/sync/delivery-events', requireAuth, async (req, res) => {
 
 router.get('/events/upcoming', requireAuth, async (req, res) => {
   try {
-    const googleRow   = await getConnectedGoogleRow(req.auth.id)
+    const googleRow   = await getConnectedGoogleRow(req.auth.id, req.auth.empresaId)
     const accessToken = await refreshAccessToken(googleRow)
 
     const startOfToday = new Date()
@@ -583,7 +570,7 @@ router.get('/events/upcoming', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/connected-users', requireAuth, async (req, res) => {
+router.get('/connected-users', requireAuth, requireRoles('admin'), async (req, res) => {
   if (Number(req.auth.rol) !== 1) return res.status(403).json({ error: 'Solo administradores.' })
   await ensureGoogleSchema()
   const { rows } = await db.query(
@@ -591,17 +578,19 @@ router.get('/connected-users', requireAuth, async (req, res) => {
             r."Nombre_Rol" AS "Rol", g."Google_Email", g."Sync_Enabled",
             g."Last_Login_Google", g."Last_Sync_At", g."Updated_At"
      FROM usuario u
+     INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = u."Id_Usuario" AND ue."Id_Empresa" = $1
      INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
-     LEFT JOIN google_calendar_tokens g ON g."Id_Usuario" = u."Id_Usuario"
-     ORDER BY (g."Updated_At" IS NULL) ASC, g."Updated_At" DESC, u."Nombre_Completo" ASC`
+     LEFT JOIN google_calendar_tokens g ON g."Id_Usuario" = u."Id_Usuario" AND g."Id_Empresa" = ue."Id_Empresa"
+     ORDER BY (g."Updated_At" IS NULL) ASC, g."Updated_At" DESC, u."Nombre_Completo" ASC`,
+    [req.auth.empresaId]
   )
   res.json({ users: rows })
 })
 
-router.delete('/unlink-user/:idUsuario', requireAuth, async (req, res) => {
+router.delete('/unlink-user/:idUsuario', requireAuth, requireRoles('admin'), async (req, res) => {
   if (Number(req.auth.rol) !== 1) return res.status(403).json({ error: 'Solo administradores.' })
   const { idUsuario } = req.params
-  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1', [idUsuario])
+  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2', [idUsuario, req.auth.empresaId])
   res.json({ mensaje: 'Cuenta de Google desvinculada por el administrador.' })
 })
 

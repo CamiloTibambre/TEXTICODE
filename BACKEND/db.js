@@ -1,22 +1,20 @@
 import pg from 'pg'
-import dotenv from 'dotenv'
-dotenv.config()
+import { env } from './config/env.js'
 
 const { Pool } = pg
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: env.databaseUrl,
   ssl: { rejectUnauthorized: false } // requerido por Supabase
 })
 
-// Verificar conexión al iniciar
-try {
+export async function checkDatabaseConnection() {
   const client = await pool.connect()
-  console.log('✅ Conectado a Supabase PostgreSQL')
-  client.release()
-} catch (err) {
-  console.error('❌ Error conectando a Supabase:', err.message)
-  process.exit(1)
+  try {
+    console.log('✅ Conectado a Supabase PostgreSQL')
+  } finally {
+    client.release()
+  }
 }
 
 export default pool

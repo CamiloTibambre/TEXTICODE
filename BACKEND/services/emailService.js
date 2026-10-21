@@ -12,6 +12,16 @@ const FROM = {
   name: process.env.SENDGRID_FROM_NAME || 'Texticode',
 };
 
+// Escapa texto antes de meterlo en el HTML del correo (evita inyección de HTML/enlaces).
+function esc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ── Etiquetas visuales por estado ─────────────────────────────────────────────
 const ESTADO_META = {
   'Pendiente':   { emoji: '⏳', color: '#f59e0b', label: 'Pendiente de inicio' },
@@ -29,7 +39,7 @@ function baseTemplate({ titulo, contenido, color = '#6366f1' }) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${titulo}</title>
+  <title>${esc(titulo)}</title>
 </head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 0;">
@@ -94,7 +104,7 @@ export async function notificarCambioEstado({
       ${meta.emoji} Tu orden ha sido actualizada
     </h1>
     <p style="margin:0 0 28px;color:#64748b;font-size:15px;">
-      Hola <strong>${clienteNombre}</strong>, te informamos que el estado de tu orden ha cambiado.
+      Hola <strong>${esc(clienteNombre)}</strong>, te informamos que el estado de tu orden ha cambiado.
     </p>
 
     <!-- Tarjeta de estado -->
@@ -116,7 +126,7 @@ export async function notificarCambioEstado({
           <td>
             <span style="background:${meta.color};color:#fff;border-radius:20px;
                          padding:4px 14px;font-size:14px;font-weight:600;">
-              ${meta.label}
+              ${esc(meta.label)}
             </span>
           </td>
         </tr>
@@ -128,7 +138,7 @@ export async function notificarCambioEstado({
       <p style="margin:0 0 6px;color:#64748b;font-size:13px;font-weight:600;
                 text-transform:uppercase;letter-spacing:1px;">Productos</p>
       <p style="margin:0;color:#1e293b;font-size:15px;line-height:1.6;">
-        ${productos}
+        ${esc(productos)}
       </p>
     </div>
 
@@ -136,7 +146,7 @@ export async function notificarCambioEstado({
     <div style="background:#fffbeb;border-left:3px solid #f59e0b;padding:14px 18px;
                 border-radius:0 8px 8px 0;margin-bottom:24px;">
       <p style="margin:0;color:#92400e;font-size:14px;line-height:1.6;">
-        <strong>Observaciones:</strong> ${observaciones}
+        <strong>Observaciones:</strong> ${esc(observaciones)}
       </p>
     </div>` : ''}
 
@@ -180,7 +190,7 @@ export async function enviarComprobante({
       📦 Comprobante de entrega
     </h1>
     <p style="margin:0 0 28px;color:#64748b;font-size:15px;">
-      Hola <strong>${clienteNombre}</strong>, tu orden <strong>#${ordenId}</strong>
+      Hola <strong>${esc(clienteNombre)}</strong>, tu orden <strong>#${ordenId}</strong>
       ha sido entregada exitosamente. Adjuntamos el comprobante oficial.
     </p>
 
@@ -202,7 +212,7 @@ export async function enviarComprobante({
             <strong>Productos:</strong>
           </td>
           <td style="color:#1e293b;font-size:14px;padding:4px 0;">
-            ${productos}
+            ${esc(productos)}
           </td>
         </tr>
         <tr>
@@ -210,7 +220,7 @@ export async function enviarComprobante({
             <strong>Fecha de entrega:</strong>
           </td>
           <td style="color:#1e293b;font-size:14px;padding:4px 0;">
-            ${fecha}
+            ${esc(fecha)}
           </td>
         </tr>
       </table>
@@ -264,7 +274,7 @@ export async function notificarTareaOperario({
       🔧 Nueva tarea asignada
     </h1>
     <p style="margin:0 0 28px;color:#64748b;font-size:15px;">
-      Hola <strong>${operarioNombre}</strong>, se te ha asignado una nueva tarea de producción.
+      Hola <strong>${esc(operarioNombre)}</strong>, se te ha asignado una nueva tarea de producción.
     </p>
 
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
@@ -275,7 +285,7 @@ export async function notificarTareaOperario({
             <p style="margin:0 0 4px;color:#64748b;font-size:13px;font-weight:600;
                       text-transform:uppercase;letter-spacing:1px;">Tarea</p>
             <p style="margin:0;color:#1e293b;font-size:16px;font-weight:600;">
-              ${tarea}
+              ${esc(tarea)}
             </p>
           </td>
         </tr>
@@ -290,7 +300,7 @@ export async function notificarTareaOperario({
                       text-transform:uppercase;">Prioridad</p>
             <span style="background:${prioridadColor};color:#fff;border-radius:20px;
                          padding:3px 12px;font-size:13px;font-weight:600;">
-              ${prioridad}
+              ${esc(prioridad)}
             </span>
           </td>
         </tr>
@@ -299,7 +309,7 @@ export async function notificarTareaOperario({
           <td colspan="2" style="padding-top:12px;">
             <p style="margin:0 0 4px;color:#64748b;font-size:12px;font-weight:600;
                       text-transform:uppercase;">Fecha límite</p>
-            <p style="margin:0;color:#1e293b;font-size:15px;">${fechaLimite}</p>
+            <p style="margin:0;color:#1e293b;font-size:15px;">${esc(fechaLimite)}</p>
           </td>
         </tr>` : ''}
       </table>

@@ -262,6 +262,7 @@ import { useAuthStore } from '../../stores/auth'
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 const auth            = useAuthStore()
+const authHeaders     = () => auth.authHeader()
 const busqueda        = ref('')
 const filtroEstado    = ref('')
 const filtroPrioridad = ref('')
@@ -296,7 +297,7 @@ onMounted(async () => {
   }
 
   try {
-    const res  = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`)
+    const res  = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`, { headers: authHeaders() })
     const data = await res.json()
 
     tareas.value = data.map(o => {
