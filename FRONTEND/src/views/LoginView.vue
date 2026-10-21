@@ -359,6 +359,7 @@ function getRuta(usuario) {
   const idRol = usuario?.Id_Rol
   const rol   = (usuario?.Rol || usuario?.rol || '').toLowerCase()
 
+  if (rol === 'superadmin')                                      return '/superadmin/empresas'
   if (idRol === 1 || rol === 'administrador' || rol === 'admin') return '/admin/usuarios'
   if (idRol === 2 || rol === 'operario')                         return '/operario/cuenta'
   if (idRol === 3 || rol === 'cliente')                          return '/cliente/cuenta'

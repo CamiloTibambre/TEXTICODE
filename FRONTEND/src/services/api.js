@@ -118,6 +118,17 @@ export async function getObservacionesOperario(id) {
   return json.data
 }
 
+// ── EMPRESAS (solo superadmin) ────────────────────────────
+export const getEmpresas        = ()         => request('/empresas')
+export const getEmpresa         = (id)       => request(`/empresas/${id}`)
+export const crearEmpresa       = (body)     => request('/empresas', { method: 'POST', body: JSON.stringify(body) })
+export const actualizarEmpresa  = (id, body) => request(`/empresas/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+export const desactivarEmpresa  = (id)       => request(`/empresas/${id}`, { method: 'DELETE' })
+export const activarEmpresa     = (id)       => request(`/empresas/${id}/activar`, { method: 'PATCH' })
+export const getAdministradoresEmpresa      = (id) => request(`/empresas/${id}/administradores`)
+export const actualizarAdministradorEmpresa = (id, idUsuario, body) => request(`/empresas/${id}/administradores/${idUsuario}`, { method: 'PUT', body: JSON.stringify(body) })
+export const inactivarAdministradorEmpresa  = (id, idUsuario)       => request(`/empresas/${id}/administradores/${idUsuario}/inactivar`, { method: 'PATCH' })
+
 // ── GOOGLE CALENDAR / OAUTH ───────────────────────────────
 function authHeaders() {
   const token = localStorage.getItem('jwt_token')

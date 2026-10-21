@@ -122,9 +122,17 @@ const iconAvances    = `<svg width="18" height="18" fill="none" viewBox="0 0 24 
 const iconPedidos    = `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>`
 const iconSoporte    = `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/></svg>`
 
+const iconEmpresas = `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/></svg>`
 const iconGoogle = `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.6" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M5.25 5.25h13.5A1.5 1.5 0 0 1 20.25 6.75v12A1.5 1.5 0 0 1 18.75 20.25H5.25a1.5 1.5 0 0 1-1.5-1.5v-12a1.5 1.5 0 0 1 1.5-1.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 13h3v3H8zM13.5 12.5h2.5M13.5 15.5h2.5"/></svg>`
 // ── MENÚ POR ROL ──
 const menuConfig = {
+  superadmin: {
+    label: 'Panel Superadmin',
+    roleLabel: 'Superadmin',
+    items: [
+      { to: '/superadmin/empresas', label: 'Gestión de Empresas', icon: iconEmpresas },
+    ]
+  },
   admin: {
     label: 'Panel Administrador',
     roleLabel: 'Administrador',
@@ -181,6 +189,7 @@ const roleLabel = computed(() => auth.usuario?.Nombre_Usuario || menuConfig[prop
 
 // Color del badge según rol
 const rolClass = computed(() => ({
+  'badge-superadmin': props.rol === 'superadmin',
   'badge-admin':    props.rol === 'admin',
   'badge-operario': props.rol === 'operario',
   'badge-cliente':  props.rol === 'cliente',
@@ -250,6 +259,7 @@ function cerrarSesion() {
   padding: 3px 12px; border-radius: 20px;
   letter-spacing: 0.3px;
 }
+.badge-superadmin { background: #1f3a52; color: #ffffff; }
 .badge-admin    { background: #e0e7ff; color: #3730a3; }
 .badge-operario { background: #dcfce7; color: #15803d; }
 .badge-cliente  { background: #fef9c3; color: #92400e; }

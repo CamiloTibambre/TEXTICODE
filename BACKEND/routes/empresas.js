@@ -168,6 +168,40 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
+router.patch('/:id/activar', async (req, res) => {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { rowCount } = await client.query(
+      `UPDATE empresa SET "Estado" = 'activa', "Updated_At" = NOW()
+       WHERE "Id_Empresa" = $1`,
+      [req.params.id]
+    )
+    if (!rowCount) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Empresa no encontrada.' })
+    }
+    // Reactiva solo las membresías de usuarios que siguen activos
+    // (los desactivados individualmente se quedan inactivos).
+    await client.query(
+      `UPDATE usuario_empresa ue SET "Estado" = 'activo'
+       FROM usuario u
+       WHERE ue."Id_Usuario" = u."Id_Usuario"
+         AND ue."Id_Empresa" = $1
+         AND lower(trim(u."Estado"::text)) = 'activo'`,
+      [req.params.id]
+    )
+    await client.query('COMMIT')
+    return res.json({ mensaje: 'Empresa activada.' })
+  } catch (err) {
+    try { await client.query('ROLLBACK') } catch {}
+    console.error('Error activando empresa:', err.message)
+    return res.status(500).json({ error: 'No se pudo activar la empresa.' })
+  } finally {
+    client.release()
+  }
+})
+
 router.get('/:id/administradores', async (req, res) => {
   try {
     const { rows } = await pool.query(
