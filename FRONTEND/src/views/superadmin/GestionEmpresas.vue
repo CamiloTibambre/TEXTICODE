@@ -418,8 +418,14 @@ function mostrarToast(msg, type = 'success') {
 function iniciales(nombre) {
   return String(nombre || '?').split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase()
 }
+// La BD guarda timestamps en UTC (sin zona). Se muestran siempre en hora de Bogotá.
 function formatearFecha(f) {
-  return f ? new Date(f).toLocaleDateString('es-CO') : '—'
+  if (!f) return '—'
+  const txt = String(f)
+  const iso = /(Z|[+-]\d{2}:?\d{2})$/.test(txt) ? txt : txt.replace(' ', 'T') + 'Z'
+  const d = new Date(iso)
+  if (isNaN(d)) return '—'
+  return d.toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })
 }
 function soloDigitos(v) {
   return String(v || '').replace(/\D/g, '').slice(0, 10)

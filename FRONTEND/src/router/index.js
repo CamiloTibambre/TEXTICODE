@@ -23,6 +23,7 @@ const routes = [
 
   // SUPERADMIN (global, sin empresa)
   { path: '/superadmin/empresas', name: 'SuperadminEmpresas', component: () => import('../views/superadmin/GestionEmpresas.vue'), meta: { rol: 'superadmin' } },
+  { path: '/superadmin/roles', name: 'SuperadminRoles', component: () => import('../views/superadmin/GestionRoles.vue'), meta: { rol: 'superadmin' } },
 
   // OPERARIO
   { path: '/operario/cuenta',  name: 'OperarioCuenta',  component: () => import('../views/operario/CuentaPersonal.vue'),  meta: { rol: 'operario' } },
