@@ -21,6 +21,7 @@ import cargaTrabajoRoutes   from './routes/carga_trabajo.js'
 import googleCalendarRouter from './routes/googleCalendar.js'
 import calendarRouter       from './routes/calendar.route.js'
 import empresasRouter       from './routes/empresas.js'
+import rolesSuperadminRouter from './routes/roles_superadmin.js'
 
 const app = express()
 
@@ -48,6 +49,7 @@ app.use('/api/usuario-orden',    requireAuth, usuarioOrdenRouter)
 app.use('/api/notificaciones',   requireAuth, requireRoles('admin'), notificacionesRouter)
 app.use('/api/auth',             authRouter)
 app.use('/api/empresas',         empresasRouter)
+app.use('/api/superadmin/roles', rolesSuperadminRouter)
 app.use('/api/practica',         requireAuth, practicaRouter)
 app.use('/api/eficiencia',       requireAuth, requireRoles('admin'), eficienciaRouter)
 app.use('/api/carga-trabajo',    requireAuth, requireRoles('admin'), cargaTrabajoRoutes)
@@ -111,4 +113,3 @@ export async function startServer() {
 if (process.env.NODE_ENV !== 'test') {
   startServer()
 }
-

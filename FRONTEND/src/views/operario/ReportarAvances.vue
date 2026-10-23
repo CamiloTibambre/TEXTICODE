@@ -97,10 +97,11 @@
 
                 <div class="oc-meta">
                   <div class="oc-meta-item">
-                    <span class="oc-meta-lbl">Prendas asignadas</span>
+                    <span class="oc-meta-lbl">Prendas realizadas</span>
                     <span class="oc-meta-val prendas">
-                      <strong>{{ o.unidadesTotales }}</strong>
-                      <span class="tot">prendas</span>
+                      <strong>{{ o.unidadesHechas }}</strong>
+                      <span class="sep">/</span>
+                      <span class="tot">{{ o.unidadesTotales }}</span>
                     </span>
                   </div>
                   <div class="oc-meta-item">
@@ -134,7 +135,7 @@
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
                   </svg>
-                  Reportar Progreso
+                  Reportar avance
                 </button>
               </div>
             </div>
@@ -182,7 +183,7 @@
         <div class="modal">
           <div class="modal-header">
             <div>
-            <div class="modal-title">Completar fase</div>
+            <div class="modal-title">Reportar avance</div>
               <div class="modal-subtitle">{{ ordenActual?.id }} — {{ ordenActual?.nombre }}</div>
             </div>
             <button class="modal-close" @click="cerrarModal">
@@ -198,16 +199,44 @@
               <span class="modal-estado-val">{{ ordenActual.id }}</span>
             </div>
             <div class="modal-estado-item">
-              <span class="modal-estado-lbl">Prendas asignadas</span>
+              <span class="modal-estado-lbl">Tu cuota</span>
               <span class="modal-estado-val">{{ ordenActual.unidadesTotales }}</span>
             </div>
             <div class="modal-estado-item">
-              <span class="modal-estado-lbl">Resultado</span>
-              <span class="modal-estado-val orange">Completada</span>
+              <span class="modal-estado-lbl">Al guardar</span>
+              <span class="modal-estado-val" :class="completaFase ? 'verde' : 'azul'">{{ resultadoTexto }}</span>
             </div>
           </div>
 
           <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">Prendas terminadas hasta ahora <span class="req">*</span></label>
+              <div class="num-row">
+                <input
+                  v-model.number="reporte.cantidad"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  :max="ordenActual?.unidadesTotales"
+                  step="1"
+                  class="form-input"
+                  placeholder="0"
+                >
+                <button type="button" class="btn-chip" @click="reporte.cantidad = ordenActual.unidadesTotales">
+                  Todas ({{ ordenActual?.unidadesTotales }})
+                </button>
+              </div>
+              <div v-if="!cantidadValida" class="form-hint form-hint-error">
+                Escribe un número entero entre 0 y {{ ordenActual?.unidadesTotales }}.
+              </div>
+              <div v-else-if="completaFase" class="form-hint form-hint-ok">
+                Con esta cantidad la fase queda <strong>completada</strong>.
+              </div>
+              <div v-else class="form-hint">
+                Te quedarán {{ ordenActual.unidadesTotales - reporte.cantidad }} prendas por terminar.
+              </div>
+            </div>
+
             <div class="form-group">
               <label class="form-label">Nota <span class="opt">(opcional)</span></label>
               <textarea v-model="reporte.nota" class="form-textarea" rows="3" placeholder="Describe cualquier novedad..."></textarea>
@@ -215,11 +244,11 @@
           </div>
           <div class="modal-footer">
             <button class="btn-cancelar" @click="cerrarModal">Cancelar</button>
-            <button class="btn-enviar" @click="enviarReporte">
+            <button class="btn-enviar" :disabled="!cantidadValida || enviando" @click="enviarReporte">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
               </svg>
-              Completar fase
+              {{ enviando ? 'Guardando...' : completaFase ? 'Completar fase' : 'Guardar avance' }}
             </button>
           </div>
         </div>
@@ -259,7 +288,8 @@ const mounted      = ref(false)
 const historial = ref([])
 const ordenes   = ref([])
 
-const reporte = ref({ nota: '' })
+const reporte = ref({ cantidad: 0, nota: '' })
+const enviando = ref(false)
 
 // ── Helpers ──
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : '' }
@@ -296,6 +326,9 @@ onMounted(async () => {
         const completada = t.Estado_Fase === 'Completada'
         const retrasada = !completada && estaVencida(t.Fecha_Limite)
 
+        const cuota  = Number(t.Cuota ?? t.Cantidad ?? 0)
+        const hechas = Number(t.Cantidad_Realizada || 0)
+
         return {
           id:              `OP-${String(t.Id_Orden).padStart(3,'0')} · F${t.Numero_Fase}`,
           idReal:          t.Id_Orden_Operario,
@@ -305,9 +338,9 @@ onMounted(async () => {
           estado:          completada ? 'completado' : retrasada ? 'retrasado' : 'en-proceso',
           prioridad:       (t.Prioridad || 'Media').toLowerCase(),
           fechaLimite:     t.Fecha_Limite?.split('T')[0] || '—',
-          unidadesHechas:  Number(t.Cantidad_Realizada || 0),
-          unidadesTotales: Number(t.Cuota ?? t.Cantidad ?? 0),
-          progreso:        completada ? 100 : Math.min(100, Math.round((Number(t.Cantidad_Realizada || 0) / Math.max(1, Number(t.Cantidad || 0))) * 100)),
+          unidadesHechas:  completada ? cuota : hechas,
+          unidadesTotales: cuota,
+          progreso:        completada ? 100 : Math.min(100, Math.round((hechas / Math.max(1, cuota)) * 100)),
         }
       }).sort(ordenarFases)
     historial.value = dataHistorial.map(t => ({
@@ -330,9 +363,21 @@ const ordenesActivas          = computed(() => ordenes.value.filter(o => o.estad
 const historialOrdenado       = computed(() => [...historial.value].reverse())
 
 // ── Modal ──
+const cuotaActual    = computed(() => Number(ordenActual.value?.unidadesTotales ?? 0))
+const cantidadValida = computed(() => {
+  const c = reporte.value.cantidad
+  return Number.isInteger(c) && c >= 0 && c <= cuotaActual.value
+})
+const completaFase   = computed(() => cantidadValida.value && reporte.value.cantidad === cuotaActual.value)
+const resultadoTexto = computed(() => {
+  if (!cantidadValida.value) return '—'
+  if (completaFase.value) return 'Completada'
+  return `${Math.round((reporte.value.cantidad / Math.max(1, cuotaActual.value)) * 100)}%`
+})
+
 function abrirModal(o) {
   ordenActual.value = o
-  reporte.value = { nota: '' }
+  reporte.value = { cantidad: o.unidadesHechas, nota: '' }
   modalVisible.value = true
 }
 function cerrarModal() { modalVisible.value = false }
@@ -340,24 +385,39 @@ function cerrarModal() { modalVisible.value = false }
 // ── Enviar reporte ──
 async function enviarReporte() {
   const o = ordenActual.value
+  if (!o || !cantidadValida.value || enviando.value) return
+  enviando.value = true
 
   try {
-    const putRes = await fetch(`${BASE}/orden-operario/${o.idReal}/completar`, {
+    const res = await fetch(`${BASE}/orden-operario/${o.idReal}/avance`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ Nota_Operario: reporte.value.nota }),
+      body: JSON.stringify({
+        Cantidad_Realizada: reporte.value.cantidad,
+        Nota_Operario: reporte.value.nota,
+      }),
     })
-    if (!putRes.ok) throw new Error(`No se pudo completar la fase: ${putRes.status}`)
-    o.estado = 'completado'
-    historial.value.unshift({ id: o.idReal, ordenId: o.idReal, orden: `${o.id} — ${o.nombre}`, nota: reporte.value.nota, fecha: new Date().toLocaleDateString('es-CO') })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || `No se pudo guardar el avance (${res.status})`)
 
-    showToast('Reporte enviado correctamente', 'toast-success')
+    const nota = reporte.value.nota
+    o.unidadesHechas = reporte.value.cantidad
+
+    if (data.fase?.Estado_Fase === 'Completada') {
+      o.estado   = 'completado'
+      o.progreso = 100
+      historial.value.unshift({ id: o.idReal, ordenId: o.idReal, orden: `${o.id} — ${o.nombre}`, nota, fecha: new Date().toLocaleDateString('es-CO') })
+      showToast('Fase completada', 'toast-success')
+    } else {
+      o.progreso = Math.min(99, Math.round((o.unidadesHechas / Math.max(1, o.unidadesTotales)) * 100))
+      showToast('Avance guardado', 'toast-success')
+    }
     cerrarModal()
-
-    // ── SENDGRID: notificar al cliente solo si la orden se completó ──
   } catch (err) {
     console.error('Error:', err)
-    showToast('Error al enviar el reporte', 'toast-error')
+    showToast(err.message || 'Error al enviar el reporte', 'toast-error')
+  } finally {
+    enviando.value = false
   }
 }
 
@@ -534,6 +594,16 @@ function showToast(msg, type = 'toast-success') {
 .btn-enviar { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #1f3a52; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform .15s; }
 .btn-enviar:hover:not(:disabled) { background: #2d5580; transform: translateY(-1px); }
 .btn-enviar:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── AVANCE PARCIAL ── */
+.num-row { display: flex; gap: 8px; align-items: stretch; }
+.num-row .form-input { flex: 1; min-width: 0; }
+.btn-chip { padding: 0 14px; border: 1px solid #e5e7eb; background: #f9fafb; border-radius: 8px; font-size: 13px; font-weight: 600; color: #1f3a52; cursor: pointer; white-space: nowrap; transition: background .15s; }
+.btn-chip:hover { background: #eef2f7; }
+.form-hint-error { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+.form-hint-ok { color: #166534; background: #f0fdf4; border-color: #bbf7d0; }
+.modal-estado-val.verde { color: #16a34a; }
+.modal-estado-val.azul { color: #1d4ed8; }
 
 /* ── TOAST ── */
 .toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }

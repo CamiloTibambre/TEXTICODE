@@ -113,6 +113,10 @@ export async function requireAuth(req, res, next) {
     if (!legacySchema && (tokenEmpresaId === null || user.Membresia_Id_Empresa == null)) {
       return res.status(403).json({ error: 'Membresía empresarial inactiva o no autorizada.' })
     }
+    // La empresa del token también debe estar activa (el JOIN la deja en NULL si está inactiva).
+    if (!legacySchema && user.Nombre_Empresa == null) {
+      return res.status(403).json({ error: 'La empresa está inactiva.' })
+    }
 
     const activeEmpresaId = legacySchema ? null : tokenEmpresaId
     const activeEmpresaNombre = legacySchema ? null : user.Nombre_Empresa

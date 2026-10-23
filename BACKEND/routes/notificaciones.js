@@ -9,7 +9,6 @@ import {
   notificarCambioEstado,
   enviarComprobante,
   notificarTareaOperario,
-  obtenerEstadisticas,
 } from '../services/emailService.js';
 
 const router = Router();
@@ -62,6 +61,7 @@ router.post('/estado', async (req, res) => {
     }
 
     const resultado = await notificarCambioEstado({
+      empresaId: req.auth.empresaId,
       ordenId: Number(ordenId),
       clienteEmail: cliente.Correo,
       clienteNombre: cliente.Nombre_Completo,
@@ -110,6 +110,7 @@ router.post('/comprobante', async (req, res) => {
     }
 
     const resultado = await enviarComprobante({
+      empresaId: req.auth.empresaId,
       ordenId: Number(ordenId),
       clienteEmail: cliente.Correo,
       clienteNombre: cliente.Nombre_Completo,
@@ -170,6 +171,7 @@ router.post('/tarea', async (req, res) => {
     }
 
     const resultado = await notificarTareaOperario({
+      empresaId: req.auth.empresaId,
       operarioEmail: opRows[0].Correo,
       operarioNombre: opRows[0].Nombre_Completo,
       tarea, ordenId: Number(ordenId), prioridad, fechaLimite,
@@ -188,28 +190,15 @@ router.post('/tarea', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/notificaciones/estadisticas?fecha=YYYY-MM-DD
-// OJO: son estadísticas de la cuenta de SendGrid completa (todas las empresas).
+// GET /api/notificaciones/estadisticas
+// Las estadísticas de SendGrid son de la cuenta completa (todas las empresas),
+// así que NO se exponen a los administradores de una empresa.
 // ─────────────────────────────────────────────────────────────────────────────
-router.get('/estadisticas', async (req, res) => {
-  const { fecha } = req.query;
-
-  // Validar formato de fecha si se proporcionó
-  if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-    return res.status(400).json({
-      success: false,
-      error: 'Formato de fecha inválido. Usa YYYY-MM-DD',
-    });
-  }
-
-  try {
-    const stats = await obtenerEstadisticas(fecha);
-    res.json({ success: true, estadisticas: stats });
-
-  } catch (error) {
-    console.error(`[SendGrid] ❌ Error al obtener estadísticas:`, error.message);
-    res.status(500).json({ success: false, error: error.message });
-  }
+router.get('/estadisticas', (req, res) => {
+  res.status(403).json({
+    success: false,
+    error: 'Las estadísticas de envío no están disponibles para administradores de empresa.',
+  });
 });
 
 export default router;

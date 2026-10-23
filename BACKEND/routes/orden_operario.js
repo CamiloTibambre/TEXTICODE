@@ -20,6 +20,7 @@ async function notificarOrdenCompletada(idOrden, empresaId) {
     const o = rows[0]
     if (!o || !o.Correo) return
     await notificarCambioEstado({
+      empresaId,
       ordenId: idOrden,
       clienteEmail: o.Correo,
       clienteNombre: o.Nombre_Completo,
@@ -61,13 +62,30 @@ async function recalcularProgresoOrden(client, idOrden, empresaId) {
     return { unidadesRealizadas: 0, estado: estadoPendiente, progreso: 0 }
   }
 
+  // Avance real por fase: prendas hechas / prendas de la fase. Cada operario
+  // tiene una cuota (reparto equitativo); una fase completada cuenta su cuota entera.
   const fasesResult = await client.query(`
-    WITH fases AS (
-      SELECT
-        "Numero_Fase",
-        COUNT(*) FILTER (WHERE "Estado_Fase" = 'Completada')::numeric / COUNT(*) AS avance
-      FROM orden_operario
-      WHERE "Id_Orden" = $1 AND "Id_Empresa" = $2
+    WITH base AS (
+      SELECT oo."Numero_Fase", oo."Estado_Fase", oo."Cantidad_Realizada",
+             (ROW_NUMBER() OVER (PARTITION BY oo."Numero_Fase" ORDER BY oo."Id_Orden_Operario") - 1)::int AS idx,
+             (COUNT(*) OVER (PARTITION BY oo."Numero_Fase"))::int AS n
+      FROM orden_operario oo
+      WHERE oo."Id_Orden" = $1 AND oo."Id_Empresa" = $2
+    ),
+    cuotas AS (
+      SELECT "Numero_Fase", "Estado_Fase", COALESCE("Cantidad_Realizada", 0) AS hecho,
+             ($3::int / n) + CASE WHEN idx < ($3::int % n) THEN 1 ELSE 0 END AS cuota
+      FROM base
+    ),
+    fases AS (
+      SELECT "Numero_Fase",
+             CASE
+               WHEN SUM(cuota) = 0 THEN
+                 COUNT(*) FILTER (WHERE "Estado_Fase" = 'Completada')::numeric / COUNT(*)
+               ELSE
+                 LEAST(1, SUM(CASE WHEN "Estado_Fase" = 'Completada' THEN cuota ELSE LEAST(hecho, cuota) END)::numeric / SUM(cuota))
+             END AS avance
+      FROM cuotas
       GROUP BY "Numero_Fase"
     )
     SELECT
@@ -75,7 +93,7 @@ async function recalcularProgresoOrden(client, idOrden, empresaId) {
       COALESCE(AVG(avance), 0)  AS "Progreso",
       COALESCE(MIN(avance), 0)  AS "Avance_Min"
     FROM fases
-  `, [idOrden, empresaId])
+  `, [idOrden, empresaId, cantidadTotal])
 
   const totalFases = Number(fasesResult.rows[0].Total_Fases) || 0
   const progreso = Number(fasesResult.rows[0].Progreso) || 0
@@ -345,7 +363,104 @@ router.delete('/:id', requireRoles('admin'), async (req, res) => {
   }
 })
 
-// PATCH completar una fase. No se reportan prendas parciales.
+// Cuota de un operario dentro de su fase (reparto equitativo; el resto va a los primeros).
+async function calcularCuota(client, fase, cantidadTotal, empresaId) {
+  const companeros = await client.query(`
+    SELECT "Id_Orden_Operario"
+    FROM orden_operario
+    WHERE "Id_Orden" = $1 AND "Numero_Fase" = $2 AND "Id_Empresa" = $3
+    ORDER BY "Id_Orden_Operario" ASC
+  `, [fase.Id_Orden, fase.Numero_Fase, empresaId])
+  const n = companeros.rows.length || 1
+  const indice = Math.max(
+    0,
+    companeros.rows.findIndex(r => Number(r.Id_Orden_Operario) === Number(fase.Id_Orden_Operario))
+  )
+  return Math.floor(cantidadTotal / n) + (indice < cantidadTotal % n ? 1 : 0)
+}
+
+// PATCH reportar avance parcial de una fase.
+// Body: { Cantidad_Realizada: <total de prendas terminadas hasta ahora>, Nota_Operario?: string }
+// La fase solo se completa cuando Cantidad_Realizada alcanza la cuota del operario.
+router.patch('/:id/avance', async (req, res) => {
+  const empresaId = req.auth.empresaId
+  const cantidad = Number(req.body.Cantidad_Realizada)
+  if (!Number.isInteger(cantidad) || cantidad < 0) {
+    return res.status(400).json({ error: 'Cantidad_Realizada debe ser un número entero mayor o igual a 0.' })
+  }
+  const nota = typeof req.body.Nota_Operario === 'string'
+    ? req.body.Nota_Operario.trim() || null
+    : null
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+
+    const faseResult = await client.query(`
+      SELECT oo.*, op."Cantidad"
+      FROM orden_operario oo
+      INNER JOIN orden_produccion op ON oo."Id_Orden" = op."Id_Orden"
+      WHERE oo."Id_Orden_Operario" = $1 AND oo."Id_Empresa" = $2 AND op."Id_Empresa" = $2
+      FOR UPDATE OF oo
+    `, [req.params.id, empresaId])
+
+    if (faseResult.rows.length === 0) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Fase no encontrada' })
+    }
+
+    const fase = faseResult.rows[0]
+    if (!hasRole(req.auth, ['admin']) && Number(fase.Id_Operario) !== Number(req.auth.id)) {
+      await client.query('ROLLBACK')
+      return res.status(403).json({ error: 'No tienes permisos para reportar avance en esta fase.' })
+    }
+    if (fase.Estado_Fase === 'Completada') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ error: 'Esta fase ya está completada.' })
+    }
+
+    const cuota = await calcularCuota(client, fase, Number(fase.Cantidad) || 0, empresaId)
+    if (cantidad > cuota) {
+      await client.query('ROLLBACK')
+      return res.status(400).json({ error: `No puedes reportar más de tu cuota (${cuota} prendas).` })
+    }
+
+    const completa = cantidad === cuota
+    const updateFase = await client.query(`
+      UPDATE orden_operario
+      SET "Cantidad_Realizada" = $1,
+          "Estado_Fase" = CASE WHEN $2::boolean THEN 'Completada' ELSE 'Pendiente' END,
+          "Nota_Operario" = COALESCE($3, "Nota_Operario"),
+          "Fecha_Completada" = CASE WHEN $2::boolean THEN COALESCE("Fecha_Completada", NOW()) ELSE NULL END
+      WHERE "Id_Orden_Operario" = $4 AND "Id_Empresa" = $5
+      RETURNING *
+    `, [cantidad, completa, nota, req.params.id, empresaId])
+
+    const estadoPrevio = (await client.query(
+      'SELECT "Estado" FROM orden_produccion WHERE "Id_Orden" = $1 AND "Id_Empresa" = $2', [fase.Id_Orden, empresaId]
+    )).rows[0]?.Estado
+    const progresoOrden = await recalcularProgresoOrden(client, fase.Id_Orden, empresaId)
+
+    await client.query('COMMIT')
+    res.json({
+      mensaje: completa ? 'Fase completada' : 'Avance guardado',
+      fase: updateFase.rows[0],
+      cuota,
+      orden: progresoOrden,
+    })
+
+    if (progresoOrden.estado === 'Completada' && estadoPrevio !== 'Completada') {
+      notificarOrdenCompletada(fase.Id_Orden, empresaId)
+    }
+  } catch (err) {
+    await client.query('ROLLBACK')
+    res.status(500).json({ error: err.message })
+  } finally {
+    client.release()
+  }
+})
+
+// PATCH completar una fase de golpe (queda para admin y compatibilidad).
 router.patch('/:id/completar', async (req, res) => {
   const empresaId = req.auth.empresaId
   const nota = typeof req.body.Nota_Operario === 'string'

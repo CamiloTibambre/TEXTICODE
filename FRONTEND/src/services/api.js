@@ -67,6 +67,12 @@ export const getRol      = (id)       => request(`/roles/${id}`)
 export const crearRol    = (body)     => request('/roles', { method: 'POST', body: JSON.stringify(body) })
 export const eliminarRol = (id)       => request(`/roles/${id}`, { method: 'DELETE' })
 
+// ── ROLES (superadmin) ────────────────────────────────────
+export const getRolesGlobales     = ()         => request('/superadmin/roles')
+export const crearRolGlobal       = (body)     => request('/superadmin/roles', { method: 'POST', body: JSON.stringify(body) })
+export const actualizarRolGlobal  = (id, body) => request(`/superadmin/roles/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+export const eliminarRolGlobal    = (id)       => request(`/superadmin/roles/${id}`, { method: 'DELETE' })
+
 // ── ORDEN MATERIAL ────────────────────────────────────────
 export const getMaterialesDeOrden  = (idOrden)              => request(`/orden-material/orden/${idOrden}`)
 export const agregarMaterialOrden  = (body)                 => request('/orden-material', { method: 'POST', body: JSON.stringify(body) })
@@ -127,6 +133,7 @@ export const desactivarEmpresa  = (id)       => request(`/empresas/${id}`, { met
 export const activarEmpresa     = (id)       => request(`/empresas/${id}/activar`, { method: 'PATCH' })
 export const getAdministradoresEmpresa      = (id) => request(`/empresas/${id}/administradores`)
 export const actualizarAdministradorEmpresa = (id, idUsuario, body) => request(`/empresas/${id}/administradores/${idUsuario}`, { method: 'PUT', body: JSON.stringify(body) })
+export const activarAdministradorEmpresa    = (id, idUsuario)       => request(`/empresas/${id}/administradores/${idUsuario}/activar`, { method: 'PATCH' })
 export const inactivarAdministradorEmpresa  = (id, idUsuario)       => request(`/empresas/${id}/administradores/${idUsuario}/inactivar`, { method: 'PATCH' })
 
 // ── GOOGLE CALENDAR / OAUTH ───────────────────────────────
