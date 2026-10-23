@@ -21,6 +21,88 @@ function nombreSeguro(value, fallback) {
   return limpio || fallback;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// REGISTRO DE ENVÍOS POR EMPRESA (tabla email_envio)
+// Las estadísticas de SendGrid son de toda la cuenta; para que cada empresa vea
+// solo lo suyo se registra cada envío en la base de datos.
+// ─────────────────────────────────────────────────────────────────────────────
+// msg.to puede ser string, { email, name } o un arreglo de ellos.
+function correoDestino(to) {
+  const uno = (x) => (typeof x === 'string' ? x : x?.email || '');
+  return Array.isArray(to) ? to.map(uno).filter(Boolean).join(', ') : uno(to);
+}
+
+async function registrarEnvio({ empresaId, tipo, destinatario, ordenId = null, estado, error = null }) {
+  if (!empresaId) return;
+  try {
+    await pool.query(
+      `INSERT INTO email_envio ("Id_Empresa", "Tipo", "Destinatario", "Id_Orden", "Estado", "Error")
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [empresaId, tipo, correoDestino(destinatario).slice(0, 200), ordenId ?? null, estado, error ? String(error).slice(0, 500) : null]
+    );
+  } catch (err) {
+    // El registro nunca debe impedir ni romper el envío del correo.
+    console.warn('[email_envio] No se pudo registrar el envío:', err.message);
+  }
+}
+
+async function enviarYRegistrar(msg, { empresaId, tipo, ordenId = null }) {
+  try {
+    await sgMail.send(msg);
+  } catch (err) {
+    const detalle = err.response?.body?.errors?.[0]?.message || err.message;
+    await registrarEnvio({ empresaId, tipo, destinatario: msg.to, ordenId, estado: 'error', error: detalle });
+    throw err;
+  }
+  await registrarEnvio({ empresaId, tipo, destinatario: msg.to, ordenId, estado: 'enviado' });
+}
+
+function fechaBogota(fecha) {
+  if (fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha;
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+}
+
+// Estadísticas de UNA empresa (día en hora de Bogotá).
+export async function obtenerEstadisticasEmpresa(empresaId, fecha = null) {
+  const dia = fechaBogota(fecha);
+  const { rows } = await pool.query(
+    `SELECT "Tipo", "Estado", COUNT(*)::int AS n
+       FROM email_envio
+      WHERE "Id_Empresa" = $1
+        AND "Fecha" >= ($2::date::timestamp AT TIME ZONE 'America/Bogota')
+        AND "Fecha" <  (($2::date + 1)::timestamp AT TIME ZONE 'America/Bogota')
+      GROUP BY "Tipo", "Estado"`,
+    [empresaId, dia]
+  );
+  const por_tipo = {};
+  let enviados = 0, errores = 0;
+  for (const r of rows) {
+    por_tipo[r.Tipo] ??= { enviados: 0, errores: 0 };
+    if (r.Estado === 'enviado') { por_tipo[r.Tipo].enviados += r.n; enviados += r.n; }
+    else { por_tipo[r.Tipo].errores += r.n; errores += r.n; }
+  }
+  return { fecha: dia, enviados, errores, por_tipo };
+}
+
+// Todas las empresas (solo superadmin): una fila por empresa, aunque no haya envíos.
+export async function obtenerEstadisticasPorEmpresa(fecha = null) {
+  const dia = fechaBogota(fecha);
+  const { rows } = await pool.query(
+    `SELECT e."Id_Empresa", e."Nombre_Empresa",
+            COUNT(x."Id_Envio") FILTER (WHERE x."Estado" = 'enviado')::int AS enviados,
+            COUNT(x."Id_Envio") FILTER (WHERE x."Estado" <> 'enviado')::int AS errores
+       FROM empresa e
+       LEFT JOIN email_envio x
+         ON x."Id_Empresa" = e."Id_Empresa"
+        AND x."Fecha" >= ($1::date::timestamp AT TIME ZONE 'America/Bogota')
+        AND x."Fecha" <  (($1::date + 1)::timestamp AT TIME ZONE 'America/Bogota')
+      GROUP BY e."Id_Empresa", e."Nombre_Empresa"
+      ORDER BY e."Id_Empresa"`,
+    [dia]
+  );
+  return { fecha: dia, empresas: rows };
+}
+
 // Marca de la empresa: { nombre, from, replyTo }
 export async function obtenerMarcaEmpresa(empresaId) {
   let nombre = FROM_NAME_DEFAULT;
@@ -198,7 +280,7 @@ export async function notificarCambioEstado({
     html:    baseTemplate({ titulo: `Orden #${ordenId} actualizada`, contenido, color: meta.color, marca }),
   };
 
-  await sgMail.send(msg);
+  await enviarYRegistrar(msg, { empresaId, tipo: 'estado', ordenId });
   return { enviado: true, destinatario: clienteEmail, estado };
 }
 
@@ -287,7 +369,7 @@ export async function enviarComprobante({
     }],
   };
 
-  await sgMail.send(msg);
+  await enviarYRegistrar(msg, { empresaId, tipo: 'comprobante', ordenId });
   return { enviado: true, destinatario: clienteEmail, adjunto: `comprobante_orden_${ordenId}.pdf` };
 }
 
@@ -373,7 +455,7 @@ export async function notificarTareaOperario({
     }),
   };
 
-  await sgMail.send(msg);
+  await enviarYRegistrar(msg, { empresaId, tipo: 'tarea', ordenId });
   return { enviado: true, destinatario: operarioEmail, tarea };
 }
 

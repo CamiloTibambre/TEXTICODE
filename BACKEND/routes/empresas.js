@@ -2,6 +2,7 @@ import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import pool from '../db.js'
 import { requireSuperadmin } from '../middleware/auth.js'
+import { obtenerEstadisticas, obtenerEstadisticasPorEmpresa } from '../services/emailService.js'
 
 const router = Router()
 router.use(requireSuperadmin)
@@ -62,6 +63,29 @@ router.get('/', async (_req, res) => {
     return res.json(rows)
   } catch (err) {
     return res.status(500).json({ error: 'No se pudieron consultar las empresas.' })
+  }
+})
+
+// Estadísticas de correo: globales de SendGrid + envíos por empresa (tabla email_envio).
+// Va ANTES de '/:id' para que "correos" no se interprete como un id.
+router.get('/correos/estadisticas', async (req, res) => {
+  const { fecha } = req.query
+  if (fecha !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(String(fecha))) {
+    return res.status(400).json({ error: 'fecha debe tener formato YYYY-MM-DD' })
+  }
+  try {
+    const porEmpresa = await obtenerEstadisticasPorEmpresa(fecha || null)
+    let global = null
+    let errorGlobal = null
+    try {
+      global = await obtenerEstadisticas(porEmpresa.fecha)
+    } catch (err) {
+      errorGlobal = 'No se pudieron consultar las estadísticas de SendGrid.'
+      console.warn('[SendGrid] stats:', err.message)
+    }
+    res.json({ fecha: porEmpresa.fecha, global, errorGlobal, empresas: porEmpresa.empresas })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
 })
 

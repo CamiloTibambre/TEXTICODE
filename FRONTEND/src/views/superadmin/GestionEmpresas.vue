@@ -49,7 +49,14 @@
               </svg>
             </div>
           </div>
-          <button class="btn" @click="abrirCrear">
+          <button class="btn btn-sec" @click="abrirCorreos">
+            <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/>
+            </svg>
+            Correos
+          </button>
+          
+<button class="btn" @click="abrirCrear">
             <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
             </svg>
@@ -350,6 +357,47 @@
     </Transition>
 
     <!-- CONFIRMAR: DESACTIVAR EMPRESA (hay que escribir el nombre) -->
+    <!-- MODAL: ESTADÍSTICAS DE CORREO -->
+    <Transition name="modal">
+      <div v-if="modalCorreos.visible" class="modal" @click.self="cerrarCorreos">
+        <div class="modal-content modal-wide">
+          <h2>Correos enviados</h2>
+          <div class="correos-fecha">
+            <label for="correos-fecha">Día</label>
+            <input id="correos-fecha" type="date" v-model="modalCorreos.fecha" @change="cargarCorreos">
+          </div>
+
+          <div v-if="modalCorreos.cargando" class="admins-empty">Cargando...</div>
+          <template v-else-if="modalCorreos.datos">
+            <h3 class="correos-sub">Cuenta completa de SendGrid</h3>
+            <div v-if="modalCorreos.datos.global" class="correos-grid">
+              <div class="correos-card"><span>Enviados</span><strong>{{ modalCorreos.datos.global.enviados }}</strong></div>
+              <div class="correos-card"><span>Entregados</span><strong>{{ modalCorreos.datos.global.entregados }}</strong></div>
+              <div class="correos-card"><span>Abiertos</span><strong>{{ modalCorreos.datos.global.abiertos }}</strong></div>
+              <div class="correos-card"><span>Rebotes</span><strong>{{ modalCorreos.datos.global.rebotes }}</strong></div>
+              <div class="correos-card"><span>Spam</span><strong>{{ modalCorreos.datos.global.spam }}</strong></div>
+            </div>
+            <p v-else class="correos-aviso">{{ modalCorreos.datos.errorGlobal || 'Sin datos de SendGrid para este día.' }}</p>
+
+            <h3 class="correos-sub">Por empresa</h3>
+            <table class="correos-tabla">
+              <thead><tr><th>Empresa</th><th>Enviados</th><th>Con error</th></tr></thead>
+              <tbody>
+                <tr v-for="x in modalCorreos.datos.empresas" :key="x.Id_Empresa">
+                  <td>{{ x.Nombre_Empresa }}</td><td>{{ x.enviados }}</td><td>{{ x.errores }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p class="correos-nota">Los envíos por empresa se cuentan desde que se activó el registro; los de SendGrid abarcan toda la cuenta.</p>
+          </template>
+
+          <div class="modal-buttons">
+            <button class="btn-cancel" @click="cerrarCorreos">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <Transition name="modal">
       <div v-if="confirmEmpresa.visible" class="confirm-overlay" @click.self="confirmEmpresa.visible = false">
         <div class="confirm-box">
@@ -393,6 +441,7 @@ import { ref, computed, onMounted } from 'vue'
 import AppSidebar from '../../components/AppSidebar.vue'
 import {
   getEmpresas, crearEmpresa, actualizarEmpresa, desactivarEmpresa, activarEmpresa,
+  getEstadisticasCorreos,
   getAdministradoresEmpresa, actualizarAdministradorEmpresa, inactivarAdministradorEmpresa, activarAdministradorEmpresa,
 } from '../../services/api.js'
 
@@ -644,6 +693,29 @@ async function activar(e) {
 }
 
 // ── ADMINISTRADORES DE UNA EMPRESA ──
+// ── ESTADÍSTICAS DE CORREO ──
+const modalCorreos = ref({ visible: false, fecha: '', cargando: false, datos: null })
+
+function hoyBogota() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' })
+}
+async function cargarCorreos() {
+  modalCorreos.value.cargando = true
+  try {
+    modalCorreos.value.datos = await getEstadisticasCorreos(modalCorreos.value.fecha || undefined)
+  } catch (e) {
+    modalCorreos.value.datos = null
+    mostrarToast(e.message || 'No se pudieron cargar las estadísticas', 'error')
+  } finally {
+    modalCorreos.value.cargando = false
+  }
+}
+function abrirCorreos() {
+  modalCorreos.value = { visible: true, fecha: hoyBogota(), cargando: false, datos: null }
+  cargarCorreos()
+}
+function cerrarCorreos() { modalCorreos.value.visible = false }
+
 const modalAdmins = ref({ visible: false, empresa: null, lista: [], cargando: false })
 
 async function cargarAdmins() {
@@ -905,4 +977,20 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
   .hero-actions-wrap { width: 100%; }
   .stats { flex-direction: column; }
 }
+
+/* ── CORREOS ── */
+.btn-sec { background: white; color: #1f3a52; border: 1px solid #d1d5db; }
+.btn-sec:hover { background: #f3f4f6; transform: translateY(-1px); }
+.correos-fecha { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.correos-fecha label { font-size: 13px; color: #6b7280; }
+.correos-fecha input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+.correos-sub { font-size: 14px; margin: 16px 0 8px; color: #1f3a52; }
+.correos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+.correos-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.correos-card span { font-size: 12px; color: #6b7280; }
+.correos-card strong { font-size: 22px; color: #111827; }
+.correos-aviso, .correos-nota { font-size: 12px; color: #9ca3af; margin: 8px 0 0; }
+.correos-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.correos-tabla th, .correos-tabla td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f0f1f3; }
+.correos-tabla th { font-size: 12px; color: #6b7280; text-transform: uppercase; }
 </style>
