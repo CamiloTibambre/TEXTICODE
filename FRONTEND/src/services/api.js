@@ -127,6 +127,7 @@ export const desactivarEmpresa  = (id)       => request(`/empresas/${id}`, { met
 export const activarEmpresa     = (id)       => request(`/empresas/${id}/activar`, { method: 'PATCH' })
 export const getAdministradoresEmpresa      = (id) => request(`/empresas/${id}/administradores`)
 export const actualizarAdministradorEmpresa = (id, idUsuario, body) => request(`/empresas/${id}/administradores/${idUsuario}`, { method: 'PUT', body: JSON.stringify(body) })
+export const activarAdministradorEmpresa    = (id, idUsuario)       => request(`/empresas/${id}/administradores/${idUsuario}/activar`, { method: 'PATCH' })
 export const inactivarAdministradorEmpresa  = (id, idUsuario)       => request(`/empresas/${id}/administradores/${idUsuario}/inactivar`, { method: 'PATCH' })
 
 // ── GOOGLE CALENDAR / OAUTH ───────────────────────────────

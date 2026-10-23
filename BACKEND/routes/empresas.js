@@ -47,9 +47,18 @@ const empresaColumns = `"Id_Empresa", "Nombre_Empresa", "Slug", "Estado", "Fecha
 const adminColumns = `u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario", u."Correo",
                       u."Telefono", u."Estado", u."Fecha_Registro", r."Nombre_Rol" AS "Rol"`
 
+// Empresa + su configuración de correo (nombre comercial y correo de notificaciones).
+const empresaConConfig = `
+  SELECT e."Id_Empresa", e."Nombre_Empresa", e."Slug", e."Estado", e."Fecha_Creacion", e."Updated_At",
+         c."Nombre_Comercial", c."Email_Notificaciones"
+  FROM empresa e
+  LEFT JOIN empresa_config c ON c."Id_Empresa" = e."Id_Empresa"`
+
+const RE_EMAIL_CONFIG = /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/
+
 router.get('/', async (_req, res) => {
   try {
-    const { rows } = await pool.query(`SELECT ${empresaColumns} FROM empresa ORDER BY "Id_Empresa"`)
+    const { rows } = await pool.query(`${empresaConConfig} ORDER BY e."Id_Empresa"`)
     return res.json(rows)
   } catch (err) {
     return res.status(500).json({ error: 'No se pudieron consultar las empresas.' })
@@ -58,7 +67,7 @@ router.get('/', async (_req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    const { rows } = await pool.query(`SELECT ${empresaColumns} FROM empresa WHERE "Id_Empresa" = $1`, [req.params.id])
+    const { rows } = await pool.query(`${empresaConConfig} WHERE e."Id_Empresa" = $1`, [req.params.id])
     if (!rows.length) return res.status(404).json({ error: 'Empresa no encontrada.' })
     return res.json(rows[0])
   } catch (err) {
@@ -126,18 +135,57 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const { Nombre_Empresa, Slug } = req.body
   if (!Nombre_Empresa || !Slug) return res.status(400).json({ error: 'Nombre_Empresa y Slug son obligatorios.' })
+
+  // Configuración de correo (opcional). Si la clave no viene en el body, no se toca;
+  // si viene vacía, se borra (la empresa usará su nombre y el correo por defecto).
+  const traeNombreComercial = Object.prototype.hasOwnProperty.call(req.body, 'Nombre_Comercial')
+  const traeEmailNotif = Object.prototype.hasOwnProperty.call(req.body, 'Email_Notificaciones')
+  const nombreComercial = traeNombreComercial ? String(req.body.Nombre_Comercial ?? '').trim() || null : null
+  const emailNotif = traeEmailNotif ? String(req.body.Email_Notificaciones ?? '').trim() || null : null
+
+  if (nombreComercial && nombreComercial.length > 80) {
+    return res.status(400).json({ error: 'El nombre comercial no puede superar 80 caracteres.' })
+  }
+  if (emailNotif && (emailNotif.length > 160 || !RE_EMAIL_CONFIG.test(emailNotif))) {
+    return res.status(400).json({ error: 'El correo de notificaciones no es válido.' })
+  }
+
+  const client = await pool.connect()
   try {
-    if (await comprobarNombreEmpresa(pool, Nombre_Empresa, req.params.id)) return respuestaDuplicado(res)
-    const { rows } = await pool.query(
+    await client.query('BEGIN')
+    if (await comprobarNombreEmpresa(client, Nombre_Empresa, req.params.id)) {
+      await client.query('ROLLBACK')
+      return respuestaDuplicado(res)
+    }
+    const { rowCount } = await client.query(
       `UPDATE empresa SET "Nombre_Empresa" = $1, "Slug" = $2, "Updated_At" = NOW()
-       WHERE "Id_Empresa" = $3 RETURNING ${empresaColumns}`,
+       WHERE "Id_Empresa" = $3`,
       [Nombre_Empresa.trim(), Slug.trim().toLowerCase(), req.params.id]
     )
-    if (!rows.length) return res.status(404).json({ error: 'Empresa no encontrada.' })
+    if (!rowCount) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Empresa no encontrada.' })
+    }
+    if (traeNombreComercial || traeEmailNotif) {
+      await client.query(
+        `INSERT INTO empresa_config ("Id_Empresa", "Nombre_Comercial", "Email_Notificaciones")
+         VALUES ($1, $2, $3)
+         ON CONFLICT ("Id_Empresa") DO UPDATE SET
+           "Nombre_Comercial" = CASE WHEN $4::boolean THEN EXCLUDED."Nombre_Comercial" ELSE empresa_config."Nombre_Comercial" END,
+           "Email_Notificaciones" = CASE WHEN $5::boolean THEN EXCLUDED."Email_Notificaciones" ELSE empresa_config."Email_Notificaciones" END,
+           "Updated_At" = NOW()`,
+        [req.params.id, nombreComercial, emailNotif, traeNombreComercial, traeEmailNotif]
+      )
+    }
+    const { rows } = await client.query(`${empresaConConfig} WHERE e."Id_Empresa" = $1`, [req.params.id])
+    await client.query('COMMIT')
     return res.json(rows[0])
   } catch (err) {
+    try { await client.query('ROLLBACK') } catch {}
     if (nombreDuplicado(err)) return respuestaDuplicado(res)
     return res.status(500).json({ error: 'No se pudo actualizar la empresa.' })
+  } finally {
+    client.release()
   }
 })
 
@@ -274,6 +322,44 @@ router.patch('/:id/administradores/:idUsuario/inactivar', async (req, res) => {
   } catch (err) {
     try { await client.query('ROLLBACK') } catch {}
     return res.status(500).json({ error: 'No se pudo desactivar el administrador.' })
+  } finally {
+    client.release()
+  }
+})
+
+router.patch('/:id/administradores/:idUsuario/activar', async (req, res) => {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    // Solo se puede reactivar a un administrador si su empresa está activa.
+    const empresa = await client.query(`SELECT "Estado" FROM empresa WHERE "Id_Empresa" = $1`, [req.params.id])
+    if (!empresa.rows.length) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Empresa no encontrada.' })
+    }
+    if (String(empresa.rows[0].Estado).toLowerCase() !== 'activa') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ error: 'Activa primero la empresa para poder reactivar a su administrador.' })
+    }
+    const { rows } = await client.query(
+      `UPDATE usuario_empresa ue SET "Estado" = 'activo'
+       FROM rol r
+       WHERE ue."Id_Rol" = r."Id_Rol" AND ue."Id_Empresa" = $1 AND ue."Id_Usuario" = $2
+         AND lower(trim(r."Nombre_Rol")) IN ('admin', 'administrador')
+       RETURNING ue."Id_Usuario"`,
+      [req.params.id, req.params.idUsuario]
+    )
+    if (!rows.length) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Administrador de empresa no encontrado.' })
+    }
+    await client.query(`UPDATE usuario SET "Estado" = 'activo' WHERE "Id_Usuario" = $1`, [req.params.idUsuario])
+    await client.query('COMMIT')
+    return res.json({ mensaje: 'Administrador activado.' })
+  } catch (err) {
+    try { await client.query('ROLLBACK') } catch {}
+    console.error('Error activando administrador:', err.message)
+    return res.status(500).json({ error: 'No se pudo activar el administrador.' })
   } finally {
     client.release()
   }

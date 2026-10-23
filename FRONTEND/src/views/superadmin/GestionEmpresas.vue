@@ -231,6 +231,20 @@
             :class="{ 'input-error': erroresEditar.slug && tocadoEditar }" @blur="tocadoEditar = true">
           <span v-if="erroresEditar.slug && tocadoEditar" class="error-msg">{{ erroresEditar.slug }}</span>
 
+          <p class="section-title">Correos a clientes y operarios</p>
+
+          <label>Nombre comercial <span class="label-hint">(opcional)</span></label>
+          <input v-model="formEditar.nombreComercial" type="text" maxlength="80" placeholder="Si lo dejas vacío se usa el nombre de la empresa"
+            :class="{ 'input-error': erroresEditar.nombreComercial && tocadoEditar }" @blur="tocadoEditar = true">
+          <span v-if="erroresEditar.nombreComercial && tocadoEditar" class="error-msg">{{ erroresEditar.nombreComercial }}</span>
+          <span class="field-help">Es el nombre que verán los destinatarios como remitente y en el asunto de cada correo.</span>
+
+          <label>Correo de respuestas <span class="label-hint">(opcional)</span></label>
+          <input v-model="formEditar.emailNotificaciones" type="email" maxlength="160" placeholder="contacto@empresa.com"
+            :class="{ 'input-error': erroresEditar.emailNotificaciones && tocadoEditar }" @blur="tocadoEditar = true">
+          <span v-if="erroresEditar.emailNotificaciones && tocadoEditar" class="error-msg">{{ erroresEditar.emailNotificaciones }}</span>
+          <span class="field-help">Cuando alguien responda un correo automático, la respuesta llegará aquí.</span>
+
           <div class="modal-buttons">
             <button class="btn-cancel" @click="cerrarEditar">Cancelar</button>
             <button class="btn-submit" @click="guardarEditar" :disabled="guardando">
@@ -263,6 +277,11 @@
                 <button class="action-btn edit-btn" @click="abrirEditarAdmin(a)" title="Editar">
                   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
+                  </svg>
+                </button>
+                <button v-if="a.Estado !== 'activo'" class="action-btn activate-btn" :disabled="activandoAdminId === a.Id_Usuario" @click="activarAdmin(a)" title="Activar">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                   </svg>
                 </button>
                 <button v-if="a.Estado === 'activo'" class="action-btn delete-btn" @click="pedirInactivarAdmin(a)" title="Desactivar">
@@ -374,7 +393,7 @@ import { ref, computed, onMounted } from 'vue'
 import AppSidebar from '../../components/AppSidebar.vue'
 import {
   getEmpresas, crearEmpresa, actualizarEmpresa, desactivarEmpresa, activarEmpresa,
-  getAdministradoresEmpresa, actualizarAdministradorEmpresa, inactivarAdministradorEmpresa,
+  getAdministradoresEmpresa, actualizarAdministradorEmpresa, inactivarAdministradorEmpresa, activarAdministradorEmpresa,
 } from '../../services/api.js'
 
 const ICON_EMPRESA = 'M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21'
@@ -538,12 +557,23 @@ async function guardarCrear() {
 const modalEditar = ref(false)
 const tocadoEditar = ref(false)
 const idEditar = ref(null)
-const formEditar = ref({ nombreEmpresa: '', slug: '' })
-const erroresEditar = computed(() => validarEmpresa(formEditar.value.nombreEmpresa, formEditar.value.slug))
+const formEditar = ref({ nombreEmpresa: '', slug: '', nombreComercial: '', emailNotificaciones: '' })
+const erroresEditar = computed(() => {
+  const f = formEditar.value
+  const e = validarEmpresa(f.nombreEmpresa, f.slug)
+  if (f.nombreComercial && f.nombreComercial.trim().length > 80) e.nombreComercial = 'Máximo 80 caracteres.'
+  if (f.emailNotificaciones && !RE_CORREO.test(f.emailNotificaciones.trim())) e.emailNotificaciones = 'El correo no tiene un formato válido.'
+  return e
+})
 
 function abrirEditar(e) {
   idEditar.value = e.Id_Empresa
-  formEditar.value = { nombreEmpresa: e.Nombre_Empresa, slug: e.Slug }
+  formEditar.value = {
+    nombreEmpresa: e.Nombre_Empresa,
+    slug: e.Slug,
+    nombreComercial: e.Nombre_Comercial || '',
+    emailNotificaciones: e.Email_Notificaciones || '',
+  }
   tocadoEditar.value = false
   modalEditar.value = true
 }
@@ -557,6 +587,8 @@ async function guardarEditar() {
     await actualizarEmpresa(idEditar.value, {
       Nombre_Empresa: formEditar.value.nombreEmpresa.trim(),
       Slug: formEditar.value.slug.trim().toLowerCase(),
+      Nombre_Comercial: formEditar.value.nombreComercial.trim(),
+      Email_Notificaciones: formEditar.value.emailNotificaciones.trim(),
     })
     modalEditar.value = false
     mostrarToast('Empresa actualizada')
@@ -670,6 +702,21 @@ async function guardarAdmin() {
     mostrarToast(e.message || 'No se pudo actualizar el administrador', 'danger')
   } finally {
     guardando.value = false
+  }
+}
+
+// activar administrador
+const activandoAdminId = ref(null)
+async function activarAdmin(a) {
+  activandoAdminId.value = a.Id_Usuario
+  try {
+    await activarAdministradorEmpresa(modalAdmins.value.empresa.Id_Empresa, a.Id_Usuario)
+    mostrarToast('Administrador activado')
+    await cargarAdmins()
+  } catch (err) {
+    mostrarToast(err.message || 'No se pudo activar el administrador', 'danger')
+  } finally {
+    activandoAdminId.value = null
   }
 }
 
@@ -792,6 +839,7 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #1f3a52; margin: 20px 0 0; padding-top: 14px; border-top: 1px solid #f1f5f9; }
 .section-title:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
 .modal-content label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; margin-top: 14px; }
+.field-help { display: block; font-size: 11.5px; color: #9ca3af; margin-top: 4px; }
 .label-hint { color: #9ca3af; font-weight: 400; font-size: 11px; }
 .modal-content input, .modal-content select { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
 .modal-content input:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }

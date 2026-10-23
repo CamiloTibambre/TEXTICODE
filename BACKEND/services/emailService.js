@@ -4,13 +4,47 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import sgMail from '@sendgrid/mail';
+import pool from '../db.js';
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const FROM = {
-  email: process.env.SENDGRID_FROM_EMAIL,
-  name: process.env.SENDGRID_FROM_NAME || 'Texticode',
-};
+// Multiempresa: una sola cuenta de SendGrid y un remitente verificado
+// (SENDGRID_FROM_EMAIL). Lo que cambia por empresa es el NOMBRE visible del
+// remitente, el Reply-To (empresa_config.Email_Notificaciones) y el texto de las plantillas.
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL;
+const FROM_NAME_DEFAULT = process.env.SENDGRID_FROM_NAME || 'Texticode';
+const RE_EMAIL = /^[^\s@<>",;]+@[^\s@<>",;]+\.[^\s@<>",;]+$/;
+
+// Limpia un texto para usarlo como nombre en cabeceras de correo (sin saltos de línea ni comillas/<>).
+function nombreSeguro(value, fallback) {
+  const limpio = String(value ?? '').replace(/[\r\n"<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+  return limpio || fallback;
+}
+
+// Marca de la empresa: { nombre, from, replyTo }
+export async function obtenerMarcaEmpresa(empresaId) {
+  let nombre = FROM_NAME_DEFAULT;
+  let replyEmail = null;
+  if (empresaId) {
+    const { rows } = await pool.query(
+      `SELECT e."Nombre_Empresa", c."Nombre_Comercial", c."Email_Notificaciones"
+       FROM empresa e
+       LEFT JOIN empresa_config c ON c."Id_Empresa" = e."Id_Empresa"
+       WHERE e."Id_Empresa" = $1`,
+      [empresaId]
+    );
+    if (rows[0]) {
+      nombre = nombreSeguro(rows[0].Nombre_Comercial || rows[0].Nombre_Empresa, FROM_NAME_DEFAULT);
+      const correo = String(rows[0].Email_Notificaciones || '').trim();
+      if (RE_EMAIL.test(correo)) replyEmail = correo;
+    }
+  }
+  return {
+    nombre,
+    from: { email: FROM_EMAIL, name: nombre },
+    replyTo: replyEmail ? { email: replyEmail, name: nombre } : undefined,
+  };
+}
 
 // Escapa texto antes de meterlo en el HTML del correo (evita inyección de HTML/enlaces).
 function esc(value) {
@@ -33,7 +67,7 @@ const ESTADO_META = {
 };
 
 // ── Template HTML reutilizable ─────────────────────────────────────────────────
-function baseTemplate({ titulo, contenido, color = '#6366f1' }) {
+function baseTemplate({ titulo, contenido, color = '#6366f1', marca }) {
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -53,7 +87,7 @@ function baseTemplate({ titulo, contenido, color = '#6366f1' }) {
           <td style="background:${color};padding:28px 40px;text-align:center;">
             <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;
                       letter-spacing:2px;text-transform:uppercase;font-weight:600;">
-              TEXTICODE — SISTEMA DE GESTIÓN TEXTIL
+              ${esc(marca.nombre)} — SISTEMA DE GESTIÓN TEXTIL
             </p>
           </td>
         </tr>
@@ -70,7 +104,7 @@ function baseTemplate({ titulo, contenido, color = '#6366f1' }) {
           <td style="background:#f1f5f9;padding:20px 40px;text-align:center;
                      border-top:1px solid #e2e8f0;">
             <p style="margin:0;color:#94a3b8;font-size:12px;line-height:1.6;">
-              Este es un correo automático generado por Texticode.<br>
+              Este es un correo automático generado por ${esc(marca.nombre)}.<br>
               Si tienes dudas, contacta al administrador del sistema.
             </p>
           </td>
@@ -95,8 +129,9 @@ function baseTemplate({ titulo, contenido, color = '#6366f1' }) {
  * @param {string}   [params.observaciones]
  */
 export async function notificarCambioEstado({
-  ordenId, clienteEmail, clienteNombre, estado, productos, observaciones = '',
+  empresaId, ordenId, clienteEmail, clienteNombre, estado, productos, observaciones = '',
 }) {
+  const marca = await obtenerMarcaEmpresa(empresaId);
   const meta = ESTADO_META[estado] || { emoji: '📋', color: '#6366f1', label: estado };
 
   const contenido = `
@@ -157,9 +192,10 @@ export async function notificarCambioEstado({
 
   const msg = {
     to:      { email: clienteEmail, name: clienteNombre },
-    from:    FROM,
-    subject: `Texticode — Orden #${ordenId}: ${meta.label}`,
-    html:    baseTemplate({ titulo: `Orden #${ordenId} actualizada`, contenido, color: meta.color }),
+    from:    marca.from,
+    ...(marca.replyTo ? { replyTo: marca.replyTo } : {}),
+    subject: `${marca.nombre} — Orden #${ordenId}: ${meta.label}`,
+    html:    baseTemplate({ titulo: `Orden #${ordenId} actualizada`, contenido, color: meta.color, marca }),
   };
 
   await sgMail.send(msg);
@@ -179,8 +215,9 @@ export async function notificarCambioEstado({
  * @param {string}   [params.fechaEntrega]
  */
 export async function enviarComprobante({
-  ordenId, clienteEmail, clienteNombre, productos, pdfBase64, fechaEntrega,
+  empresaId, ordenId, clienteEmail, clienteNombre, productos, pdfBase64, fechaEntrega,
 }) {
+  const marca = await obtenerMarcaEmpresa(empresaId);
   const fecha = fechaEntrega || new Date().toLocaleDateString('es-CO', {
     year: 'numeric', month: 'long', day: 'numeric',
   });
@@ -233,23 +270,25 @@ export async function enviarComprobante({
 
   const msg = {
     to:      { email: clienteEmail, name: clienteNombre },
-    from:    FROM,
-    subject: `Texticode — Comprobante de entrega Orden #${ordenId}`,
+    from:    marca.from,
+    ...(marca.replyTo ? { replyTo: marca.replyTo } : {}),
+    subject: `${marca.nombre} — Comprobante de entrega Orden #${ordenId}`,
     html:    baseTemplate({
       titulo:   `Comprobante Orden #${ordenId}`,
       contenido,
       color:    '#8b5cf6',
+      marca,
     }),
     attachments: [{
       content:     pdfBase64,
-      filename:    `comprobante_texticode_orden_${ordenId}.pdf`,
+      filename:    `comprobante_orden_${ordenId}.pdf`,
       type:        'application/pdf',
       disposition: 'attachment',
     }],
   };
 
   await sgMail.send(msg);
-  return { enviado: true, destinatario: clienteEmail, adjunto: `comprobante_texticode_orden_${ordenId}.pdf` };
+  return { enviado: true, destinatario: clienteEmail, adjunto: `comprobante_orden_${ordenId}.pdf` };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -265,8 +304,9 @@ export async function enviarComprobante({
  * @param {string}   [params.fechaLimite]
  */
 export async function notificarTareaOperario({
-  operarioEmail, operarioNombre, tarea, ordenId, prioridad = 'Normal', fechaLimite = '',
+  empresaId, operarioEmail, operarioNombre, tarea, ordenId, prioridad = 'Normal', fechaLimite = '',
 }) {
+  const marca = await obtenerMarcaEmpresa(empresaId);
   const prioridadColor = { Alta: '#ef4444', Media: '#f59e0b', Normal: '#10b981' }[prioridad] || '#6366f1';
 
   const contenido = `
@@ -316,18 +356,20 @@ export async function notificarTareaOperario({
     </div>
 
     <p style="margin:0;color:#94a3b8;font-size:13px;">
-      Ingresa al sistema Texticode para ver los detalles completos de la tarea.
+      Ingresa al sistema ${esc(marca.nombre)} para ver los detalles completos de la tarea.
     </p>
   `;
 
   const msg = {
     to:      { email: operarioEmail, name: operarioNombre },
-    from:    FROM,
-    subject: `Texticode — Nueva tarea asignada: ${tarea}`,
+    from:    marca.from,
+    ...(marca.replyTo ? { replyTo: marca.replyTo } : {}),
+    subject: `${marca.nombre} — Nueva tarea asignada: ${nombreSeguro(tarea, 'Tarea')}`,
     html:    baseTemplate({
       titulo:   'Nueva tarea asignada',
       contenido,
       color:    '#6366f1',
+      marca,
     }),
   };
 
@@ -337,6 +379,7 @@ export async function notificarTareaOperario({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. ESTADÍSTICAS DE ENVÍO (GET)
+// Son de la cuenta de SendGrid completa (todas las empresas): solo para uso global.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function obtenerEstadisticas(fecha = null) {
   // Fix: antes se usaba new Date().toISOString(), que da la fecha en UTC.

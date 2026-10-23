@@ -52,8 +52,9 @@ export async function ensureGoogleSchema() {}
 // Empresa activa del usuario (su única membresía). Devuelve null si no tiene.
 export async function resolverEmpresaDeUsuario(userId) {
   const { rows } = await db.query(
-    `SELECT "Id_Empresa" FROM usuario_empresa
-     WHERE "Id_Usuario" = $1 AND "Estado" = 'activo'
+    `SELECT ue."Id_Empresa" FROM usuario_empresa ue
+     INNER JOIN empresa e ON e."Id_Empresa" = ue."Id_Empresa" AND e."Estado" = 'activa'
+     WHERE ue."Id_Usuario" = $1 AND ue."Estado" = 'activo'
      LIMIT 1`,
     [userId]
   )
@@ -258,11 +259,12 @@ router.get('/callback', async (req, res) => {
     const { rows } = await db.query(
       `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
               u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol",
-              g."Id_Empresa"
+              g."Id_Empresa", e."Nombre_Empresa"
        FROM google_calendar_tokens g
        INNER JOIN usuario u ON u."Id_Usuario" = g."Id_Usuario"
        INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = g."Id_Usuario"
          AND ue."Id_Empresa" = g."Id_Empresa" AND ue."Estado" = 'activo'
+       INNER JOIN empresa e ON e."Id_Empresa" = g."Id_Empresa" AND e."Estado" = 'activa'
        INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
        WHERE (g."Google_Id" = $1 OR g."Google_Email" = $2)
        LIMIT 1`,
@@ -270,7 +272,7 @@ router.get('/callback', async (req, res) => {
     )
 
     if (!rows.length)
-      throw new Error('Esta cuenta de Google aún no está vinculada a un usuario creado por el administrador.')
+      throw new Error('Esta cuenta de Google no está vinculada a un usuario activo de una empresa activa.')
 
     const user = rows[0]
     if (user.Estado === 'inactivo')
