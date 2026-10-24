@@ -76,7 +76,7 @@ router.post('/estado', async (req, res) => {
     console.error(`[SendGrid] ❌ Error al notificar estado:`, error.response?.body || error.message);
     res.status(500).json({
       success: false,
-      error: error.response?.body?.errors?.[0]?.message || error.message,
+      error: 'No se pudo enviar la notificación.',
     });
   }
 });
@@ -125,7 +125,7 @@ router.post('/comprobante', async (req, res) => {
     console.error(`[SendGrid] ❌ Error al enviar comprobante:`, error.response?.body || error.message);
     res.status(500).json({
       success: false,
-      error: error.response?.body?.errors?.[0]?.message || error.message,
+      error: 'No se pudo enviar la notificación.',
     });
   }
 });
@@ -185,7 +185,7 @@ router.post('/tarea', async (req, res) => {
     console.error(`[SendGrid] ❌ Error al notificar tarea:`, error.response?.body || error.message);
     res.status(500).json({
       success: false,
-      error: error.response?.body?.errors?.[0]?.message || error.message,
+      error: 'No se pudo enviar la notificación.',
     });
   }
 });

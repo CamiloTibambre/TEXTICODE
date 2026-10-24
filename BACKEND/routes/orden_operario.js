@@ -149,7 +149,8 @@ router.post('/', requireRoles('admin'), async (req, res) => {
       return res.status(409).json({ error: 'Ese operario ya está asignado a esa fase en la orden' })
     }
     if (err.code === '23503') return res.status(400).json({ error: 'La orden o el operario no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -168,7 +169,8 @@ router.get('/orden/:idOrden', requireRoles('admin'), async (req, res) => {
     `, [req.params.idOrden, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -210,7 +212,8 @@ router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin
     `, [req.params.idOperario, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -245,7 +248,8 @@ router.get('/operario/:idOperario/historial', requireSelfParamOrRoles('idOperari
     `, [req.params.idOperario, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -328,7 +332,8 @@ router.put('/:id', requireRoles('admin'), async (req, res) => {
       return res.status(409).json({ error: 'Ese operario ya está asignado a esa fase en la orden' })
     }
     if (err.code === '23503') return res.status(400).json({ error: 'La orden o el operario no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -357,7 +362,8 @@ router.delete('/:id', requireRoles('admin'), async (req, res) => {
     res.json({ mensaje: 'Fase eliminada de la orden' })
   } catch (err) {
     await client.query('ROLLBACK')
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -454,7 +460,8 @@ router.patch('/:id/avance', async (req, res) => {
     }
   } catch (err) {
     await client.query('ROLLBACK')
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -535,7 +542,8 @@ router.patch('/:id/completar', async (req, res) => {
     }
   } catch (err) {
     await client.query('ROLLBACK')
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }

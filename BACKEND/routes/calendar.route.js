@@ -38,7 +38,7 @@ router.post('/connect', requireAuth, async (req, res) => {
     res.json({ connected: true, calendarEmail: profile.email })
   } catch (err) {
     console.error('[calendar/connect]', err.message)
-    res.status(400).json({ error: err.message })
+    res.status(err.code ? 500 : 400).json({ error: err.code ? 'Error interno del servidor.' : err.message })
   }
 })
 
@@ -72,7 +72,7 @@ router.post('/sync', requireAuth, async (req, res) => {
     res.json({ creados, actualizados, total: orders.length })
   } catch (err) {
     console.error('[calendar/sync]', err.message)
-    res.status(400).json({ error: err.message })
+    res.status(err.code ? 500 : 400).json({ error: err.code ? 'Error interno del servidor.' : err.message })
   }
 })
 
@@ -90,7 +90,7 @@ router.post('/sync/:idOrden', requireAuth, async (req, res) => {
     res.json({ mensaje: 'Orden sincronizada correctamente.' })
   } catch (err) {
     console.error('[calendar/sync/:idOrden]', err.message)
-    res.status(400).json({ error: err.message })
+    res.status(err.code ? 500 : 400).json({ error: err.code ? 'Error interno del servidor.' : err.message })
   }
 })
 

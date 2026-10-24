@@ -23,7 +23,7 @@ function reset() {
   Object.assign(state, {
     loginUser: {
       Id_Usuario: 8, Nombre_Completo: 'Global', Nombre_Usuario: 'global',
-      Correo: 'global@example.invalid', Contrasena: 'local-fixture', Estado: 'activo',
+      Correo: 'global@example.invalid', Contrasena: '$2b$10$local-fixture', Estado: 'activo',
       Id_Rol: 90, Rol: 'superadmin',
     },
     memberships: [],

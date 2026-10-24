@@ -16,8 +16,9 @@
       </div>
 
       <div class="info">
-        Los roles base (superadmin, admin, operario, cliente) están protegidos: no se renombran ni se eliminan.
-        Un rol con usuarios asignados tampoco se puede eliminar.
+        Los roles no se eliminan, se desactivan: los usuarios con un rol inactivo no pueden iniciar sesión
+        hasta que lo vuelvas a activar. Los roles base (superadmin, admin, operario, cliente) no se renombran,
+        y el rol superadmin no se puede desactivar.
       </div>
 
       <div class="card">
@@ -25,17 +26,19 @@
         <div v-else-if="!roles.length" class="empty">No hay roles.</div>
         <table v-else class="tabla">
           <thead>
-            <tr><th>ID</th><th>Rol</th><th>Usuarios</th><th>Tipo</th><th class="acc">Acciones</th></tr>
+            <tr><th>ID</th><th>Rol</th><th>Usuarios</th><th>Tipo</th><th>Estado</th><th class="acc">Acciones</th></tr>
           </thead>
           <tbody>
-            <tr v-for="r in roles" :key="r.Id_Rol">
+            <tr v-for="r in roles" :key="r.Id_Rol" :class="{ 'fila-inactiva': esInactivo(r) }">
               <td>{{ r.Id_Rol }}</td>
               <td class="nombre">{{ r.Nombre_Rol }}</td>
               <td>{{ r.Total_Usuarios }}</td>
               <td><span class="tag" :class="r.Protegido ? 'tag-base' : 'tag-custom'">{{ r.Protegido ? 'Base' : 'Personalizado' }}</span></td>
+              <td><span class="tag" :class="esInactivo(r) ? 'tag-off' : 'tag-on'">{{ esInactivo(r) ? 'Inactivo' : 'Activo' }}</span></td>
               <td class="acc">
                 <button class="mini" :disabled="r.Protegido" @click="abrirEditar(r)">Editar</button>
-                <button class="mini mini-danger" :disabled="r.Protegido || r.Total_Usuarios > 0" @click="pedirEliminar(r)">Eliminar</button>
+                <button v-if="esInactivo(r)" class="mini mini-ok" @click="pedirCambioEstado(r)">Activar</button>
+                <button v-else class="mini mini-danger" :disabled="esSuperadmin(r)" @click="pedirCambioEstado(r)">Desactivar</button>
               </td>
             </tr>
           </tbody>
@@ -56,14 +59,23 @@
         </div>
       </div>
 
-      <!-- MODAL ELIMINAR -->
-      <div v-if="eliminar.visible" class="overlay" @click.self="eliminar.visible = false">
+      <!-- MODAL ACTIVAR / DESACTIVAR -->
+      <div v-if="cambio.visible" class="overlay" @click.self="cambio.visible = false">
         <div class="modal">
-          <h2>Eliminar rol</h2>
-          <p>¿Eliminar el rol <strong>{{ eliminar.rol?.Nombre_Rol }}</strong>? Esta acción no se puede deshacer.</p>
+          <h2>{{ cambio.activar ? 'Activar rol' : 'Desactivar rol' }}</h2>
+          <p v-if="cambio.activar">
+            ¿Activar el rol <strong>{{ cambio.rol?.Nombre_Rol }}</strong>? Sus usuarios podrán volver a iniciar sesión.
+          </p>
+          <p v-else>
+            ¿Desactivar el rol <strong>{{ cambio.rol?.Nombre_Rol }}</strong>?
+            Sus {{ cambio.rol?.Total_Usuarios }} usuario(s), en todas las empresas, no podrán iniciar sesión
+            y sus sesiones abiertas se cortarán hasta que lo vuelvas a activar.
+          </p>
           <div class="modal-actions">
-            <button class="btn-cancel" @click="eliminar.visible = false">Cancelar</button>
-            <button class="btn-danger" :disabled="eliminando" @click="confirmarEliminar">{{ eliminando ? 'Eliminando...' : 'Eliminar' }}</button>
+            <button class="btn-cancel" @click="cambio.visible = false">Cancelar</button>
+            <button :class="cambio.activar ? 'btn-submit' : 'btn-danger'" :disabled="cambiando" @click="confirmarCambioEstado">
+              {{ cambiando ? 'Guardando...' : (cambio.activar ? 'Activar' : 'Desactivar') }}
+            </button>
           </div>
         </div>
       </div>
@@ -74,15 +86,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import AppSidebar from '../../components/AppSidebar.vue'
-import { getRolesGlobales, crearRolGlobal, actualizarRolGlobal, eliminarRolGlobal } from '../../services/api.js'
+import { getRolesGlobales, crearRolGlobal, actualizarRolGlobal, desactivarRolGlobal, activarRolGlobal } from '../../services/api.js'
 
 const roles = ref([])
 const cargando = ref(true)
 const guardando = ref(false)
-const eliminando = ref(false)
+const cambiando = ref(false)
 const toast = ref({ visible: false, msg: '', type: 'success' })
 const modal = ref({ visible: false, id: null, nombre: '', error: '' })
-const eliminar = ref({ visible: false, rol: null })
+const cambio = ref({ visible: false, rol: null, activar: false })
 
 function mostrarToast(msg, type = 'success') {
   toast.value = { visible: true, msg, type }
@@ -122,20 +134,25 @@ async function guardar() {
   }
 }
 
-function pedirEliminar(r) { eliminar.value = { visible: true, rol: r } }
+const esInactivo = (r) => r.Estado === 'inactivo'
+const esSuperadmin = (r) => String(r.Nombre_Rol || '').trim().toLowerCase() === 'superadmin'
 
-async function confirmarEliminar() {
-  eliminando.value = true
+function pedirCambioEstado(r) { cambio.value = { visible: true, rol: r, activar: esInactivo(r) } }
+
+async function confirmarCambioEstado() {
+  const { rol, activar } = cambio.value
+  cambiando.value = true
   try {
-    await eliminarRolGlobal(eliminar.value.rol.Id_Rol)
-    eliminar.value.visible = false
-    mostrarToast('Rol eliminado')
+    if (activar) await activarRolGlobal(rol.Id_Rol)
+    else await desactivarRolGlobal(rol.Id_Rol)
+    cambio.value.visible = false
+    mostrarToast(activar ? 'Rol activado' : 'Rol desactivado')
     await cargar()
   } catch (e) {
-    eliminar.value.visible = false
-    mostrarToast(e.message || 'No se pudo eliminar', 'error')
+    cambio.value.visible = false
+    mostrarToast(e.message || 'No se pudo cambiar el estado', 'error')
   } finally {
-    eliminando.value = false
+    cambiando.value = false
   }
 }
 
@@ -166,6 +183,11 @@ onMounted(cargar)
 .mini:hover:not(:disabled) { background: #f3f4f6; }
 .mini:disabled { opacity: 0.4; cursor: not-allowed; }
 .mini-danger { color: #dc2626; border-color: #fecaca; }
+.mini-ok { color: #15803d; border-color: #bbf7d0; }
+.tag-on { background: #dcfce7; color: #15803d; }
+.tag-off { background: #fee2e2; color: #b91c1c; }
+.fila-inactiva td { color: #9ca3af; }
+.fila-inactiva .nombre { color: #9ca3af; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
 .modal { background: white; border-radius: 14px; padding: 24px; width: 100%; max-width: 420px; }
 .modal h2 { margin: 0 0 14px; font-size: 18px; }

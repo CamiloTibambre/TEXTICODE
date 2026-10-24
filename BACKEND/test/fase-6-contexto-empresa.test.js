@@ -8,7 +8,7 @@ const state = {
     Nombre_Completo: 'Usuario de prueba',
     Nombre_Usuario: 'usuario_fase6',
     Correo: 'fase6@example.invalid',
-    Contrasena: 'clave-local',
+    Contrasena: '$2b$10$hash-de-clave-local',
     Estado: 'activo',
     Id_Rol: 1,
     Rol: 'Administrador',
@@ -52,6 +52,8 @@ const database = {
           ...state.user,
           Membresia_Id_Empresa: member?.Id_Empresa ?? null,
           Nombre_Empresa: member?.Nombre_Empresa ?? null,
+          Membresia_Id_Rol: member?.Id_Rol ?? null,
+          Membresia_Rol: member?.Rol ?? null,
         }] : [],
       }
     }
@@ -99,12 +101,12 @@ const express = {
 
 globalThis.__fase61Mocks = {
   database,
-  env: { jwtSecret: 'mock-secret', jwtExpires: '1h', sendgridApiKey: '' },
+  env: { jwtSecret: 'mock-secret', jwtExpires: '1h', sendgridApiKey: '', googleAllowedAudiences: ['mock-client-id'] },
   express,
   jwt,
   sgMail: { setApiKey() {}, async send() { return [{}] } },
   google: { async exchangeMobileAuthCode() {}, async upsertGoogleTokens() {} },
-  bcrypt: { async compare() { return false }, async hash() { return 'mock-hash' } },
+  bcrypt: { async compare(plain, hash) { return plain === 'clave-local' && hash.startsWith('$2') }, async hash() { return 'mock-hash' } },
   auth: null,
   service: null,
 }
@@ -162,7 +164,7 @@ function resetState() {
     Nombre_Completo: 'Usuario de prueba',
     Nombre_Usuario: 'usuario_fase6',
     Correo: 'fase6@example.invalid',
-    Contrasena: 'clave-local',
+    Contrasena: '$2b$10$hash-de-clave-local',
     Estado: 'activo',
     Id_Rol: 1,
     Rol: 'Administrador',
@@ -219,7 +221,9 @@ test('P1: login deriva la empresa única e ignora la empresa del cliente; select
   assert.equal(state.tokens.get(selectionRes.body.token).empresa, 4)
 
   const previousFetch = globalThis.fetch
-  globalThis.fetch = async () => ({ ok: true, async json() { return { email: state.user.Correo, sub: 'mock-google-sub' } } })
+  globalThis.fetch = async () => ({ ok: true, async json() {
+    return { email: state.user.Correo, sub: 'mock-google-sub', aud: 'mock-client-id', iss: 'https://accounts.google.com', email_verified: 'true' }
+  } })
   try {
     const googleRes = makeResponse()
     await state.routes.get('POST /google/mobile')({ body: { idToken: 'mock-google-id-token' }, headers: {} }, googleRes)
@@ -303,7 +307,7 @@ test('P7: token ausente, vencido e con firma inválida mantienen rechazo HTTP 40
   }
 })
 
-test('P8: usuario inactivo sigue en 403 y un rol distinto conserva el rol del token como antes', async () => {
+test('P8: usuario inactivo sigue en 403 y el rol sale de la membresía en BD, no del token', async () => {
   resetState()
   state.user.Estado = 'inactivo'
   const inactiveReq = signedRequest({ id: 7, rol: 1, usuario: 'usuario_fase6', empresa: 4 })
@@ -319,7 +323,18 @@ test('P8: usuario inactivo sigue en 403 y un rol distinto conserva el rol del to
   let roleNext = false
   await auth.requireAuth(roleReq, roleRes, () => { roleNext = true })
   assert.equal(roleNext, true)
-  assert.equal(roleReq.auth.rol, 2)
+  // El token dice rol 2, pero la membresía activa tiene rol 1: manda la base.
+  assert.equal(roleReq.auth.rol, 1)
+  assert.equal(roleReq.auth.rolNombre, 'Administrador')
+
+  resetState()
+  state.memberships = [{ ...activeMembership(), Id_Rol: 3, Rol: 'cliente' }]
+  const demotedReq = signedRequest({ id: 7, rol: 1, rolNombre: 'Administrador', usuario: 'usuario_fase6', empresa: 4 })
+  let demotedNext = false
+  await auth.requireAuth(demotedReq, makeResponse(), () => { demotedNext = true })
+  assert.equal(demotedNext, true)
+  assert.equal(demotedReq.auth.rol, 3)
+  assert.equal(demotedReq.auth.rolNombre, 'cliente')
 
   resetState()
   state.membershipTablesMissing = true

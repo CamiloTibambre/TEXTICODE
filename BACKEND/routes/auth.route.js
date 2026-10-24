@@ -107,8 +107,12 @@ router.post('/select-empresa', async (req, res) => {
       usuario: result.usuario,
     })
   } catch (err) {
-    const status = err.statusCode || 500
-    return res.status(status).json({ error: err.message })
+    if (err.statusCode) return res.status(err.statusCode).json({ error: err.message })
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token de selección inválido o expirado.' })
+    }
+    console.error(err)
+    return res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -130,7 +134,13 @@ router.post('/google/mobile', async (req, res) => {
     )
     const info = await infoRes.json()
 
-    if (!infoRes.ok || !info.email) {
+    // El token debe haber sido emitido para ESTA app (aud), por Google (iss) y con correo verificado;
+    // si no, cualquier idToken de otra app con el correo de la víctima abriría su sesión.
+    const audiencias = env.googleAllowedAudiences || []
+    const emisorValido = ['accounts.google.com', 'https://accounts.google.com'].includes(info.iss)
+    const correoVerificado = info.email_verified === true || info.email_verified === 'true'
+    if (!infoRes.ok || !info.email || !emisorValido || !correoVerificado
+      || !audiencias.length || !audiencias.includes(info.aud)) {
       return res.status(401).json({ error: 'Token de Google inválido.' })
     }
 
@@ -172,6 +182,9 @@ router.post('/google/mobile', async (req, res) => {
       return res.status(409).json({ error: 'La cuenta no tiene una membresía empresarial única.' })
     }
     const membership = memberships?.[0] || null
+    if (membership?.Rol_Estado === 'inactivo') {
+      return res.status(403).json({ error: 'Tu rol está desactivado. Contacta al administrador.' })
+    }
     const sessionUser = membership ? {
       ...user,
       Id_Empresa: membership.Id_Empresa,

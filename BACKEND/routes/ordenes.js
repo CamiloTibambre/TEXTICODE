@@ -39,8 +39,8 @@ router.get('/', requireRoles('admin'), async (req, res) => {
 
     res.json(rows)
   } catch (err) {
-    console.error('ERROR:', err)
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -73,7 +73,8 @@ router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin
     `, [req.params.idOperario, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -96,7 +97,8 @@ router.get('/cliente/:idCliente', requireSelfParamOrRoles('idCliente', 'admin'),
     `, [req.params.idCliente, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -137,7 +139,8 @@ router.get('/:id', async (req, res) => {
     }
     res.json(orden)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -162,7 +165,8 @@ router.get('/estado/:estado', requireRoles('admin'), async (req, res) => {
     `, [req.params.estado, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -214,7 +218,8 @@ router.post('/', requireRoles('admin'), async (req, res) => {
   } catch (err) {
     if (err.code === '23503')
       return res.status(400).json({ error: 'Cliente, material u operario no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -279,7 +284,8 @@ router.put('/:id', requireRoles('admin'), async (req, res) => {
   } catch (err) {
     if (err.code === '23503')
       return res.status(400).json({ error: 'Cliente, material u operario no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -295,7 +301,8 @@ router.delete('/:id', requireRoles('admin'), async (req, res) => {
   } catch (err) {
     if (err.code === '23503')
       return res.status(409).json({ error: 'No se puede eliminar la orden porque tiene registros asociados.' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 

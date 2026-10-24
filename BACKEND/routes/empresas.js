@@ -85,7 +85,8 @@ router.get('/correos/estadisticas', async (req, res) => {
     }
     res.json({ fecha: porEmpresa.fecha, global, errorGlobal, empresas: porEmpresa.empresas })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
