@@ -9,10 +9,14 @@ const router = Router()
 router.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT * FROM rol WHERE lower(trim("Nombre_Rol")) <> 'superadmin' ORDER BY "Id_Rol"`)
+      // Los roles desactivados no se ofrecen al admin para asignarlos.
+      `SELECT * FROM rol WHERE lower(trim("Nombre_Rol")) <> 'superadmin'
+         AND COALESCE(to_jsonb(rol) ->> 'Estado', 'activo') <> 'inactivo'
+       ORDER BY "Id_Rol"`)
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -23,7 +27,8 @@ router.get('/:id', async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Rol no encontrado' })
     res.json(rows[0])
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 

@@ -3,6 +3,12 @@ import cors from 'cors'
 import { env, validateEnv } from './config/env.js'
 import { requireAuth } from './middleware/auth.js'
 import { requireRoles } from './middleware/roles.js'
+import {
+  limiteLoginCuenta,
+  limiteLoginIp,
+  limiteRecuperacion,
+  limiteTokenRecuperacion,
+} from './middleware/rateLimit.js'
 import { checkDatabaseConnection } from './db.js'
 
 import usuariosRouter       from './routes/usuarios.js'
@@ -33,6 +39,19 @@ app.use(cors({
   ] 
 }))
 app.use(express.json({ limit: '10mb' }))
+
+// Detrás de un proxy (Render, Nginx...) define TRUST_PROXY para que req.ip sea la IP real del cliente.
+if (process.env.TRUST_PROXY) {
+  const valor = process.env.TRUST_PROXY
+  app.set('trust proxy', /^\d+$/.test(valor) ? Number(valor) : valor === 'true' ? true : valor)
+}
+
+// Límite de intentos en rutas de autenticación (antes de los routers).
+app.post(['/api/auth/login', '/api/usuarios/login'], limiteLoginIp, limiteLoginCuenta)
+app.post('/api/auth/google/mobile', limiteLoginIp)
+app.post('/api/auth/recuperar-contrasena', limiteRecuperacion)
+app.get('/api/auth/validar-token', limiteTokenRecuperacion)
+app.post('/api/auth/cambiar-contrasena', limiteTokenRecuperacion)
 
 app.get('/health', async (req, res) => {
   res.json({ ok: true, service: 'texticode-api' })
@@ -101,7 +120,12 @@ export async function startServer() {
   try {
     await checkDatabaseConnection()
   } catch (err) {
-    console.error('❌ Error conectando a Supabase:', err.message)
+    // ECONNREFUSED llega como AggregateError con message vacío: se muestra el código y el destino.
+    const detalle = err.message || [err.code, ...(err.errors || []).map(e => `${e.address}:${e.port}`)].filter(Boolean).join(' ')
+    console.error('❌ Error conectando a la base de datos:', detalle)
+    if (err.code === 'ECONNREFUSED') {
+      console.error('   ¿Está levantada la base? Para la local: docker compose up -d db')
+    }
     process.exit(1)
   }
 

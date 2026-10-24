@@ -16,7 +16,8 @@ router.get('/orden/:idOrden', requireRoles('admin'), async (req, res) => {
     `, [req.params.idOrden, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -32,7 +33,8 @@ router.get('/usuario/:idUsuario', requireSelfParamOrRoles('idUsuario', 'admin'),
     `, [req.params.idUsuario, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -55,7 +57,8 @@ router.post('/', requireRoles('admin'), async (req, res) => {
       return res.status(409).json({ error: 'El usuario ya está asignado a esa orden' })
     if (err.code === '23503')
       return res.status(400).json({ error: 'La orden o el usuario no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -69,7 +72,8 @@ router.delete('/:idUsuario/:idOrden', requireRoles('admin'), async (req, res) =>
     if (rowCount === 0) return res.status(404).json({ error: 'Asignación no encontrada' })
     res.json({ mensaje: 'Usuario desasignado de la orden' })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 

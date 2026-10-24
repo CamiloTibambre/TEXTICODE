@@ -67,6 +67,13 @@ export const getRol      = (id)       => request(`/roles/${id}`)
 export const crearRol    = (body)     => request('/roles', { method: 'POST', body: JSON.stringify(body) })
 export const eliminarRol = (id)       => request(`/roles/${id}`, { method: 'DELETE' })
 
+// ── ROLES (superadmin) ────────────────────────────────────
+export const getRolesGlobales     = ()         => request('/superadmin/roles')
+export const crearRolGlobal       = (body)     => request('/superadmin/roles', { method: 'POST', body: JSON.stringify(body) })
+export const actualizarRolGlobal  = (id, body) => request(`/superadmin/roles/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+export const desactivarRolGlobal  = (id)       => request(`/superadmin/roles/${id}/desactivar`, { method: 'PATCH' })
+export const activarRolGlobal     = (id)       => request(`/superadmin/roles/${id}/activar`, { method: 'PATCH' })
+
 // ── ORDEN MATERIAL ────────────────────────────────────────
 export const getMaterialesDeOrden  = (idOrden)              => request(`/orden-material/orden/${idOrden}`)
 export const agregarMaterialOrden  = (body)                 => request('/orden-material', { method: 'POST', body: JSON.stringify(body) })
@@ -152,7 +159,7 @@ async function requestAuth(url, options = {}) {
   return data
 }
 
-export const getGoogleAuthUrl             = (action = 'link') => requestAuth(`/google/auth-url?action=${encodeURIComponent(action)}`)
+export const getGoogleAuthUrl             = (action = 'link', nonce = '') => requestAuth(`/google/auth-url?action=${encodeURIComponent(action)}${nonce ? `&nonce=${encodeURIComponent(nonce)}` : ''}`)
 export const getGoogleCalendarStatus      = ()                 => requestAuth('/google/status')
 export const updateGoogleCalendarSettings = (body)            => requestAuth('/google/settings', { method: 'PATCH', body: JSON.stringify(body) })
 export const unlinkGoogleCalendar         = ()                 => requestAuth('/google/unlink', { method: 'DELETE' })

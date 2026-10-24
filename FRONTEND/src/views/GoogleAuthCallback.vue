@@ -35,12 +35,22 @@ function getRuta(usuario) {
 }
 
 onMounted(() => {
-  const status = route.query.status
+  // El login llega en el fragmento (#) para que el token no quede en logs ni en el Referer.
+  const hash = new URLSearchParams(window.location.hash.slice(1))
+  if (window.location.hash) {
+    history.replaceState(history.state, '', window.location.pathname + window.location.search)
+  }
+  const status = hash.get('status') || route.query.status
 
   if (status === 'login') {
+    const nonceGuardado = sessionStorage.getItem('google_oauth_nonce')
+    sessionStorage.removeItem('google_oauth_nonce')
     try {
-      const usuario = parseBase64UrlJson(route.query.usuario)
-      const token = String(route.query.token || '')
+      if (!nonceGuardado || hash.get('nonce') !== nonceGuardado) {
+        throw new Error('El inicio de sesión con Google no se inició desde este navegador.')
+      }
+      const usuario = parseBase64UrlJson(hash.get('usuario'))
+      const token = String(hash.get('token') || '')
       if (!token || !usuario?.Id_Usuario) throw new Error('Respuesta de autenticación incompleta.')
       const sessionUser = auth.guardarSesionGoogle(token, usuario)
       title.value = 'Inicio con Google exitoso'

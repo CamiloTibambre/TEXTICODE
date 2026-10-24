@@ -72,13 +72,16 @@ export async function requireAuth(req, res, next) {
       result = await db.query(
         `SELECT u."Id_Usuario", u."Nombre_Usuario", u."Nombre_Completo",
                 u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol",
-                ue."Id_Empresa" AS "Membresia_Id_Empresa", e."Nombre_Empresa"
+                ue."Id_Empresa" AS "Membresia_Id_Empresa", e."Nombre_Empresa",
+                ue."Id_Rol" AS "Membresia_Id_Rol", rm."Nombre_Rol" AS "Membresia_Rol",
+                to_jsonb(rm) ->> 'Estado' AS "Membresia_Rol_Estado"
          FROM usuario u
          INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
          LEFT JOIN usuario_empresa ue
            ON ue."Id_Usuario" = u."Id_Usuario"
           AND ue."Id_Empresa" = $2
           AND ue."Estado" = 'activo'
+         LEFT JOIN rol rm ON rm."Id_Rol" = ue."Id_Rol"
          LEFT JOIN empresa e
            ON e."Id_Empresa" = ue."Id_Empresa"
           AND e."Estado" = 'activa'
@@ -95,7 +98,8 @@ export async function requireAuth(req, res, next) {
       legacySchema = true
       result = await db.query(
         `SELECT u."Id_Usuario", u."Nombre_Usuario", u."Nombre_Completo",
-                u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol"
+                u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol",
+                to_jsonb(r) ->> 'Estado' AS "Rol_Estado"
          FROM usuario u
          INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
          WHERE u."Id_Usuario" = $1
@@ -117,11 +121,17 @@ export async function requireAuth(req, res, next) {
     if (!legacySchema && user.Nombre_Empresa == null) {
       return res.status(403).json({ error: 'La empresa está inactiva.' })
     }
+    // Un rol desactivado por el superadmin corta también las sesiones ya abiertas.
+    if ((legacySchema ? user.Rol_Estado : user.Membresia_Rol_Estado) === 'inactivo') {
+      return res.status(403).json({ error: 'Tu rol está desactivado. Contacta al administrador.' })
+    }
 
     const activeEmpresaId = legacySchema ? null : tokenEmpresaId
     const activeEmpresaNombre = legacySchema ? null : user.Nombre_Empresa
-    const activeRol = payload.rol || user.Id_Rol
-    const activeRolNombre = payload.rolNombre || user.Rol
+    // El rol sale de la base (membresía activa, o el usuario en el esquema legado), no del token:
+    // así un cambio de rol surte efecto en la siguiente petición y no al vencer el JWT.
+    const activeRol = legacySchema ? user.Id_Rol : (user.Membresia_Id_Rol ?? user.Id_Rol)
+    const activeRolNombre = legacySchema ? user.Rol : (user.Membresia_Rol ?? user.Rol)
 
     req.auth = {
       id: user.Id_Usuario,

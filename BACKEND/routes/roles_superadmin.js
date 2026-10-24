@@ -23,14 +23,15 @@ function validarNombre(raw) {
 router.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT r."Id_Rol", r."Nombre_Rol", COUNT(u."Id_Usuario")::int AS "Total_Usuarios"
+      `SELECT r."Id_Rol", r."Nombre_Rol", r."Estado", COUNT(u."Id_Usuario")::int AS "Total_Usuarios"
          FROM rol r LEFT JOIN usuario u ON u."Id_Rol" = r."Id_Rol"
-        GROUP BY r."Id_Rol", r."Nombre_Rol"
+        GROUP BY r."Id_Rol", r."Nombre_Rol", r."Estado"
         ORDER BY r."Id_Rol"`
     )
     res.json(rows.map(r => ({ ...r, Protegido: esProtegido(r.Nombre_Rol) })))
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -44,7 +45,8 @@ router.post('/', async (req, res) => {
     res.status(201).json({ mensaje: 'Rol creado', Id_Rol: rows[0].Id_Rol })
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ese rol ya existe' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -61,26 +63,29 @@ router.put('/:id', async (req, res) => {
     res.json({ mensaje: 'Rol actualizado' })
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Ese rol ya existe' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
-// DELETE (la FK usuario→rol es ON DELETE CASCADE: se bloquea si hay usuarios)
-router.delete('/:id', async (req, res) => {
+// Los roles no se eliminan (la FK usuario→rol es ON DELETE CASCADE y borraría a sus usuarios):
+// se desactivan. Con el rol inactivo, sus usuarios no pueden iniciar sesión hasta reactivarlo.
+async function cambiarEstado(req, res, estado) {
   try {
-    const { rows } = await pool.query(
-      `SELECT r."Nombre_Rol", (SELECT COUNT(*)::int FROM usuario u WHERE u."Id_Rol" = r."Id_Rol") AS n
-         FROM rol r WHERE r."Id_Rol" = $1`, [req.params.id])
+    const { rows } = await pool.query('SELECT "Nombre_Rol" FROM rol WHERE "Id_Rol" = $1', [req.params.id])
     if (!rows.length) return res.status(404).json({ error: 'Rol no encontrado' })
-    if (esProtegido(rows[0].Nombre_Rol))
-      return res.status(403).json({ error: 'Los roles base del sistema no se pueden eliminar.' })
-    if (rows[0].n > 0)
-      return res.status(409).json({ error: `No se puede eliminar: ${rows[0].n} usuario(s) tienen este rol.` })
-    await pool.query('DELETE FROM rol WHERE "Id_Rol" = $1', [req.params.id])
-    res.json({ mensaje: 'Rol eliminado' })
+    if (estado === 'inactivo' && norm(rows[0].Nombre_Rol) === 'superadmin')
+      return res.status(403).json({ error: 'El rol superadmin no se puede desactivar.' })
+    await pool.query('UPDATE rol SET "Estado" = $1 WHERE "Id_Rol" = $2', [estado, req.params.id])
+    res.json({ mensaje: estado === 'activo' ? 'Rol activado' : 'Rol desactivado' })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
-})
+}
+
+// PATCH desactivar / activar
+router.patch('/:id/desactivar', (req, res) => cambiarEstado(req, res, 'inactivo'))
+router.patch('/:id/activar', (req, res) => cambiarEstado(req, res, 'activo'))
 
 export default router

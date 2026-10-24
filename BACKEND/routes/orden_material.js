@@ -18,7 +18,8 @@ router.get('/orden/:idOrden', async (req, res) => {
     `, [req.params.idOrden, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -75,7 +76,8 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'Ese material ya está en la orden' })
     if (err.code === '23503')
       return res.status(400).json({ error: 'La orden o el material no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -151,7 +153,8 @@ router.put('/:idOrden/:idProducto', async (req, res) => {
     await client.query('ROLLBACK')
     if (err.code === '23503')
       return res.status(400).json({ error: 'La orden o el material no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -192,7 +195,8 @@ router.delete('/:idOrden/:idProducto', async (req, res) => {
     await client.query('ROLLBACK')
     if (err.code === '23503')
       return res.status(400).json({ error: 'La orden o el material no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }

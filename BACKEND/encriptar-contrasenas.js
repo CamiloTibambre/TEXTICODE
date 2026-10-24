@@ -1,5 +1,7 @@
 // encriptar-contrasenas.js
-// Ejecuta este script UNA SOLA VEZ para encriptar las contraseñas existentes
+// Encripta con bcrypt las contraseñas que sigan en texto plano.
+// El login ya NO acepta contraseñas sin hash: ejecútalo en cada base (local, staging, Supabase).
+// Es idempotente: las que ya tienen hash se omiten.
 // Comando: node encriptar-contrasenas.js
 
 import pool from './db.js'
@@ -9,33 +11,31 @@ async function encriptarTodas() {
   try {
     console.log('🔐 Iniciando encriptación de contraseñas...\n')
 
-    // Obtener todos los usuarios con contraseñas en texto plano
-    const [usuarios] = await pool.query(
-      `SELECT Id_Usuario, Nombre_Usuario, Contrasena FROM usuario`
+    const { rows: usuarios } = await pool.query(
+      `SELECT "Id_Usuario", "Nombre_Usuario", "Contrasena" FROM usuario`
     )
 
     let encriptados = 0
     let omitidos    = 0
 
     for (const u of usuarios) {
-      // Si ya está encriptada con bcrypt, omitir
-      if (u.Contrasena.startsWith('$2')) {
-        console.log(`⏭️  ${u.Nombre_Usuario} — ya encriptada, omitiendo`)
+      if (!u.Contrasena || u.Contrasena.startsWith('$2')) {
         omitidos++
         continue
       }
 
-      // Encriptar y actualizar en la BD
       const hash = await bcrypt.hash(u.Contrasena, 10)
+      // La condición evita pisar una contraseña que alguien cambió mientras corría el script.
       await pool.query(
-        `UPDATE usuario SET Contrasena = ? WHERE Id_Usuario = ?`,
-        [hash, u.Id_Usuario]
+        `UPDATE usuario SET "Contrasena" = $1 WHERE "Id_Usuario" = $2 AND "Contrasena" = $3`,
+        [hash, u.Id_Usuario, u.Contrasena]
       )
       console.log(`✅ ${u.Nombre_Usuario} — encriptada correctamente`)
       encriptados++
     }
 
     console.log(`\n✔️  Listo: ${encriptados} encriptadas, ${omitidos} omitidas`)
+    await pool.end()
     process.exit(0)
 
   } catch (err) {

@@ -370,7 +370,11 @@ async function iniciarSesionGoogle() {
   error.value = ''
   loading.value = true
   try {
-    const data = await getGoogleAuthUrl('login')
+    // Nonce de un solo uso: el callback solo acepta la sesión si vuelve este mismo valor.
+    const bytes = crypto.getRandomValues(new Uint8Array(24))
+    const nonce = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+    sessionStorage.setItem('google_oauth_nonce', nonce)
+    const data = await getGoogleAuthUrl('login', nonce)
     window.location.href = data.url
   } catch (e) {
     error.value = e?.message || 'No se pudo iniciar con Google.'

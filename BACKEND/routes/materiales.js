@@ -18,7 +18,8 @@ router.get('/', requireRoles('admin'), async (req, res) => {
     `, [req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -53,7 +54,8 @@ router.get('/reportes/historial', requireRoles('admin'), async (req, res) => {
     `, [`${periodo}-01`, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -70,7 +72,8 @@ router.get('/cliente/:idCliente', requireSelfParamOrRoles('idCliente', 'admin'),
     `, [req.params.idCliente, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -87,7 +90,8 @@ router.get('/alertas/stock-bajo', requireRoles('admin'), async (req, res) => {
     `, [req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -107,7 +111,8 @@ router.get('/:id', async (req, res) => {
     }
     res.json(rows[0])
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -123,7 +128,8 @@ router.get('/:id/movimientos', requireRoles('admin'), async (req, res) => {
     `, [req.params.id, req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -173,7 +179,8 @@ router.post('/', requireRoles('admin'), async (req, res) => {
       return res.status(409).json({ error: 'Ya existe un material con ese nombre' })
     if (err.code === '23503')
       return res.status(400).json({ error: 'La referencia indicada no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -256,7 +263,8 @@ router.put('/:id', requireRoles('admin'), async (req, res) => {
     await client.query('ROLLBACK')
     if (err.code === '23505') return res.status(409).json({ error: 'Ya existe un material con ese nombre' })
     if (err.code === '23503') return res.status(400).json({ error: 'La referencia indicada no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }
@@ -305,7 +313,8 @@ router.delete('/:id', requireRoles('admin'), async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK')
     if (err.code === '23503') return res.status(400).json({ error: 'La referencia indicada no existe o no pertenece a esta empresa' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   } finally {
     client.release()
   }

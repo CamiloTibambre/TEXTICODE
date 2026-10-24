@@ -12,7 +12,7 @@ export function sanitizeUser(user) {
 
 /**
  * Autentica las credenciales de un usuario buscando por Correo o Nombre_Usuario.
- * Admite contraseñas con hash bcrypt ($2...) y contraseñas legadas en texto plano.
+ * Solo admite contraseñas con hash bcrypt ($2...).
  *
  * @param {object} dbClient Cliente o pool de base de datos con método query()
  * @param {object} credentials { identificador, contrasena }
@@ -44,23 +44,26 @@ export async function authenticateCredentials(dbClient, { identificador, contras
 
   const user = rows[0]
 
-  if (user.Estado === 'inactivo') {
-    const error = new Error('Tu cuenta está inactiva. Contacta al administrador.')
-    error.statusCode = 403
-    throw error
-  }
-
+  // Solo se aceptan contraseñas con hash bcrypt. Una contraseña guardada en texto plano
+  // no autentica: hay que migrarla con encriptar-contrasenas.js o restablecerla.
   let passwordValida = false
-  const esHash = user.Contrasena && user.Contrasena.startsWith('$2')
+  const esHash = typeof user.Contrasena === 'string' && user.Contrasena.startsWith('$2')
   if (esHash) {
     passwordValida = await bcrypt.compare(contrasena, user.Contrasena)
   } else {
-    passwordValida = (contrasena === user.Contrasena)
+    console.warn(`[auth] Usuario ${user.Id_Usuario} tiene una contraseña sin hash; se rechaza el login.`)
   }
 
   if (!passwordValida) {
     const error = new Error('Credenciales incorrectas.')
     error.statusCode = 401
+    throw error
+  }
+
+  // El estado se revela solo después de validar la contraseña (evita enumerar cuentas).
+  if (user.Estado === 'inactivo') {
+    const error = new Error('Tu cuenta está inactiva. Contacta al administrador.')
+    error.statusCode = 403
     throw error
   }
 
@@ -81,7 +84,7 @@ export async function getUserMemberships(dbClient, idUsuario) {
     const { rows } = await dbClient.query(
       `SELECT ue."Id_Empresa", e."Nombre_Empresa", e."Estado" AS "Empresa_Estado",
               ue."Id_Rol", r."Nombre_Rol" AS "Rol", ue."Estado" AS "Membresia_Estado",
-              ue."Es_Principal"
+              ue."Es_Principal", to_jsonb(r) ->> 'Estado' AS "Rol_Estado"
        FROM usuario_empresa ue
        INNER JOIN empresa e ON e."Id_Empresa" = ue."Id_Empresa"
        INNER JOIN rol r ON r."Id_Rol" = ue."Id_Rol"
@@ -227,9 +230,22 @@ export async function selectEmpresa(dbClient, { userId, selectionToken }) {
 }
 
 /**
+ * Lanza 403 si el rol de la membresía está desactivado por el superadmin.
+ * (to_jsonb(...)->>'Estado' es NULL si la columna aún no existe: se trata como activo.)
+ */
+export function assertRolActivo(membership) {
+  if (membership && membership.Rol_Estado === 'inactivo') {
+    const error = new Error('Tu rol está desactivado. Contacta al administrador.')
+    error.statusCode = 403
+    throw error
+  }
+}
+
+/**
  * Construye y emite la sesión final para la empresa seleccionada.
  */
 function issueTenantSession(user, membership) {
+  assertRolActivo(membership)
   const sessionUser = {
     ...user,
     Id_Empresa: membership.Id_Empresa,

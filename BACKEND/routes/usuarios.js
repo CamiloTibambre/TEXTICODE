@@ -90,7 +90,8 @@ router.get('/', requireAuth, requireRoles('admin'), async (req, res) => {
     `, [req.auth.empresaId])
     res.json(rows)
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -110,7 +111,8 @@ router.get('/:id', requireAuth, requireSelfParamOrRoles('id', 'admin'), async (r
     if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' })
     res.json(rows[0])
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -167,7 +169,8 @@ router.post('/login', async (req, res) => {
     if (err.statusCode) {
       return res.status(err.statusCode).json({ error: err.message })
     }
-    return res.status(500).json({ error: err.message })
+    console.error(err)
+    return res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -210,7 +213,8 @@ router.post('/', requireAuth, requireRoles('admin'), async (req, res) => {
       return res.status(409).json({ error: 'El correo o nombre de usuario ya existe' })
     if (err.code === '23503')
       return res.status(400).json({ error: 'El rol indicado no existe.' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -274,7 +278,8 @@ router.put('/:id', requireAuth, requireSelfParamOrRoles('id', 'admin'), async (r
       return res.status(409).json({ error: 'El correo o nombre de usuario ya existe' })
     if (err.code === '23503')
       return res.status(400).json({ error: 'El rol indicado no existe.' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -294,7 +299,8 @@ router.patch('/:id/inactivar', requireAuth, requireRoles('admin'), async (req, r
     if (!encontrado) return res.status(404).json({ error: 'Usuario no encontrado' })
     res.json({ mensaje: 'Usuario inactivado' })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 
@@ -314,7 +320,8 @@ router.delete('/:id', requireAuth, requireRoles('admin'), async (req, res) => {
     // Las FKs de la base impiden borrar usuarios con órdenes, materiales o comprobantes.
     if (err.code === '23503')
       return res.status(409).json({ error: 'No se puede eliminar: el usuario tiene registros asociados. Inactívalo en su lugar.' })
-    res.status(500).json({ error: err.message })
+    console.error(err)
+    res.status(500).json({ error: 'Error interno del servidor.' })
   }
 })
 

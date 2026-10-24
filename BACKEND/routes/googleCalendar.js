@@ -12,6 +12,7 @@ const GOOGLE_CLIENT_SECRET = env.googleClientSecret
 const GOOGLE_REDIRECT_URI  = env.googleRedirectUri
 const FRONTEND_URL         = env.frontendUrl
 const ALLOW_DIFFERENT_EMAILS = process.env.GOOGLE_ALLOW_DIFFERENT_EMAILS === 'true'
+const GOOGLE_STATE_PURPOSE   = 'google_oauth_state'
 
 const GOOGLE_SCOPES = [
   'openid',
@@ -193,7 +194,15 @@ router.get('/auth-url', async (req, res) => {
   if (!requireGoogleConfig(res)) return
 
   const action = req.query.action === 'login' ? 'login' : 'link'
-  let statePayload = { action }
+  // Nonce generado por el navegador que inicia el flujo: vuelve en el callback y el frontend
+  // solo acepta la sesión si coincide con el que guardó (evita el CSRF de login).
+  const nonce = typeof req.query.nonce === 'string' && /^[A-Za-z0-9_-]{16,128}$/.test(req.query.nonce)
+    ? req.query.nonce
+    : null
+  if (action === 'login' && !nonce) {
+    return res.status(400).json({ error: 'Falta el nonce del inicio de sesión con Google.' })
+  }
+  let statePayload = { purpose: GOOGLE_STATE_PURPOSE, action, nonce }
 
   if (action === 'link') {
     const token = getBearerToken(req)
@@ -206,7 +215,7 @@ router.get('/auth-url', async (req, res) => {
       if (!empresaActual || (empresaToken && String(empresaActual) !== String(empresaToken))) {
         return res.status(403).json({ error: 'Tu usuario no tiene una empresa activa.' })
       }
-      statePayload = { action, id: auth.id }
+      statePayload = { ...statePayload, id: auth.id }
     } catch {
       return res.status(401).json({ error: 'Sesión inválida o expirada.' })
     }
@@ -236,6 +245,7 @@ router.get('/callback', async (req, res) => {
       throw new Error('Google OAuth no está configurado en el servidor.')
 
     const payload      = jwt.verify(state, env.jwtSecret)
+    if (payload?.purpose !== GOOGLE_STATE_PURPOSE) throw new Error('Estado de Google OAuth inválido.')
     const tokenPayload = await exchangeCodeForTokens(code)
     const profile      = await getGoogleProfile(tokenPayload.access_token)
 
@@ -259,13 +269,15 @@ router.get('/callback', async (req, res) => {
     const { rows } = await db.query(
       `SELECT u."Id_Usuario", u."Nombre_Completo", u."Nombre_Usuario",
               u."Correo", u."Estado", u."Id_Rol", r."Nombre_Rol" AS "Rol",
-              g."Id_Empresa", e."Nombre_Empresa"
+              g."Id_Empresa", e."Nombre_Empresa",
+              to_jsonb(rm) ->> 'Estado' AS "Rol_Membresia_Estado"
        FROM google_calendar_tokens g
        INNER JOIN usuario u ON u."Id_Usuario" = g."Id_Usuario"
        INNER JOIN usuario_empresa ue ON ue."Id_Usuario" = g."Id_Usuario"
          AND ue."Id_Empresa" = g."Id_Empresa" AND ue."Estado" = 'activo'
        INNER JOIN empresa e ON e."Id_Empresa" = g."Id_Empresa" AND e."Estado" = 'activa'
        INNER JOIN rol r ON r."Id_Rol" = u."Id_Rol"
+       INNER JOIN rol rm ON rm."Id_Rol" = ue."Id_Rol"
        WHERE (g."Google_Id" = $1 OR g."Google_Email" = $2)
        LIMIT 1`,
       [profile.id, profile.email]
@@ -277,15 +289,21 @@ router.get('/callback', async (req, res) => {
     const user = rows[0]
     if (user.Estado === 'inactivo')
       throw new Error('Tu cuenta está inactiva. Contacta al administrador.')
+    if (user.Rol_Membresia_Estado === 'inactivo')
+      throw new Error('Tu rol está desactivado. Contacta al administrador.')
 
     await upsertGoogleTokens(user.Id_Usuario, profile, tokenPayload, user.Id_Empresa)
     // El token de la app debe llevar la empresa del usuario (igual que el login normal).
     const appToken = buildAppToken({ ...user, empresaId: user.Id_Empresa })
+    // La sesión viaja en el fragmento (#), que el navegador no envía a ningún servidor
+    // ni incluye en el Referer, en lugar del query string.
     const url = new URL('/google-auth/callback', FRONTEND_URL)
-    url.searchParams.set('status',  'login')
-    url.searchParams.set('token',   appToken)
-    url.searchParams.set('usuario', Buffer.from(JSON.stringify({ ...user, rol: (user.Rol || '').toLowerCase() })).toString('base64url'))
-    console.log('🟢 [login] FRONTEND_URL:', FRONTEND_URL)
+    url.hash = new URLSearchParams({
+      status:  'login',
+      token:   appToken,
+      nonce:   payload.nonce || '',
+      usuario: Buffer.from(JSON.stringify({ ...user, rol: (user.Rol || '').toLowerCase() })).toString('base64url'),
+    }).toString()
     return res.redirect(url.toString())
 
   } catch (err) {
@@ -531,7 +549,7 @@ router.post('/sync/delivery-events', requireAuth, async (req, res) => {
     res.json({ mensaje: 'Entregas sincronizadas con Google Calendar.', total: results.length, results })
   } catch (err) {
     console.error('[google/sync]', err.message)
-    res.status(400).json({ error: err.message })
+    res.status(err.code ? 500 : 400).json({ error: err.code ? 'Error interno del servidor.' : err.message })
   }
 })
 
@@ -568,7 +586,7 @@ router.get('/events/upcoming', requireAuth, async (req, res) => {
     })
   } catch (err) {
     console.error('[google/upcoming]', err.message)
-    res.status(400).json({ error: err.message })
+    res.status(err.code ? 500 : 400).json({ error: err.code ? 'Error interno del servidor.' : err.message })
   }
 })
 

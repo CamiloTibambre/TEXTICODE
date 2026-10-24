@@ -28,6 +28,10 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+  // Client IDs aceptados como "aud" de un idToken de Google (el web + los móviles, separados por coma).
+  googleAllowedAudiences: [process.env.GOOGLE_CLIENT_ID, ...(process.env.GOOGLE_MOBILE_CLIENT_IDS || '').split(',')]
+    .map(v => String(v || '').trim())
+    .filter(Boolean),
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/google/callback',
   sendgridApiKey: process.env.SENDGRID_API_KEY || '',
   sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || '',
