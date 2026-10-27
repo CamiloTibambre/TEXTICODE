@@ -81,7 +81,7 @@ El sistema se llama **Texticode — Sistema de Gestión Textil** y está compues
 
 - Sesiones con tokens firmados (**JWT**) y comunicación cifrada por **HTTPS**.
 
-- **Copia de seguridad automática diaria** de la base de datos, con retención de **30 días**.
+- **Copia de seguridad automática diaria** de la base de datos, con retención de **7 días** (plan Supabase Pro).
 
 - **Copia completa mensual** exportada fuera de la plataforma, con retención de **12 meses**.
 
