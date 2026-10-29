@@ -1,6 +1,5 @@
 <template>
   <div style="display:flex;min-height:100vh;background:#f1f5f9;position:relative;overflow:hidden">
-    <AppSidebar rol="cliente" />
 
     <!-- FONDO DECORATIVO -->
     <div class="bg-orbs" aria-hidden="true">
@@ -12,30 +11,11 @@
 
     <main class="main">
 
-      <!-- HERO HEADER -->
-      <div class="page-hero" :class="{ 'hero-visible': mounted }">
-        <div class="hero-left">
-          <div class="hero-icon-wrap">
-            <svg class="hero-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/>
-            </svg>
-            <div class="hero-icon-ring ring-1"></div>
-            <div class="hero-icon-ring ring-2"></div>
-          </div>
-          <div class="hero-text">
-            <h1 class="hero-title">
-              <span
-                v-for="(ch, i) in 'Centro de Soporte'"
-                :key="i"
-                class="title-char"
-                :style="{ animationDelay: mounted ? `${i * 35}ms` : '9999s' }"
-              >{{ ch === ' ' ? '\u00A0' : ch }}</span>
-            </h1>
-            <p class="hero-sub">Contáctanos y resuelve tus dudas fácilmente.</p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Centro de Soporte"
+        subtitulo="Contáctanos y resuelve tus dudas fácilmente"
+        icono="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+      />
 
       <!-- CANALES + FAQs -->
       <section class="contact-section">
@@ -161,8 +141,8 @@
 </template>
 
 <script setup>
+import PageHeader from '../../components/PageHeader.vue'
 import { ref, onMounted } from 'vue'
-import AppSidebar from '../../components/AppSidebar.vue'
 
 const mounted = ref(false)
 
@@ -199,20 +179,8 @@ const faqs = [
 .main { flex: 1; padding: 28px 30px; overflow-y: auto; position: relative; z-index: 1; }
 
 /* ── HERO ── */
-.page-hero { display: flex; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; opacity: 0; transform: translateY(-16px); transition: opacity 0.5s ease, transform 0.5s ease; }
-.page-hero.hero-visible { opacity: 1; transform: translateY(0); }
-.hero-left { display: flex; align-items: center; gap: 16px; }
-.hero-text { display: flex; flex-direction: column; }
-.hero-icon-wrap { position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: #1f3a52; border-radius: 14px; flex-shrink: 0; }
-.hero-icon { width: 26px; height: 26px; color: white; }
-.hero-icon-ring { position: absolute; border-radius: 50%; border: 1.5px solid #1f3a52; opacity: 0; animation: iconPulse 3s ease-out infinite; }
-.ring-1 { width: 68px; height: 68px; animation-delay: 0s; }
-.ring-2 { width: 86px; height: 86px; animation-delay: 0.8s; }
 @keyframes iconPulse { 0% { transform: scale(0.7); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 0; } }
-.hero-title { font-size: 24px; font-weight: 700; color: #111827; margin: 0; display: flex; flex-wrap: wrap; }
-.title-char { display: inline-block; opacity: 0; transform: translateY(12px); animation: charReveal 0.4s ease forwards; }
 @keyframes charReveal { to { opacity: 1; transform: translateY(0); } }
-.hero-sub { font-size: 13px; color: #6b7280; margin: 4px 0 0 0; }
 
 /* ── CARDS ── */
 .contact-section { display: grid; gap: 18px; }
@@ -238,7 +206,8 @@ const faqs = [
 .contact-row .val { display: block; font-size: 12px; color: #64748b; }
 
 /* ── FAQ ── */
-.faq-list { display: flex; flex-direction: column; gap: 10px; }
+/* Dos columnas en escritorio para que las preguntas quepan sin tanto scroll */
+.faq-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 10px; }
 .faq-item { padding: 14px 16px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; opacity: 0; transform: translateX(-10px); animation: faqReveal 0.4s ease both; transition: background 0.2s, border-color 0.2s, transform 0.15s; }
 .faq-item:hover { background: #fff; border-color: #c7d9f0; transform: translateX(2px); }
 @keyframes faqReveal { to { opacity: 1; transform: translateX(0); } }
