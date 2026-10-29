@@ -2,13 +2,16 @@
 // texticode-vue/src/main.js — ACTUALIZADO con sistema de animaciones
 // ═══════════════════════════════════════════════════════════════
 
+// ── CSS global: se importa ANTES que los componentes para que los
+//    estilos propios de cada componente tengan prioridad ─────────
+import './assets/tokens.css'      // sistema de diseño (variables)
+import './assets/components.css'  // botones, skeleton, utilidades
+import './assets/motion.css'      // animaciones globales
+
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
-
-// ── CSS de animaciones ──────────────────────────────────────────
-import './assets/motion.css'           // ← reemplaza con el nuevo archivo
 
 // ── Plugins de animación ────────────────────────────────────────
 import { ScrollRevealPlugin } from './plugins/scrollReveal'

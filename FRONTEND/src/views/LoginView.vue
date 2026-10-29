@@ -82,7 +82,7 @@
             <input v-model="password" :type="showPass ? 'text' : 'password'" placeholder="••••••••"
               @focus="focusPass = true" @blur="focusPass = false"
               @keyup.enter="iniciarSesion" autocomplete="current-password">
-            <button class="toggle-pass" @click="showPass = !showPass" type="button" tabindex="-1">
+            <button class="toggle-pass" @click="showPass = !showPass" type="button" tabindex="-1" :aria-label="showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="showPass">
               <svg v-if="!showPass" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
@@ -645,7 +645,7 @@ h1.visible { opacity: 1; transform: none; }
   box-shadow: 0 0 0 3px rgba(248,113,113,0.1);
 }
 .input-icon {
-  width: 16px; height: 16px; color: #9ca3af;
+  width: 16px; height: 16px; color: var(--color-text-muted);
   margin-left: 13px; flex-shrink: 0; transition: color 0.2s;
 }
 .form-group.focused .input-icon { color: #1f3a52; }
@@ -656,14 +656,14 @@ h1.visible { opacity: 1; transform: none; }
 .input-wrap input::placeholder { color: #c4c9d4; }
 .toggle-pass {
   background: none; border: none; cursor: pointer;
-  padding: 0 13px; color: #9ca3af;
+  padding: 0 13px; color: var(--color-text-muted);
   display: flex; align-items: center; transition: color 0.15s;
 }
 .toggle-pass:hover { color: #374151; }
 
 .error-msg {
   display: flex; align-items: center; gap: 6px;
-  color: #dc2626; font-size: 12.5px; font-weight: 500;
+  color: #b91c1c; font-size: 12.5px; font-weight: 500;
   margin-bottom: 13px; padding: 9px 12px;
   background: #fef2f2; border-radius: 12px; border: 1px solid #fecaca;
 }
@@ -697,7 +697,7 @@ h1.visible { opacity: 1; transform: none; }
 .btn-google:hover:not(:disabled) { transform: translateY(-1px); border-color: #93c5fd; box-shadow: 0 8px 22px rgba(37,99,235,0.12); }
 .google-icon-img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
 .google-icon { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: white; background: linear-gradient(135deg,#4285f4,#34a853); font-weight: 900; font-size: 12px; flex-shrink: 0; }
-.login-separator { display: flex; align-items: center; gap: 10px; color: #9ca3af; font-size: 11px; margin: 16px 0 0; }
+.login-separator { display: flex; align-items: center; gap: 10px; color: var(--color-text-muted); font-size: 11px; margin: 16px 0 0; }
 .login-separator::before, .login-separator::after { content: ''; height: 1px; background: #e5e7eb; flex: 1; }
 
 .btn-login {
@@ -774,7 +774,7 @@ h1.visible { opacity: 1; transform: none; }
 .modal-subtitle strong { color: #1f3a52; }
 
 .modal-hint {
-  text-align: center; font-size: 12px; color: #9ca3af;
+  text-align: center; font-size: 12px; color: var(--color-text-muted);
   margin-top: 10px; margin-bottom: 4px;
 }
 
@@ -825,7 +825,7 @@ h1.visible { opacity: 1; transform: none; }
   background: #f9fafb;
   transition: all 0.2s ease;
 }
-.back-landing-btn svg { transition: transform 0.2s ease; color: #9ca3af; }
+.back-landing-btn svg { transition: transform 0.2s ease; color: var(--color-text-muted); }
 .back-landing-btn:hover {
   color: #1f3a52;
   border-color: #1f3a52;
@@ -835,7 +835,7 @@ h1.visible { opacity: 1; transform: none; }
 .back-landing-btn:hover svg { transform: translateX(-3px); color: #1f3a52; }
 
 .card-footer {
-  text-align: center; font-size: 11px; color: #c4c9d4;
+  text-align: center; font-size: 11px; color: var(--color-text-muted);
   margin-top: 14px; opacity: 0; transition: opacity 0.4s ease 0.62s;
 }
 .card-footer.visible { opacity: 1; }

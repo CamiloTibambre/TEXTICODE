@@ -45,9 +45,12 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  // Scroll instantáneo: la transición de ruta ya da continuidad visual,
+  // un scroll animado al mismo tiempo se siente como un salto doble.
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
-    return { top: 0, behavior: 'smooth' }
+    // 'instant' es necesario porque motion.css define html { scroll-behavior: smooth }
+    return { top: 0, behavior: 'instant' }
   },
 })
 

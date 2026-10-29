@@ -1,0 +1,354 @@
+/* ═══════════════════════════════════════════════════════════════════
+   TEXTICODE — CLASES DE COMPONENTES COMPARTIDAS
+   Botones e íconos-botón con estados hover / focus / active / disabled
+   consistentes. Usan solo los tokens de tokens.css.
+   Las vistas existentes conservan sus clases propias; las nuevas
+   piezas (modales, drawers, toasts, estados vacíos) usan estas.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── BOTÓN BASE ─────────────────────────────────────────────────── */
+.tx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color     var(--duration-fast) var(--ease-standard),
+    color            var(--duration-fast) var(--ease-standard),
+    box-shadow       var(--duration-fast) var(--ease-standard),
+    transform        var(--duration-fast) var(--ease-out);
+}
+.tx-btn:active:not(:disabled) { transform: scale(0.97); }
+.tx-btn:disabled,
+.tx-btn[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.tx-btn svg { flex-shrink: 0; }
+
+.tx-btn--sm {
+  min-height: var(--control-height-sm);
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* ── VARIANTES ──────────────────────────────────────────────────── */
+.tx-btn--primary {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+.tx-btn--primary:hover:not(:disabled) {
+  background: var(--color-brand-hover);
+  box-shadow: var(--shadow-brand);
+}
+
+.tx-btn--secondary {
+  background: var(--color-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-secondary);
+}
+.tx-btn--secondary:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.tx-btn--danger {
+  background: var(--color-danger-solid);
+  color: var(--color-on-brand);
+}
+.tx-btn--danger:hover:not(:disabled) {
+  background: var(--color-danger);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);
+}
+
+.tx-btn--ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.tx-btn--ghost:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* ── BOTÓN DE SOLO ÍCONO (requiere aria-label) ──────────────────── */
+.tx-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color            var(--duration-fast) var(--ease-standard),
+    transform        var(--duration-fast) var(--ease-out);
+}
+.tx-icon-btn:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+.tx-icon-btn:active:not(:disabled) { transform: scale(0.92); }
+.tx-icon-btn--danger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+/* ── SPINNER PARA BOTONES EN CARGA ──────────────────────────────── */
+.tx-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: txSpin 0.7s linear infinite;
+}
+@keyframes txSpin { to { transform: rotate(360deg); } }
+
+/* ── SKELETON (bloques base reutilizables) ─────────────────────── */
+.tx-skel {
+  display: block;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, #eef1f5 0%, #f7f9fb 40%, #eef1f5 80%);
+  background-size: 300% 100%;
+  border-radius: var(--radius-sm);
+  animation: txSkelShimmer 1.4s ease-in-out infinite;
+}
+.tx-skel--line   { height: 12px; }
+.tx-skel--head   { height: 10px; width: 50%; opacity: 0.8; }
+.tx-skel--circle { width: 32px; height: 32px; border-radius: var(--radius-full); }
+.tx-skel--btn    { width: 30px; height: 30px; border-radius: var(--radius-md); }
+
+@keyframes txSkelShimmer {
+  from { background-position: 100% 0; }
+  to   { background-position: -50% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-skel { animation: none; }
+}
+
+/* ── TABLA CON SCROLL PROPIO ─────────────────────────────────────
+   Envuelve una <table> larga: scroll horizontal si no cabe y
+   encabezado fijo (sticky) mientras se desplaza verticalmente.
+   <div class="tx-table-scroll"><table>…</table></div>              */
+.tx-table-scroll {
+  max-height: calc(100vh - 300px);
+  min-height: 160px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+.tx-table-scroll table { width: 100%; }
+.tx-table-scroll thead th {
+  /* !important: varias vistas ponen position: relative en sus th ordenables
+     (para el subrayado ::after); sticky también sirve de referencia para eso */
+  position: sticky !important;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--color-surface-muted);
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+/* Buscadores tipo ".search-box": el foco se dibuja en la caja (search-focus),
+   así que el input interno no necesita un segundo anillo */
+.search-box input:focus,
+.search-box input:focus-visible { outline: none; }
+
+/* ── FORMULARIOS ─────────────────────────────────────────────────
+   <form class="tx-form">
+     <div class="tx-form-grid">          ← dos columnas
+       <BaseField …><input class="tx-input"></BaseField>
+       <BaseField completo …>…</BaseField>  ← ocupa las dos
+     </div>
+   </form>
+   Para agrupar un formulario largo: <fieldset class="tx-form-section">
+   con <legend class="tx-form-section__title">.                       */
+.tx-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.tx-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.tx-form-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tx-form-section {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.tx-form-section + .tx-form-section {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+.tx-form-section__title {
+  /* float: saca el <legend> del borde del fieldset para que se comporte como un título normal */
+  float: left;
+  width: 100%;
+  display: block;
+  margin-bottom: var(--space-3);
+  padding: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.tx-form-section__title + * { clear: both; }
+
+.tx-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.tx-field--full { grid-column: 1 / -1; }
+.tx-field__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+}
+.tx-field__req { margin-left: 2px; color: var(--color-danger); }
+.tx-field__opt { margin-left: 2px; font-weight: var(--weight-regular); color: var(--color-text-muted); }
+.tx-field__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.tx-field__error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+.tx-field__error svg { flex-shrink: 0; margin-top: 2px; }
+
+.tx-field-msg-enter-active { transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out); }
+.tx-field-msg-leave-active { transition: opacity 100ms var(--ease-in); }
+.tx-field-msg-enter-from { opacity: 0; transform: translateY(-3px); }
+.tx-field-msg-leave-to   { opacity: 0; }
+
+.tx-input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  font: inherit;
+  font-size: var(--text-base);
+  color: var(--color-text);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow   var(--duration-fast) var(--ease-standard);
+}
+.tx-input::placeholder { color: var(--color-text-muted); opacity: 0.8; }
+.tx-input:hover:not(:disabled):not(:focus) { border-color: #9ca3af; }
+.tx-input:focus,
+.tx-input:focus-visible {
+  outline: none;
+  border-color: var(--focus-ring-color);
+  box-shadow: var(--focus-ring);
+}
+.tx-input[aria-invalid="true"] { border-color: var(--color-danger-solid); }
+.tx-input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25); }
+.tx-input:disabled,
+.tx-input[readonly] {
+  background-color: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+textarea.tx-input {
+  height: auto;
+  min-height: 88px;
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.5;
+  resize: vertical;
+}
+select.tx-input {
+  padding-right: 36px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+input[type="date"].tx-input,
+input[type="time"].tx-input { cursor: text; }
+
+/* Prefijo fijo (ej. +57) pegado al input */
+.tx-input-group {
+  display: flex;
+  align-items: stretch;
+}
+.tx-input-group__addon {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-right: none;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  background: var(--color-surface-muted);
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.tx-input-group .tx-input { border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+
+/* Contraseña con botón mostrar/ocultar */
+.tx-pass { position: relative; }
+.tx-pass .tx-input { padding-right: 44px; }
+.tx-pass__toggle {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  transform: translateY(-50%);
+}
+.tx-pass__toggle:active:not(:disabled) { transform: translateY(-50%) scale(0.92); }
+
+/* Requisitos de contraseña */
+.tx-pass-hints {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+.tx-pass-hints li { transition: color var(--duration-fast) var(--ease-standard); }
+.tx-pass-hints .is-ok { color: var(--color-success); }
+.tx-pass-hints .is-no { color: var(--color-text-muted); }
+
+/* Resumen de errores al intentar guardar */
+.tx-form-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}

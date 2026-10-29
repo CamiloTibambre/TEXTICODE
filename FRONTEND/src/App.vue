@@ -1,21 +1,82 @@
 <template>
-  <div class="app-shell">
-    <div class="app-ambient">
+  <div class="app-shell" :class="{ 'has-sidebar': mostrarSidebar, 'sidebar-collapsed': mostrarSidebar && collapsed }">
+    <a v-if="mostrarSidebar" href="#contenido-principal" class="skip-link" @click.prevent="saltarAlContenido">
+      Saltar al contenido
+    </a>
+
+    <div class="app-ambient" aria-hidden="true">
       <span class="ambient-orb orb-a"></span>
       <span class="ambient-orb orb-b"></span>
       <span class="ambient-grid"></span>
     </div>
 
-    <RouterView v-slot="{ Component, route }">
-      <Transition name="route-fade" mode="out-in">
-        <component :is="Component" :key="route.fullPath" />
-      </Transition>
-    </RouterView>
+    <!-- El sidebar vive fuera del RouterView: no se desmonta al navegar,
+         así el indicador activo puede deslizarse entre opciones. -->
+    <AppSidebar v-if="mostrarSidebar" :rol="rolSidebar" />
+
+    <div id="contenido-principal" ref="contentEl" class="app-content" tabindex="-1">
+      <RouterView v-slot="{ Component, route: r }">
+        <Transition name="route-fade" mode="out-in">
+          <component :is="Component" :key="r.fullPath" />
+        </Transition>
+      </RouterView>
+    </div>
+
+    <!-- Capas globales: notificaciones y confirmaciones (useToast / useConfirm) -->
+    <ToastHost />
+    <ConfirmDialog />
   </div>
 </template>
 
 <script setup>
-import { RouterView } from 'vue-router'
+import { computed, ref, watch, nextTick } from 'vue'
+import { RouterView, useRoute } from 'vue-router'
+import AppSidebar from './components/AppSidebar.vue'
+import ToastHost from './components/base/ToastHost.vue'
+import ConfirmDialog from './components/base/ConfirmDialog.vue'
+import { useSidebar, prefiereMenosMovimiento } from './composables/useSidebar'
+
+const route = useRoute()
+const { collapsed } = useSidebar()
+const contentEl = ref(null)
+
+// El sidebar se muestra en toda ruta protegida por rol (meta.rol).
+// El rol sale de la ruta, que ya fue validada por el guard del router.
+const rolSidebar     = computed(() => route.meta?.rol || '')
+const mostrarSidebar = computed(() => !!rolSidebar.value)
+
+// Al colapsar/expandir, el padding del contenido cambia de golpe (un solo
+// reflow) y luego deslizamos el contenido con transform para que el cambio
+// se sienta continuo, sin animar width/padding cuadro a cuadro.
+watch(collapsed, async (estaColapsado) => {
+  if (!mostrarSidebar.value || prefiereMenosMovimiento()) return
+  await nextTick()
+  const el = contentEl.value
+  if (!el || typeof el.animate !== 'function') return
+
+  const styles = getComputedStyle(document.documentElement)
+  const ancho  = parseFloat(styles.getPropertyValue('--sidebar-width')) || 260
+  const mini   = parseFloat(styles.getPropertyValue('--sidebar-width-collapsed')) || 76
+  const delta  = ancho - mini
+
+  el.animate(
+    [
+      { transform: `translateX(${estaColapsado ? delta : -delta}px)` },
+      { transform: 'translateX(0)' },
+    ],
+    {
+      duration: parseFloat(styles.getPropertyValue('--duration-slow')) || 300,
+      easing: styles.getPropertyValue('--ease-out').trim() || 'ease-out',
+    }
+  )
+})
+
+function saltarAlContenido() {
+  const destino = contentEl.value?.querySelector('main') || contentEl.value
+  if (!destino) return
+  if (!destino.hasAttribute('tabindex')) destino.setAttribute('tabindex', '-1')
+  destino.focus()
+}
 </script>
 
 <style>
@@ -23,7 +84,7 @@ import { RouterView } from 'vue-router'
 
 :root {
   color-scheme: light;
-  font-family: Inter, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
 }
 
 html, body, #app {
@@ -35,13 +96,32 @@ body {
     radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 30%),
     radial-gradient(circle at top right, rgba(14, 165, 233, 0.1), transparent 28%),
     linear-gradient(180deg, #f8fbff 0%, #eef4fb 48%, #edf2f7 100%);
-  color: #111827;
+  color: var(--color-text);
 }
 
 .app-shell {
   position: relative;
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+/* Contenido: deja espacio al sidebar fijo */
+.app-content {
+  position: relative;
+  min-height: 100vh;
+}
+.app-content:focus { outline: none; }
+
+.has-sidebar .app-content {
+  padding-left: var(--sidebar-width);
+}
+.has-sidebar.sidebar-collapsed .app-content {
+  padding-left: var(--sidebar-width-collapsed);
+}
+
+/* Las vistas traen su propio contenedor .layout de 100vh */
+.app-content > .layout {
+  min-height: 100vh;
 }
 
 .app-ambient {

@@ -818,12 +818,12 @@ onUnmounted(() => {
 /* Green — errores */
 .n-pill--green { border-color: #bbf7d0; }
 .n-pill--green:hover { border-color: #86efac; box-shadow: 0 6px 18px rgba(22,163,74,0.12); }
-.n-pill-icon-wrap--green { background: #dcfce7; color: #16a34a; animation-delay: 0s; }
+.n-pill-icon-wrap--green { background: #dcfce7; color: #15803d; animation-delay: 0s; }
 
 /* Blue — tiempo */
 .n-pill--blue { border-color: #bfdbfe; }
 .n-pill--blue:hover { border-color: #93c5fd; box-shadow: 0 6px 18px rgba(37,99,235,0.12); }
-.n-pill-icon-wrap--blue { background: #dbeafe; color: #2563eb; animation-delay: -1s; }
+.n-pill-icon-wrap--blue { background: #dbeafe; color: #1d4ed8; animation-delay: -1s; }
 
 /* Purple — centraliza */
 .n-pill--purple { border-color: #e9d5ff; }
@@ -833,7 +833,7 @@ onUnmounted(() => {
 /* Amber — acceso */
 .n-pill--amber { border-color: #fde68a; }
 .n-pill--amber:hover { border-color: #fbbf24; box-shadow: 0 6px 18px rgba(217,119,6,0.12); }
-.n-pill-icon-wrap--amber { background: #fef3c7; color: #d97706; animation-delay: -3s; }
+.n-pill-icon-wrap--amber { background: #fef3c7; color: #b45309; animation-delay: -3s; }
 
 .prob-sol-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
 .ps-section { padding: 22px 24px; }
@@ -854,10 +854,10 @@ onUnmounted(() => {
 }
 .ps-problem .ps-icon { animation-delay: 0s; }
 .ps-solution .ps-icon { animation-delay: -2.5s; }
-.ps-icon-red   { background: #fee2e2; color: #dc2626; }
-.ps-icon-green { background: #dcfce7; color: #16a34a; }
+.ps-icon-red   { background: #fee2e2; color: #b91c1c; }
+.ps-icon-green { background: #dcfce7; color: #15803d; }
 .ps-section p  { font-size: 14px; color: #4b5563; line-height: 1.65; margin: 0; }
-.ps-divider { display: flex; align-items: center; justify-content: center; padding: 10px; background: #f3f4f6; color: #9ca3af; }
+.ps-divider { display: flex; align-items: center; justify-content: center; padding: 10px; background: #f3f4f6; color: var(--color-text-muted); }
 
 .question-card { background: linear-gradient(135deg, var(--deep), #1a4a6e); border-radius: 16px; padding: 28px 28px 24px; position: relative; overflow: hidden; }
 .q-mark { font-size: 72px; font-weight: 900; color: rgba(255,255,255,0.12); line-height: 1; position: absolute; top: 12px; left: 20px; }
@@ -907,7 +907,7 @@ onUnmounted(() => {
 .rm-name { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 2px; }
 .rm-desc { font-size: 12px; color: #6b7280; }
 
-.reqs-header { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 16px; }
+.reqs-header { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-muted); margin-bottom: 16px; }
 .req-list { display: flex; flex-direction: column; gap: 10px; }
 .req-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: #f9fafb; border: 1px solid #f3f4f6; border-radius: 10px; transition: background 0.15s, border-color 0.15s; }
 .req-item:hover { background: white; border-color: #e5e7eb; }
@@ -967,13 +967,13 @@ onUnmounted(() => {
 .alcance-item:nth-child(4) .alc-icon { animation-delay: -2.1s; }
 .alcance-item:nth-child(5) .alc-icon { animation-delay: -2.8s; }
 .alcance-item:nth-child(6) .alc-icon { animation-delay: -3.5s; }
-.alc-icon-no { background: #fee2e2; color: #dc2626; }
+.alc-icon-no { background: #fee2e2; color: #b91c1c; }
 
 .objetivo-card { background: linear-gradient(135deg, var(--deep), #1a4a6e); border-radius: 14px; padding: 22px 24px; margin-top: 24px; }
 .obj-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 10px; }
 .objetivo-card p { font-size: 14px; color: rgba(255,255,255,0.88); line-height: 1.7; margin: 0; }
 
-.obj-timeline-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #9ca3af; margin-bottom: 24px; }
+.obj-timeline-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-muted); margin-bottom: 24px; }
 .obj-items { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .obj-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px; transition: box-shadow 0.2s, transform 0.2s; }
 .obj-item:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); transform: translateY(-2px); }
@@ -988,7 +988,7 @@ onUnmounted(() => {
 .tech-icon-wrap { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
 .tech-icon-text { font-size: 13px; font-weight: 800; letter-spacing: 0.5px; }
 .tech-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
-.tech-role { font-size: 12px; color: #9ca3af; }
+.tech-role { font-size: 12px; color: var(--color-text-muted); }
 
 /* ── EQUIPO ── */
 .section-equipo { background: white; }
@@ -997,7 +997,7 @@ onUnmounted(() => {
 .team-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.08); transform: translateY(-3px); }
 .team-avatar { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; margin: 0 auto 16px; }
 .team-name { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 6px; }
-.team-role { font-size: 12px; color: #9ca3af; }
+.team-role { font-size: 12px; color: var(--color-text-muted); }
 
 /* ── CTA ── */
 .section-cta { padding: 80px 32px; }
@@ -1023,7 +1023,7 @@ onUnmounted(() => {
 .footer-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
 .footer-brand { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.55); font-size: 13px; font-weight: 600; }
 .footer-logo { width: 28px; filter: brightness(0) invert(0.4); }
-.footer-copy { font-size: 12px; color: rgba(255,255,255,0.3); }
+.footer-copy { font-size: 12px; color: rgba(255,255,255,0.6); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
