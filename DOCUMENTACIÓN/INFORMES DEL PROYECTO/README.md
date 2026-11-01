@@ -14,6 +14,7 @@ Los documentos 01, 02, 03, 06 y 07 corresponden al caso **ISATEX J&M S.A.S** (NI
 | 05 | [Plan de migración de datos](05_Plan_Migracion_Datos/Plan_Migracion_Datos_Texticode.md) | 1.1 | Inventario de datos, estrategia, mapeo contra el esquema real, scripts, validación, riesgos y rollback |
 | 06 | [Especificación de requerimientos (02.2)](06_Requerimientos/02_2_Especificacion_de_Requerimientos_ISATEX.md) | 1.0 | 75 RF y 24 RNF (IEEE 830), matriz de trazabilidad con los problemas del 02.1 y puntos por revisar |
 | 07 | [Contrato de servicios (03.1)](07_Contrato_Servicios/03_1_Contrato_Servicios_ISATEX.md) | 1.0 | Licencia, implementación, SLA, propiedad intelectual y encargo del tratamiento de datos personales (Ley 1581 de 2012), con anexos A–F |
+| 08 | [Plan de respaldo y recuperación de datos](08_Plan_Respaldo_Recuperacion/Plan_Respaldo_Recuperacion_Texticode.md) | 1.0 | RPO/RTO, regla 3-2-1, criticidad de las 15 tablas, scripts `backup.sh` y `monitor_backup.sh`, 4 escenarios de restauración, DRP, RACI y costos (evidencias de laboratorio por completar) |
 
 Cada carpeta incluye su subcarpeta `img/` con los diagramas que el documento enlaza.
 
