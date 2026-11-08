@@ -342,6 +342,7 @@ function mapear(u) {
     rolLabel: ROL_LABEL[rol] || rolNombreRaw,
     estado: u.Estado === 'activo' ? 'active' : 'inactive',
     fechaRegistro: u.Fecha_Registro ? new Date(u.Fecha_Registro).toLocaleDateString('es-CO') : '—',
+    fechaOrden: u.Fecha_Registro ? new Date(u.Fecha_Registro).getTime() : 0, // para ordenar por fecha real
     iniciales: nombre.split(' ').map(p => p[0]).slice(0,2).join('').toUpperCase(),
     flash: false,
     eliminating: false,
@@ -435,7 +436,9 @@ const usuariosFiltrados = computed(() =>
 )
 const usuariosOrdenados = computed(() =>
   [...usuariosFiltrados.value].sort((a, b) => {
-    const va = a[sortKey.value] || '', vb = b[sortKey.value] || ''
+    // La fecha se muestra como texto (dd/mm/aaaa), pero se ordena por su valor real
+    const k = sortKey.value === 'fechaRegistro' ? 'fechaOrden' : sortKey.value
+    const va = a[k] || '', vb = b[k] || ''
     return (va > vb ? 1 : va < vb ? -1 : 0) * sortDir.value
   })
 )
