@@ -8,8 +8,8 @@
 | **Integrantes** | Kevin Stevan Wagner Montenegro · Andrés Felipe Lancheros · Camilo Andrés Tibambre · Kevin Andrés Castro |
 | **Responsable técnico** | Kevin Wagner |
 | **Docente** | Ing. Edwin Marín |
-| **Fecha de preparación** | 29 de octubre de 2026 |
-| **Versión** | 1.0 |
+| **Fecha de preparación** | 29 de octubre de 2026 (v1.1: 4 de noviembre de 2026) |
+| **Versión** | 1.1 |
 | **Estado** | En revisión (pendiente: evidencias del Laboratorio 1, Laboratorio 2 y simulacro) |
 | **Documento de referencia** | Guía de aprendizaje "Plan de Respaldo y Recuperación de Datos" (modelo `02.6_Plan_Respaldo_Datos.md`, sistema EBS) |
 
@@ -20,6 +20,8 @@
 ## 0. Contexto del sistema
 
 Texticode es una aplicación **multiempresa** para talleres de confección: un superadministrador crea empresas (talleres) y cada empresa gestiona sus usuarios (administrador, operario, cliente), inventario de materiales, órdenes de producción por fases, comprobantes de entrega y observaciones a operarios.
+
+> **Relación con los demás informes.** Este plan describe el **entorno actual** del proyecto (Supabase plan Free, sin respaldos del proveedor), y por eso el equipo asume toda la responsabilidad de los respaldos y declara un RPO de 24 h. La **Propuesta comercial**, la **Arquitectura técnica** y el **Contrato de servicios 03.1** contemplan que la operación de ISATEX J&M S.A.S corra en **Supabase Pro** (incluido en la operación de $375.000/mes), que suma los respaldos diarios automáticos del proveedor con 7 días de historial. Al contratar ISATEX, los procedimientos de este plan **se mantienen como segunda capa**: los respaldos propios cifrados fuera de Supabase siguen siendo la defensa ante la eliminación del proyecto o una cuenta comprometida (Escenario 3).
 
 | Componente | Tecnología | Dónde vive | Qué contiene |
 |---|---|---|---|
@@ -265,36 +267,36 @@ Todo cabe en los 15 GB gratuitos de Google Drive y en cualquier memoria USB.
 ### 6.1 Preparación (una sola vez)
 
 1. Instalar el cliente de PostgreSQL **17** (debe ser ≥ 17.6, la versión del servidor):
-   - Windows: instalador oficial de PostgreSQL 17, marcar solo *Command Line Tools*, y agregar `C:\Program Files\PostgreSQL\17\bin` al `PATH`.
-   - Alternativa sin instalar nada (ya usamos Docker): `docker run --rm postgres:17 pg_dump --version`.
+    - Windows: instalador oficial de PostgreSQL 17, marcar solo *Command Line Tools*, y agregar `C:\Program Files\PostgreSQL\17\bin` al `PATH`.
+    - Alternativa sin instalar nada (ya usamos Docker): `docker run --rm postgres:17 pg_dump --version`.
 2. Abrir **Git Bash** (trae `bash`, `sha256sum`, `gpg` y `date` de GNU) y crear las carpetas:
 
-   ```bash
-   mkdir -p /c/texticode-backups/{diarios,semanales,mensuales,anual,precambio,logs}
-   ```
+    ```bash
+    mkdir -p /c/texticode-backups/{diarios,semanales,mensuales,anual,precambio,logs}
+    ```
 
 3. Crear `C:\texticode-backups\.env.backup` (fuera de cualquier repositorio) con permisos solo para el usuario:
 
-   ```bash
-   # .env.backup  — NO subir a GitHub, NO compartir
-   DB_URL="postgresql://postgres.[ref]:[CONTRASEÑA]@[host-session-pooler]:5432/postgres"
-   BACKUP_PASSPHRASE="[frase larga guardada en el gestor de contraseñas]"
-   DRIVE_DIR="/g/Mi unidad/Texticode_Respaldos"
-   ```
+    ```bash
+    # .env.backup  — NO subir a GitHub, NO compartir
+    DB_URL="postgresql://postgres.[ref]:[CONTRASEÑA]@[host-session-pooler]:5432/postgres"
+    BACKUP_PASSPHRASE="[frase larga guardada en el gestor de contraseñas]"
+    DRIVE_DIR="/g/Mi unidad/Texticode_Respaldos"
+    ```
 
-   La cadena se copia de Supabase → botón **Connect** → *Session pooler* (la red del equipo no tiene IPv6).
+    La cadena se copia de Supabase → botón **Connect** → *Session pooler* (la red del equipo no tiene IPv6).
 
 4. Agregar al `.gitignore` del repositorio:
 
-   ```gitignore
-   *.dump
-   *.sql.gz
-   *.gpg
-   *.sha256
-   .env
-   .env.*
-   !.env.example
-   ```
+    ```gitignore
+    *.dump
+    *.sql.gz
+    *.gpg
+    *.sha256
+    .env
+    .env.*
+    !.env.example
+    ```
 
 ### 6.2 Laboratorio 1: primer backup real (pasos ejecutados)
 
@@ -495,24 +497,24 @@ Aplica antes de: ejecutar un script de `DATABASE/` (migraciones), `ALTER TABLE`,
 1. En producción, ejecutar el **Anexo A** y guardar el resultado (captura).
 2. Verificar la huella del respaldo:
 
-   ```bash
-   cd /c/texticode-backups/diarios
-   sha256sum -c texticode_diario_FECHA.sha256     # debe decir: OK
-   ```
+    ```bash
+    cd /c/texticode-backups/diarios
+    sha256sum -c texticode_diario_FECHA.sha256     # debe decir: OK
+    ```
 
 3. **Iniciar el cronómetro.** Restaurar en el proyecto de prueba:
 
-   ```bash
-   export DB_PRUEBA="postgresql://postgres.[ref-prueba]:[CONTRASEÑA]@[host]:5432/postgres"
-   # El dump hecho con --schema=public trae "CREATE SCHEMA public", que ya existe en
-   # Supabase y detendría --exit-on-error. Se quita de la lista de restauración:
-   pg_restore -l texticode_diario_FECHA.dump \
-     | grep -vE " SCHEMA - public | COMMENT - SCHEMA public " > lista.toc
-   time pg_restore -d "$DB_PRUEBA" --no-owner --no-privileges --exit-on-error \
-        -L lista.toc texticode_diario_FECHA.dump
-   ```
+    ```bash
+    export DB_PRUEBA="postgresql://postgres.[ref-prueba]:[CONTRASEÑA]@[host]:5432/postgres"
+    # El dump hecho con --schema=public trae "CREATE SCHEMA public", que ya existe en
+    # Supabase y detendría --exit-on-error. Se quita de la lista de restauración:
+    pg_restore -l texticode_diario_FECHA.dump \
+      | grep -vE " SCHEMA - public | COMMENT - SCHEMA public " > lista.toc
+    time pg_restore -d "$DB_PRUEBA" --no-owner --no-privileges --exit-on-error \
+         -L lista.toc texticode_diario_FECHA.dump
+    ```
 
-   Si el proyecto de prueba no está vacío: agregar `--clean --if-exists` (solo en prueba).
+    Si el proyecto de prueba no está vacío: agregar `--clean --if-exists` (solo en prueba).
 
 4. Ejecutar el **Anexo A** en el proyecto de prueba. Los 15 conteos deben coincidir con el paso 1.
 5. Ejecutar el **Anexo B** (validación). Todas las consultas deben devolver 0, salvo `usuario_sin_empresa` = 1 (el superadministrador, que no pertenece a ninguna empresa por diseño).
@@ -570,30 +572,30 @@ docker rm -f texticode-restore        # al terminar
 4. Restaurarlo en Docker local (variante de 7.3).
 5. Exportar la orden y sus hijos desde Docker (en este orden por las llaves foráneas):
 
-   ```bash
-   R="postgresql://postgres:prueba@localhost:5440/postgres"; ID=123
-   for T in orden_produccion orden_material orden_operario comprobantes \
-            material_movimiento observacion_operario usuario_orden; do
-     psql "$R" -c "\copy (SELECT * FROM public.$T WHERE \"Id_Orden\" = $ID) TO 'rec_$T.csv' CSV HEADER"
-   done
-   ```
+    ```bash
+    R="postgresql://postgres:prueba@localhost:5440/postgres"; ID=123
+    for T in orden_produccion orden_material orden_operario comprobantes \
+             material_movimiento observacion_operario usuario_orden; do
+      psql "$R" -c "\copy (SELECT * FROM public.$T WHERE \"Id_Orden\" = $ID) TO 'rec_$T.csv' CSV HEADER"
+    done
+    ```
 
 6. Insertar en producción en una sola transacción, en el mismo orden:
 
-   ```bash
-   psql "$DB_URL" <<'SQL'
-   BEGIN;
-   \copy public.orden_produccion     FROM 'rec_orden_produccion.csv'     CSV HEADER
-   \copy public.orden_material       FROM 'rec_orden_material.csv'       CSV HEADER
-   \copy public.orden_operario       FROM 'rec_orden_operario.csv'       CSV HEADER
-   \copy public.comprobantes         FROM 'rec_comprobantes.csv'         CSV HEADER
-   \copy public.material_movimiento  FROM 'rec_material_movimiento.csv'  CSV HEADER
-   \copy public.observacion_operario FROM 'rec_observacion_operario.csv' CSV HEADER
-   \copy public.usuario_orden        FROM 'rec_usuario_orden.csv'        CSV HEADER
-   -- revisar: SELECT * FROM orden_produccion WHERE "Id_Orden" = 123;
-   COMMIT;
-   SQL
-   ```
+    ```bash
+    psql "$DB_URL" <<'SQL'
+    BEGIN;
+    \copy public.orden_produccion     FROM 'rec_orden_produccion.csv'     CSV HEADER
+    \copy public.orden_material       FROM 'rec_orden_material.csv'       CSV HEADER
+    \copy public.orden_operario       FROM 'rec_orden_operario.csv'       CSV HEADER
+    \copy public.comprobantes         FROM 'rec_comprobantes.csv'         CSV HEADER
+    \copy public.material_movimiento  FROM 'rec_material_movimiento.csv'  CSV HEADER
+    \copy public.observacion_operario FROM 'rec_observacion_operario.csv' CSV HEADER
+    \copy public.usuario_orden        FROM 'rec_usuario_orden.csv'        CSV HEADER
+    -- revisar: SELECT * FROM orden_produccion WHERE "Id_Orden" = 123;
+    COMMIT;
+    SQL
+    ```
 
 7. Si hubo avances posteriores al respaldo (fases registradas hoy), el administrador los registra de nuevo desde la interfaz.
 8. **Verificación:** la orden aparece en la vista de Producción de la empresa correcta, con sus fases y comprobantes; Anexo B sin errores; `docker rm -f texticode-restore`.
@@ -610,18 +612,18 @@ docker rm -f texticode-restore        # al terminar
 4. Exportar la tabla sana: `psql "$R" -c "\copy (SELECT \"Id_Material\",\"Stock_Actual\" FROM public.material) TO 'material_sano.csv' CSV HEADER"`
 5. Corregir en producción **sin borrar la tabla** (nunca `TRUNCATE ... CASCADE`):
 
-   ```sql
-   BEGIN;
-   CREATE TEMP TABLE material_sano ("Id_Material" int PRIMARY KEY, "Stock_Actual" int);
-   \copy material_sano FROM 'material_sano.csv' CSV HEADER
-   UPDATE public.material m
-      SET "Stock_Actual" = s."Stock_Actual"
-     FROM material_sano s
-    WHERE s."Id_Material" = m."Id_Material";
-   -- comparar antes de confirmar:
-   SELECT count(*) FROM public.material WHERE "Stock_Actual" < 0;
-   COMMIT;
-   ```
+    ```sql
+    BEGIN;
+    CREATE TEMP TABLE material_sano ("Id_Material" int PRIMARY KEY, "Stock_Actual" int);
+    \copy material_sano FROM 'material_sano.csv' CSV HEADER
+    UPDATE public.material m
+       SET "Stock_Actual" = s."Stock_Actual"
+      FROM material_sano s
+     WHERE s."Id_Material" = m."Id_Material";
+    -- comparar antes de confirmar:
+    SELECT count(*) FROM public.material WHERE "Stock_Actual" < 0;
+    COMMIT;
+    ```
 
 6. Aplicar los movimientos posteriores al respaldo: revisar `material_movimiento` con `"Fecha" > [hora del respaldo]` y ajustar el stock de esos materiales.
 7. Reiniciar el backend: `docker compose start backend`.
@@ -637,20 +639,20 @@ docker rm -f texticode-restore        # al terminar
 2. Crear un proyecto Supabase nuevo (o usar el de prueba), región cercana, **PostgreSQL 17**.
 3. Obtener el respaldo más reciente disponible, en este orden: local diario → Drive semanal → USB mensual. Si viene de Drive o USB, descifrarlo:
 
-   ```bash
-   gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
-       -o texticode_semanal_FECHA.dump -d texticode_semanal_FECHA.dump.gpg <<< "$BACKUP_PASSPHRASE"
-   sha256sum -c texticode_semanal_FECHA.sha256
-   ```
+    ```bash
+    gpg --batch --pinentry-mode loopback --passphrase-fd 0 \
+        -o texticode_semanal_FECHA.dump -d texticode_semanal_FECHA.dump.gpg <<< "$BACKUP_PASSPHRASE"
+    sha256sum -c texticode_semanal_FECHA.sha256
+    ```
 
 4. Restaurar (con el mismo filtro de 7.3):
 
-   ```bash
-   pg_restore -l texticode_semanal_FECHA.dump \
-     | grep -vE " SCHEMA - public | COMMENT - SCHEMA public " > lista.toc
-   pg_restore -d "$DB_NUEVA" --no-owner --no-privileges --exit-on-error \
-              -L lista.toc texticode_semanal_FECHA.dump
-   ```
+    ```bash
+    pg_restore -l texticode_semanal_FECHA.dump \
+      | grep -vE " SCHEMA - public | COMMENT - SCHEMA public " > lista.toc
+    pg_restore -d "$DB_NUEVA" --no-owner --no-privileges --exit-on-error \
+               -L lista.toc texticode_semanal_FECHA.dump
+    ```
 5. Validar con Anexo A (contra el último conteo registrado) y Anexo B.
 6. Actualizar `DATABASE_URL` en el `.env` del backend con la nueva cadena (procedimiento de rotación de variables ya documentado por el equipo) y reiniciar: `docker compose up -d --build backend`.
 7. El frontend en Vercel **no cambia** (apunta al backend, no a la BD). La app móvil tampoco.
@@ -667,14 +669,14 @@ docker rm -f texticode-restore        # al terminar
 2. **Frontend (Vercel):** *Deployments* → último despliegue sano → **Instant Rollback**. Tarda segundos.
 3. **Backend (Docker):**
 
-   ```bash
-   cd TEXTICODE
-   git log --oneline -5                  # identificar el último commit sano
-   git checkout <commit_sano> -- BACKEND
-   docker compose up -d --build backend
-   ```
+    ```bash
+    cd TEXTICODE
+    git log --oneline -5                  # identificar el último commit sano
+    git checkout <commit_sano> -- BACKEND
+    docker compose up -d --build backend
+    ```
 
-   Luego revertir formalmente con un PR (`git revert`), nunca con push directo a `main`.
+    Luego revertir formalmente con un PR (`git revert`), nunca con push directo a `main`.
 4. **Base de datos (migración fallida):** si existe script de rollback probado de esa fase, ejecutarlo dentro de una transacción. Si no existe o falla: restaurar el respaldo `precambio` tomado en el paso 2 de 6.6 con el procedimiento del Escenario 3 (sobre el mismo proyecto: `pg_restore --clean --if-exists`, **solo** tras confirmarlo dos integrantes).
 5. **Verificación:** la versión anterior responde, login correcto, Anexo B sin errores; documentar la causa en el post-mortem.
 
@@ -795,7 +797,7 @@ OK: respaldo de hace 0 h, 61598 bytes, huella válida
 
 $ pg_restore -d prueba_restore --no-owner --no-privileges --exit-on-error backup.dump
 pg_restore: error: could not execute query: ERROR:  schema "public" already exists
-   -> 0 tablas restauradas  (hallazgo: se agregó el filtro -L lista.toc al plan)
+    -> 0 tablas restauradas  (hallazgo: se agregó el filtro -L lista.toc al plan)
 
 $ pg_restore -d prueba_restore --no-owner --no-privileges --exit-on-error -L lista.toc backup.dump
 real 0m0.123s   -> 15 tablas, conteos iguales al origen
@@ -1002,7 +1004,7 @@ Supuestos (taller pequeño de Bogotá, valores estimados para el ejercicio): 3�
 
 ### 12.4 Comparación
 
-Proteger los datos de Texticode cuesta hoy **USD 0 al mes** y una memoria USB, más unas 20 horas de trabajo del equipo al año. Un solo día perdido le cuesta a un taller al menos COP 30.000 en redigitación y muchísimo más en errores de inventario y entregas, y una pérdida total pondría en riesgo el producto. La relación costo-beneficio es claramente favorable. Si Texticode pasa a operar con talleres reales que paguen, el siguiente paso recomendado es **Supabase Pro (USD 25/mes)** para sumar los respaldos diarios del proveedor a los propios; PITR solo se justificaría si un RPO de 24 h deja de ser aceptable.
+Proteger los datos de Texticode cuesta hoy **USD 0 al mes** y una memoria USB, más unas 20 horas de trabajo del equipo al año. Un solo día perdido le cuesta a un taller al menos COP 30.000 en redigitación y muchísimo más en errores de inventario y entregas, y una pérdida total pondría en riesgo el producto. La relación costo-beneficio es claramente favorable. Si Texticode pasa a operar con talleres reales que paguen, el siguiente paso recomendado es **Supabase Pro (USD 25/mes)** para sumar los respaldos diarios del proveedor a los propios; PITR solo se justificaría si un RPO de 24 h deja de ser aceptable. Ese paso ya está previsto para ISATEX J&M S.A.S: la Propuesta comercial incluye Supabase Pro dentro de la operación mensual de $375.000.
 
 ---
 
@@ -1035,7 +1037,8 @@ Se lleva en una hoja compartida del equipo (no dentro de la BD de producción, p
 | Versión | Fecha | Autor | Cambios |
 |---|---|---|---|
 | 1.0 | 29/10/2026 | Equipo Texticode | Versión inicial: 12 secciones, datos reales de la BD, scripts de respaldo y monitoreo, 4 escenarios, DRP |
-| 1.1 | [COMPLETAR] | [ ] | Correcciones después del simulacro |
+| 1.1 | 04/11/2026 | Equipo Texticode | Formato institucional en PDF y nota de relación con la Propuesta comercial (Supabase Pro para la operación de ISATEX) |
+| 1.2 | [COMPLETAR] | [ ] | Correcciones después del simulacro |
 
 ### 13.4 Próxima revisión
 
