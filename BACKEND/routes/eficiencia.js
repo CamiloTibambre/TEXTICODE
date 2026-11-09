@@ -436,7 +436,9 @@ router.get('/operarios/:id/historial', async (req, res) => {
       ) AS con_problema
     FROM ${SQL_ORDENES_OP} op
     WHERE op."Id_Operario" = $1
-      AND op."Id_Empresa" = $2
+      -- La subconsulta de órdenes no expone "Id_Empresa": se valida contra orden_produccion
+      AND EXISTS (SELECT 1 FROM orden_produccion po
+                  WHERE po."Id_Orden" = op."Id_Orden" AND po."Id_Empresa" = $2)
       AND op."Fecha_Creacion" >= CURRENT_DATE - INTERVAL '${offsetInicio} days'
       AND op."Fecha_Creacion" <  CURRENT_DATE - INTERVAL '${offsetFin} days'
   `
