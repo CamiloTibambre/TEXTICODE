@@ -1,0 +1,9 @@
+[build]
+  base = "FRONTEND"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  VITE_BASE = "/"
+  VITE_ROUTER_MODE = "history"
