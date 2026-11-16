@@ -20,3 +20,6 @@ texticode-vue/certs/*.crt
 .env.docker
 DATABASE/docker/*.sql
 
+# Estado local de Netlify
+.netlify/
+
