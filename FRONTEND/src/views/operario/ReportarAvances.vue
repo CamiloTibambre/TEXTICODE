@@ -31,7 +31,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
           Historial
-          <span v-if="historial.length" class="tab-badge green">{{ historial.length }}</span>
+          <span v-if="historialTotal" class="tab-badge green">{{ historialTotal }}</span>
         </button>
       </div>
 
@@ -63,47 +63,24 @@
             >
               <div class="oc-header" :class="o.estado">
                 <div class="oc-header-left">
-                  <span class="oc-id">{{ o.id }}</span>
+                  <span class="oc-id">{{ o.numeroOrden }}</span>
                   <span class="oc-badge" :class="o.estado">{{ estadoLabel(o.estado) }}</span>
                   <span class="oc-prio" :class="o.prioridad">{{ capitalize(o.prioridad) }}</span>
                 </div>
               </div>
 
               <div class="oc-body">
-                <div class="oc-nombre">{{ o.producto || o.nombre }}</div>
-                <div v-if="o.producto && o.nombre && o.producto !== o.nombre" class="oc-fase">
-                  Fase: {{ o.nombre }}
-                </div>
+                <h2 class="oc-nombre">{{ o.producto }}</h2>
+                <p class="oc-fase">Fase {{ o.numeroFase }} · {{ o.nombre }}</p>
 
                 <div class="oc-meta">
                   <div class="oc-meta-item">
-                    <span class="oc-meta-lbl">Prendas realizadas</span>
-                    <span class="oc-meta-val prendas">
-                      <strong>{{ o.unidadesHechas }}</strong>
-                      <span class="sep">/</span>
-                      <span class="tot">{{ o.unidadesTotales }}</span>
-                    </span>
+                    <span class="oc-meta-lbl">Prendas a realizar</span>
+                    <span class="oc-meta-val prendas"><strong>{{ o.unidadesTotales }}</strong></span>
                   </div>
                   <div class="oc-meta-item">
                     <span class="oc-meta-lbl">Fecha Límite</span>
                     <span class="oc-meta-val" :class="{ 'val-vencida': estaVencida(o.fechaLimite) }">{{ o.fechaLimite }}</span>
-                  </div>
-                </div>
-
-                <div class="oc-progress">
-                  <div class="oc-progress-row">
-                    <span class="oc-progress-lbl">Progreso de la fase</span>
-                    <span class="oc-progress-pct" :class="{ 'pct-verde': o.progreso >= 100, 'pct-rojo': o.estado === 'retrasado' }">{{ o.progreso }}%</span>
-                  </div>
-                  <div class="oc-bar">
-                    <div
-                      class="oc-bar-fill"
-                      :class="{
-                        'fill-completado': o.progreso >= 100,
-                        'fill-retrasado':  o.estado === 'retrasado'
-                      }"
-                      :style="{ width: o.progreso + '%' }"
-                    ></div>
                   </div>
                 </div>
 
@@ -125,17 +102,36 @@
 
       <!-- ── HISTORIAL ── -->
       <div v-show="tabActivo === 'historial'" class="tab-content">
-        <div v-if="historial.length === 0" class="empty-wrap">
+        <div class="history-filters">
+          <label class="history-search">
+            <span>Buscar orden</span>
+            <input v-model="historialBusqueda" type="search" class="tx-input" placeholder="ORD-014 o nombre de la orden">
+          </label>
+          <label>
+            <span>Desde</span>
+            <input v-model="historialDesde" type="date" class="tx-input">
+          </label>
+          <label>
+            <span>Hasta</span>
+            <input v-model="historialHasta" type="date" class="tx-input">
+          </label>
+        </div>
+
+        <div v-if="historialCargando" class="historial-list">
+          <SkeletonCard v-for="i in 3" :key="i" variante="contenido" :lineas="3" />
+        </div>
+
+        <div v-else-if="historial.length === 0" class="empty-wrap history-empty">
           <svg width="44" height="44" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="#d1d5db">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <p>No hay reportes en el historial aún.</p>
-          <span class="empty-hint">Los reportes que envíes aparecerán aquí.</span>
+          <p>No se encontraron fases completadas.</p>
+          <span class="empty-hint">Prueba otro rango de fechas o busca una orden diferente.</span>
         </div>
 
         <div v-else class="historial-list">
           <TransitionGroup name="row" tag="div" class="hist-entries">
-            <div v-for="h in historialOrdenado" :key="h.id" class="hist-card">
+            <article v-for="h in historial" :key="h.id" class="hist-card">
               <div class="hist-left">
                 <div class="hist-icon">
                   <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
@@ -143,16 +139,30 @@
                   </svg>
                 </div>
                 <div class="hist-info">
-                  <div class="hist-orden">{{ h.orden }}</div>
-                  <div class="hist-nota" v-if="h.nota">{{ h.nota }}</div>
+                  <div class="hist-title-row">
+                    <h3 class="hist-orden">{{ h.numeroOrden }} · {{ h.producto }}</h3>
+                    <span class="oc-prio" :class="h.prioridad">{{ capitalize(h.prioridad) }}</span>
+                    <span v-if="h.aTiempo !== null" class="delivery-badge" :class="h.aTiempo ? 'on-time' : 'late'">{{ h.aTiempo ? 'A tiempo' : 'Con retraso' }}</span>
+                  </div>
+                  <p class="hist-fase">Fase {{ h.numeroFase }} · {{ h.fase }}</p>
+                  <dl class="hist-details">
+                    <div><dt>Cliente</dt><dd>{{ h.cliente }}</dd></div>
+                    <div><dt>Prendas</dt><dd>{{ h.cantidad }}</dd></div>
+                    <div><dt>Fecha límite</dt><dd>{{ h.fechaLimite }}</dd></div>
+                    <div><dt>Completada</dt><dd>{{ h.fecha }}</dd></div>
+                  </dl>
+                  <div class="hist-nota" v-if="h.nota"><strong>Nota:</strong> {{ h.nota }}</div>
                 </div>
               </div>
-              <div class="hist-right">
-                <div class="hist-unidades"><span class="hist-uni-lbl">Completada</span></div>
-                <div class="hist-fecha">{{ h.fecha }}</div>
-              </div>
-            </div>
+            </article>
           </TransitionGroup>
+          <BasePagination
+            v-model:pagina="historialPagina"
+            v-model:por-pagina="historialPorPagina"
+            :total="historialTotal"
+            :opciones-tamano="[10]"
+            etiqueta="registros"
+          />
         </div>
       </div>
     </main>
@@ -160,36 +170,25 @@
     <!-- ── MODAL REPORTAR PROGRESO ── -->
     <BaseModal
       :open="modalVisible"
-      titulo="Reportar avance"
-      :descripcion="ordenActual ? `${ordenActual.id} — ${ordenActual.nombre}` : ''"
+      titulo="Completar fase"
+      :descripcion="ordenActual ? `${ordenActual.numeroOrden} — ${ordenActual.producto}` : ''"
       tamano="md"
       :cerrar-al-clic-fuera="false"
       @update:open="val => !val && cerrarModal()"
     >
       <form v-if="ordenActual" id="form-avance" class="tx-form" novalidate @submit.prevent="enviarReporte">
-        <dl class="avance-resumen">
-          <div><dt>Fase</dt><dd>{{ ordenActual.id }}</dd></div>
-          <div><dt>Tu cuota</dt><dd>{{ ordenActual.unidadesTotales }} prendas</dd></div>
-          <div><dt>Al guardar</dt><dd :class="completaFase ? 'is-ok' : 'is-info'">{{ resultadoTexto }}</dd></div>
-        </dl>
-
-        <div class="avance-barra" aria-hidden="true">
-          <span class="avance-barra__fill" :class="{ 'is-ok': completaFase }"
-            :style="{ transform: `scaleX(${cantidadValida ? reporte.cantidad / Math.max(1, cuotaActual) : 0})` }"></span>
+        <div class="confirmation-note" role="status">
+          <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+          </svg>
+          <p>Vas a marcar <strong>todas las prendas de esta fase</strong> como completadas. Esta acción avanzará el estado de la orden según corresponda.</p>
         </div>
 
-        <BaseField label="Prendas terminadas hasta ahora" requerido
-          :error="cantidadValida ? '' : `Escribe un número entero entre 0 y ${ordenActual.unidadesTotales}.`"
-          :hint="completaFase ? 'Con esta cantidad la fase queda completada.' : `Te quedarán ${ordenActual.unidadesTotales - reporte.cantidad} prendas por terminar.`"
-          v-slot="{ attrs }">
-          <div class="material-row">
-            <input v-bind="attrs" v-model.number="reporte.cantidad" type="number" inputmode="numeric" min="0"
-              :max="ordenActual.unidadesTotales" step="1" class="tx-input" placeholder="0" required>
-            <button type="button" class="tx-btn tx-btn--secondary" @click="reporte.cantidad = ordenActual.unidadesTotales">
-              Todas ({{ ordenActual.unidadesTotales }})
-            </button>
-          </div>
-        </BaseField>
+        <dl class="avance-resumen">
+          <div><dt>Orden</dt><dd>{{ ordenActual.numeroOrden }}</dd></div>
+          <div><dt>Fase</dt><dd>{{ ordenActual.numeroFase }} · {{ ordenActual.nombre }}</dd></div>
+          <div><dt>Prendas</dt><dd>{{ ordenActual.unidadesTotales }}</dd></div>
+        </dl>
 
         <BaseField label="Nota" opcional hint="Se guarda junto con el avance y aparece en tu historial." v-slot="{ attrs }">
           <textarea v-bind="attrs" v-model="reporte.nota" class="tx-input" rows="3"
@@ -199,12 +198,12 @@
 
       <template #footer>
         <button type="button" class="tx-btn tx-btn--secondary" :disabled="enviando" @click="cerrarModal">Cancelar</button>
-        <button type="submit" form="form-avance" class="tx-btn tx-btn--primary" :disabled="!cantidadValida || enviando">
+        <button type="submit" form="form-avance" class="tx-btn tx-btn--primary" :disabled="enviando">
           <span v-if="enviando" class="tx-spinner" aria-hidden="true"></span>
           <svg v-else width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
           </svg>
-          {{ enviando ? 'Guardando…' : completaFase ? 'Completar fase' : 'Guardar avance' }}
+          {{ enviando ? 'Confirmando…' : 'Confirmar' }}
         </button>
       </template>
     </BaseModal>
@@ -217,12 +216,12 @@ import PageHeader from '../../components/PageHeader.vue'
 import SkeletonCard from '../../components/base/SkeletonCard.vue'
 import BaseModal from '../../components/base/BaseModal.vue'
 import BaseField from '../../components/base/BaseField.vue'
+import BasePagination from '../../components/base/BasePagination.vue'
 import { useToast } from '../../composables/useToast'
-
-const toast = useToast()
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 
+const toast = useToast()
 const auth = useAuthStore()
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 const authHeaders = () => auth.authHeader()
@@ -235,8 +234,15 @@ const mounted      = ref(false)
 
 const historial = ref([])
 const ordenes   = ref([])
+const historialPagina = ref(1)
+const historialPorPagina = ref(10)
+const historialTotal = ref(0)
+const historialBusqueda = ref('')
+const historialDesde = ref('')
+const historialHasta = ref('')
+const historialCargando = ref(false)
 
-const reporte = ref({ cantidad: 0, nota: '' })
+const reporte = ref({ nota: '' })
 const enviando = ref(false)
 
 // ── Helpers ──
@@ -250,7 +256,48 @@ function estaVencida(fechaStr) {
 }
 
 function estadoLabel(estado) {
-  return { 'en-proceso': 'En Proceso', 'completado': 'Completado', 'retrasado': 'Retrasada' }[estado] || estado
+  return { 'pendiente': 'Pendiente', 'completado': 'Completada', 'retrasado': 'Retrasada' }[estado] || estado
+}
+
+function fechaHora(value) {
+  if (!value) return '—'
+  return new Date(value).toLocaleString('es-CO', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  })
+}
+
+async function cargarHistorial() {
+  if (!auth.idUsuario) return
+  historialCargando.value = true
+  try {
+    const query = new URLSearchParams({ page: historialPagina.value, limit: historialPorPagina.value })
+    if (historialBusqueda.value.trim()) query.set('search', historialBusqueda.value.trim())
+    if (historialDesde.value) query.set('desde', historialDesde.value)
+    if (historialHasta.value) query.set('hasta', historialHasta.value)
+    const res = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}/historial?${query}`, { headers: authHeaders() })
+    if (!res.ok) throw new Error('No se pudo cargar el historial')
+    const payload = await res.json()
+    historialTotal.value = payload.pagination?.total || 0
+    historial.value = (payload.data || []).map(t => ({
+      id: t.Id_Orden_Operario,
+      numeroOrden: `ORD-${String(t.Id_Orden).padStart(3, '0')}`,
+      producto: t.Producto || t.Descripcion_Orden || `Orden #${t.Id_Orden}`,
+      numeroFase: t.Numero_Fase,
+      fase: t.Descripcion_Fase || 'Sin descripción',
+      nota: t.Nota_Operario,
+      fecha: fechaHora(t.Fecha_Completada || t.updated_at),
+      prioridad: (t.Prioridad || 'Media').toLowerCase(),
+      cantidad: Number(t.Cuota ?? t.Cantidad ?? 0),
+      cliente: t.Cliente || '—',
+      fechaLimite: t.Fecha_Limite?.split('T')[0] || '—',
+      aTiempo: t.Completada_A_Tiempo,
+    }))
+  } catch (error) {
+    console.error('Error cargando historial:', error)
+    toast.error('No se pudo cargar el historial.')
+  } finally {
+    historialCargando.value = false
+  }
 }
 
 // ── Carga ──
@@ -261,43 +308,27 @@ onMounted(async () => {
     const fasesRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`, { headers: authHeaders() })
     if (!fasesRes.ok) throw new Error('No se pudieron cargar las fases')
     const data = await fasesRes.json()
-    let dataHistorial = []
-    try {
-      const historialRes = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}/historial`, { headers: authHeaders() })
-      if (historialRes.ok) dataHistorial = await historialRes.json()
-    } catch {
-      // El historial no impide que las fases activas se muestren.
-    }
-
     ordenes.value = data
       .map(t => {
         const completada = t.Estado_Fase === 'Completada'
         const retrasada = !completada && estaVencida(t.Fecha_Limite)
 
         const cuota  = Number(t.Cuota ?? t.Cantidad ?? 0)
-        const hechas = Number(t.Cantidad_Realizada || 0)
-
         return {
-          id:              `OP-${String(t.Id_Orden).padStart(3,'0')} · F${t.Numero_Fase}`,
+          numeroOrden:     `ORD-${String(t.Id_Orden).padStart(3,'0')}`,
           idReal:          t.Id_Orden_Operario,
+          idOrden:         t.Id_Orden,
           idCliente:       t.Id_Cliente,
+          numeroFase:      t.Numero_Fase,
           nombre:          t.Descripcion_Fase || t.Descripcion_Orden || 'Sin descripción de fase',
           producto:        t.Producto || t.Nombre_Orden || t.Descripcion_Orden || `Orden #${t.Id_Orden}`,
-          estado:          completada ? 'completado' : retrasada ? 'retrasado' : 'en-proceso',
+          estado:          completada ? 'completado' : retrasada ? 'retrasado' : 'pendiente',
           prioridad:       (t.Prioridad || 'Media').toLowerCase(),
           fechaLimite:     t.Fecha_Limite?.split('T')[0] || '—',
-          unidadesHechas:  completada ? cuota : hechas,
           unidadesTotales: cuota,
-          progreso:        completada ? 100 : Math.min(100, Math.round((hechas / Math.max(1, cuota)) * 100)),
         }
       }).sort(ordenarFases)
-    historial.value = dataHistorial.map(t => ({
-      id: t.Id_Orden_Operario,
-      ordenId: t.Id_Orden,
-      orden: `OP-${String(t.Id_Orden).padStart(3, '0')} · F${t.Numero_Fase} — ${t.Producto || t.Descripcion_Fase || ''}`,
-      nota: t.Nota_Operario,
-      fecha: new Date(t.Fecha_Completada || t.updated_at).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' }),
-    }))
+    await cargarHistorial()
   } catch (err) {
     console.error('Error cargando avances:', err)
   } finally {
@@ -308,24 +339,24 @@ onMounted(async () => {
 
 // ── Computed ──
 const ordenesActivas          = computed(() => ordenes.value.filter(o => o.estado !== 'completado'))
-const historialOrdenado       = computed(() => [...historial.value].reverse())
 
-// ── Modal ──
-const cuotaActual    = computed(() => Number(ordenActual.value?.unidadesTotales ?? 0))
-const cantidadValida = computed(() => {
-  const c = reporte.value.cantidad
-  return Number.isInteger(c) && c >= 0 && c <= cuotaActual.value
+watch([historialPagina, historialPorPagina], cargarHistorial)
+watch([historialDesde, historialHasta], () => {
+  if (historialPagina.value !== 1) historialPagina.value = 1
+  else cargarHistorial()
 })
-const completaFase   = computed(() => cantidadValida.value && reporte.value.cantidad === cuotaActual.value)
-const resultadoTexto = computed(() => {
-  if (!cantidadValida.value) return '—'
-  if (completaFase.value) return 'Completada'
-  return `${Math.round((reporte.value.cantidad / Math.max(1, cuotaActual.value)) * 100)}%`
+let historialTimer
+watch(historialBusqueda, () => {
+  clearTimeout(historialTimer)
+  historialTimer = setTimeout(() => {
+    if (historialPagina.value !== 1) historialPagina.value = 1
+    else cargarHistorial()
+  }, 300)
 })
 
 function abrirModal(o) {
   ordenActual.value = o
-  reporte.value = { cantidad: o.unidadesHechas, nota: '' }
+  reporte.value = { nota: '' }
   modalVisible.value = true
 }
 function cerrarModal() { modalVisible.value = false }
@@ -333,33 +364,23 @@ function cerrarModal() { modalVisible.value = false }
 // ── Enviar reporte ──
 async function enviarReporte() {
   const o = ordenActual.value
-  if (!o || !cantidadValida.value || enviando.value) return
+  if (!o || enviando.value) return
   enviando.value = true
 
   try {
-    const res = await fetch(`${BASE}/orden-operario/${o.idReal}/avance`, {
+    const res = await fetch(`${BASE}/orden-operario/${o.idReal}/completar`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify({
-        Cantidad_Realizada: reporte.value.cantidad,
         Nota_Operario: reporte.value.nota,
       }),
     })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) throw new Error(data.error || `No se pudo guardar el avance (${res.status})`)
 
-    const nota = reporte.value.nota
-    o.unidadesHechas = reporte.value.cantidad
-
-    if (data.fase?.Estado_Fase === 'Completada') {
-      o.estado   = 'completado'
-      o.progreso = 100
-      historial.value.unshift({ id: o.idReal, ordenId: o.idReal, orden: `${o.id} — ${o.nombre}`, nota, fecha: new Date().toLocaleDateString('es-CO') })
-      showToast('Fase completada.', 'toast-success')
-    } else {
-      o.progreso = Math.min(99, Math.round((o.unidadesHechas / Math.max(1, o.unidadesTotales)) * 100))
-      showToast('Avance guardado.', 'toast-success')
-    }
+    o.estado = 'completado'
+    await cargarHistorial()
+    showToast('Fase completada.', 'toast-success')
     cerrarModal()
   } catch (err) {
     console.error('Error:', err)
@@ -370,7 +391,7 @@ async function enviarReporte() {
 }
 
 function ordenarFases(a, b) {
-  const grupo = o => o.estado === 'retrasado' ? 0 : o.estado === 'en-proceso' ? 1 : 2
+  const grupo = o => o.estado === 'retrasado' ? 0 : o.estado === 'pendiente' ? 1 : 2
   return grupo(a) - grupo(b) || new Date(a.fechaLimite || '9999-12-31') - new Date(b.fechaLimite || '9999-12-31')
 }
 
@@ -389,11 +410,9 @@ function showToast(msg, type = 'toast-success') {
 .avance-resumen dd { margin: 2px 0 0; font-size: var(--text-md); font-weight: var(--weight-bold); color: var(--color-text); font-variant-numeric: tabular-nums; }
 .avance-resumen dd.is-ok { color: var(--color-success); }
 .avance-resumen dd.is-info { color: var(--color-info); }
-.avance-barra { height: 8px; margin-top: calc(var(--space-2) * -1); border-radius: var(--radius-full); background: var(--color-surface-hover); overflow: hidden; }
-.avance-barra__fill { display: block; width: 100%; height: 100%; border-radius: inherit; background: var(--color-info); transform-origin: left; transition: transform var(--duration-slow) var(--ease-out), background var(--duration-fast); }
-.avance-barra__fill.is-ok { background: var(--color-success-solid, #16a34a); }
-.material-row { display: flex; gap: var(--space-2); }
-.material-row .tx-input { flex: 1; min-width: 0; }
+.confirmation-note { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-4); border-radius: var(--radius-lg); background: #eff6ff; color: #1e3a5f; border: 1px solid #bfdbfe; }
+.confirmation-note svg { flex: 0 0 auto; margin-top: 1px; }
+.confirmation-note p { margin: 0; line-height: 1.55; }
 
 /* ── LAYOUT ── */
 .layout { display: flex; min-height: 100vh; background: #f1f5f9; position: relative; overflow: hidden; }
@@ -432,7 +451,7 @@ function showToast(msg, type = 'toast-success') {
 
 /* ── GRID ÓRDENES ── */
 /* Dos columnas en escritorio */
-.orders-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: var(--space-4); align-items: start; opacity: 0; transform: translateY(var(--motion-shift-md)); transition: opacity var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out); }
+.orders-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); align-items: start; opacity: 0; transform: translateY(var(--motion-shift-md)); transition: opacity var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out); }
 .orders-grid--loading { opacity: 1; transform: none; }
 .orders-grid.section-visible { opacity: 1; transform: translateY(0); }
 .order-card { background: white; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; }
@@ -440,21 +459,21 @@ function showToast(msg, type = 'toast-success') {
 .order-card.card-retrasada { border-color: #fca5a5; background: #fff8f8; }
 
 .oc-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 12px; border-bottom: 1px solid #f3f4f6; }
-.oc-header.en-proceso { background: linear-gradient(90deg, #eff6ff, transparent); border-bottom-color: #dbeafe; }
+.oc-header.pendiente { background: linear-gradient(90deg, #eff6ff, transparent); border-bottom-color: #dbeafe; }
 .oc-header.retrasado  { background: linear-gradient(90deg, #fef2f2, transparent); border-bottom-color: #fecaca; }
 .oc-header.completado { background: linear-gradient(90deg, #f0fdf4, transparent); border-bottom-color: #bbf7d0; }
 
 .oc-header-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .oc-id   { font-size: 13px; font-weight: 700; color: #1f3a52; }
 .oc-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-.oc-badge.en-proceso { background: #dbeafe; color: #1d4ed8; }
+.oc-badge.pendiente { background: #dbeafe; color: #1d4ed8; }
 .oc-badge.completado  { background: #dcfce7; color: #15803d; }
 .oc-badge.retrasado   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 .oc-prio { padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 
 .oc-body    { padding: 16px 18px; }
-.oc-nombre  { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 14px; }
-.oc-fase    { font-size: 12px; color: #6b7280; margin: -9px 0 14px; }
+.oc-nombre  { font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 5px; }
+.oc-fase    { font-size: 13px; color: #6b7280; margin: 0 0 16px; }
 .oc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-bottom: 16px; }
 .oc-meta-item { display: flex; flex-direction: column; gap: 3px; }
 .oc-meta-lbl  { font-size: 11px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
@@ -482,15 +501,25 @@ function showToast(msg, type = 'toast-success') {
 .btn-reportar:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
 
 /* ── HISTORIAL ── */
+.history-filters { display: grid; grid-template-columns: minmax(240px, 1fr) 180px 180px; gap: var(--space-3); align-items: end; padding: var(--space-4); margin-bottom: var(--space-4); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+.history-filters label { display: flex; flex-direction: column; gap: 6px; color: var(--color-text-muted); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
 .historial-list { display: flex; flex-direction: column; gap: 12px; }
 .hist-entries   { display: flex; flex-direction: column; gap: 12px; }
 
-.hist-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px 20px; transition: box-shadow 0.2s, transform 0.2s; }
+.hist-card { display: flex; align-items: flex-start; gap: 14px; background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px 20px; transition: box-shadow 0.2s, transform 0.2s; }
 .hist-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-1px); }
 .hist-left { display: flex; align-items: flex-start; gap: 12px; flex: 1; min-width: 0; }
 .hist-icon { width: 38px; height: 38px; flex-shrink: 0; background: #f0fdf4; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #15803d; }
 .hist-info  { flex: 1; min-width: 0; }
-.hist-orden { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.hist-orden { font-size: 15px; font-weight: 700; color: #111827; margin: 0; }
+.hist-fase { margin: 5px 0 12px; color: #64748b; font-size: 13px; }
+.hist-details { display: grid; grid-template-columns: repeat(4, minmax(100px, 1fr)); gap: 10px 18px; margin: 0; }
+.hist-details dt { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8; }
+.hist-details dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: #334155; }
+.delivery-badge { display: inline-flex; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.delivery-badge.on-time { background: #dcfce7; color: #166534; }
+.delivery-badge.late { background: #fee2e2; color: #991b1b; }
 .hist-nota  { font-size: 12px; color: #6b7280; background: #f9fafb; border-radius: 6px; padding: 5px 8px; margin-top: 4px; border: 1px solid #f3f4f6; }
 .hist-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .hist-unidades { display: flex; align-items: baseline; gap: 4px; }
@@ -511,6 +540,17 @@ function showToast(msg, type = 'toast-success') {
 
 @media (max-width: 900px) {
   .main { padding: 20px 16px; }
+  .orders-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .history-filters { grid-template-columns: 1fr 1fr; }
+  .history-search { grid-column: 1 / -1; }
+  .hist-details { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 620px) {
+  .orders-grid { grid-template-columns: 1fr; }
+  .avance-resumen { grid-template-columns: 1fr; }
+  .history-filters { grid-template-columns: 1fr; }
+  .history-search { grid-column: auto; }
+  .hist-details { grid-template-columns: 1fr; }
 }
 
 /* Reglas repuestas (clases que llegan desde datos) */

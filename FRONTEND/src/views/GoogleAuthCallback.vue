@@ -28,9 +28,10 @@ function parseBase64UrlJson(value) {
 function getRuta(usuario) {
   const idRol = usuario?.Id_Rol
   const rol = (usuario?.Rol || usuario?.rol || '').toLowerCase()
-  if (idRol === 1 || rol === 'administrador' || rol === 'admin') return '/admin/google-calendar'
-  if (idRol === 2 || rol === 'operario') return '/operario/google-calendar'
-  if (idRol === 3 || rol === 'cliente') return '/cliente/google-calendar'
+  if (rol === 'superadmin') return '/superadmin/empresas'
+  if (idRol === 1 || rol === 'administrador' || rol === 'admin') return '/admin/usuarios'
+  if (idRol === 2 || rol === 'operario') return '/operario/tareas'
+  if (idRol === 3 || rol === 'cliente') return '/cliente/pedidos'
   return '/login'
 }
 
@@ -66,7 +67,7 @@ onMounted(() => {
 
   if (status === 'linked') {
     title.value = 'Cuenta de Google vinculada'
-    detail.value = 'Ya puedes sincronizar fechas de entrega con tu calendario personal.'
+    detail.value = 'Tus órdenes activas se sincronizarán automáticamente con tu calendario.'
     setTimeout(() => router.replace(getRuta(auth.usuario)), 900)
     return
   }

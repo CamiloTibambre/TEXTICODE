@@ -4,6 +4,13 @@ import { requireRoles, requireSelfParamOrRoles } from '../middleware/roles.js'
 
 const router = Router()
 
+function sincronizarCalendario(idOrden, empresaId) {
+  if (process.env.NODE_ENV === 'test') return
+  import('./googleCalendar.js')
+    .then(modulo => modulo.programarSincronizacionOrden(idOrden, empresaId))
+    .catch(error => console.error('[google/auto] No se pudo programar la asignación:', error.message))
+}
+
 // GET operarios asignados a una orden
 router.get('/orden/:idOrden', requireRoles('admin'), async (req, res) => {
   try {
@@ -52,6 +59,7 @@ router.post('/', requireRoles('admin'), async (req, res) => {
     `, [Id_Usuario, Id_Orden, Funcion || null, empresaId])
 
     res.status(201).json({ mensaje: 'Usuario asignado a la orden' })
+    sincronizarCalendario(Id_Orden, empresaId)
   } catch (err) {
     if (err.code === '23505')
       return res.status(409).json({ error: 'El usuario ya está asignado a esa orden' })
@@ -71,6 +79,7 @@ router.delete('/:idUsuario/:idOrden', requireRoles('admin'), async (req, res) =>
 
     if (rowCount === 0) return res.status(404).json({ error: 'Asignación no encontrada' })
     res.json({ mensaje: 'Usuario desasignado de la orden' })
+    sincronizarCalendario(req.params.idOrden, req.auth.empresaId)
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Error interno del servidor.' })

@@ -38,7 +38,7 @@
         <span class="perfil-avatar" aria-hidden="true">{{ iniciales }}</span>
         <div class="perfil-identity__text">
           <p class="perfil-name">{{ perfil.nombre || 'Sin nombre' }}</p>
-          <span class="perfil-role">Administrador</span>
+          <span class="perfil-role">{{ rolLabel }}</span>
         </div>
       </div>
 
@@ -56,6 +56,31 @@
           <dd :class="{ 'is-empty': !perfil.nombreUsuario }">{{ perfil.nombreUsuario || 'Sin registrar' }}</dd>
         </div>
       </dl>
+
+      <section class="google-account" aria-labelledby="google-account-title">
+        <div class="google-account__heading">
+          <span class="google-mark" aria-hidden="true"><img src="/img/google-g.svg" alt=""></span>
+          <div>
+            <h3 id="google-account-title">Cuenta de Google</h3>
+            <p>Las órdenes asignadas se sincronizan automáticamente con Calendar.</p>
+          </div>
+        </div>
+
+        <div v-if="googleCargando" class="google-account__loading">Consultando vinculación…</div>
+        <div v-else-if="google.connected" class="google-account__status">
+          <div>
+            <span class="linked-badge">Vinculada</span>
+            <p>{{ google.profile?.email }}</p>
+          </div>
+          <button type="button" class="tx-btn tx-btn--danger tx-btn--sm" :disabled="googleProcesando" @click="desvincularGoogle">
+            {{ googleProcesando ? 'Desvinculando…' : 'Desvincular' }}
+          </button>
+        </div>
+        <button v-else type="button" class="tx-btn tx-btn--secondary google-link-btn" :disabled="googleProcesando" @click="vincularGoogle">
+          <span class="google-mark google-mark--small" aria-hidden="true"><img src="/img/google-g.svg" alt=""></span>
+          {{ googleProcesando ? 'Abriendo Google…' : 'Vincular cuenta de Google' }}
+        </button>
+      </section>
     </div>
 
     <!-- Formulario de edición -->
@@ -85,7 +110,7 @@
     <template #footer>
       <template v-if="!editando">
         <button type="button" class="tx-btn tx-btn--secondary" @click="cerrar">Cerrar</button>
-        <button type="button" class="tx-btn tx-btn--primary" :disabled="cargando || errorCarga" @click="empezarEdicion">
+        <button v-if="!esSuperadmin" type="button" class="tx-btn tx-btn--primary" :disabled="cargando || errorCarga" @click="empezarEdicion">
           <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/></svg>
           Editar perfil
         </button>
@@ -110,7 +135,8 @@ import BasePassword, { reglasContrasena } from './base/BasePassword.vue'
 import { useValidacion } from '../composables/useValidacion'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from '../composables/useToast'
-import { getUsuario, actualizarUsuario } from '../services/api.js'
+import { useConfirm } from '../composables/useConfirm'
+import { getUsuario, actualizarUsuario, getGoogleAuthUrl, getGoogleCalendarStatus, unlinkGoogleCalendar } from '../services/api.js'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -119,11 +145,15 @@ const emit = defineEmits(['update:open'])
 
 const auth  = useAuthStore()
 const toast = useToast()
+const confirmar = useConfirm()
 
 const cargando   = ref(false)
 const errorCarga = ref(false)
 const editando   = ref(false)
 const guardando  = ref(false)
+const googleCargando = ref(false)
+const googleProcesando = ref(false)
+const google = ref({ connected: false, profile: null })
 
 const perfil = ref({ nombre: '', nombreUsuario: '', email: '', telefono: '', Id_Rol: null })
 const form   = ref({ nombre: '', nombreUsuario: '', email: '', telefono: '', contrasena: '' })
@@ -131,13 +161,28 @@ const form   = ref({ nombre: '', nombreUsuario: '', email: '', telefono: '', con
 const iniciales = computed(() =>
   (perfil.value.nombre || '?').split(' ').filter(Boolean).map(p => p[0]).slice(0, 2).join('').toUpperCase()
 )
+const esSuperadmin = computed(() => String(auth.rol || '').toLowerCase() === 'superadmin')
+const rolLabel = computed(() => ({
+  admin: 'Administrador', administrador: 'Administrador', operario: 'Operario', cliente: 'Cliente', superadmin: 'Superadmin',
+})[String(auth.rol || '').toLowerCase()] || 'Usuario')
+
+async function cargarGoogle() {
+  googleCargando.value = true
+  try {
+    google.value = await getGoogleCalendarStatus()
+  } catch {
+    google.value = { connected: false, profile: null }
+  } finally {
+    googleCargando.value = false
+  }
+}
 
 async function cargar() {
   if (!auth.idUsuario) return
   cargando.value = true
   errorCarga.value = false
   try {
-    const d = await getUsuario(auth.idUsuario)
+    const d = esSuperadmin.value ? auth.usuario : await getUsuario(auth.idUsuario)
     perfil.value = {
       nombre: d.Nombre_Completo || d.Nombre_Usuario || '',
       nombreUsuario: d.Nombre_Usuario || '',
@@ -145,10 +190,42 @@ async function cargar() {
       telefono: d.Telefono || '',
       Id_Rol: d.Id_Rol,
     }
+    await cargarGoogle()
   } catch {
     errorCarga.value = true
   } finally {
     cargando.value = false
+  }
+}
+
+async function vincularGoogle() {
+  googleProcesando.value = true
+  try {
+    const { url } = await getGoogleAuthUrl('link')
+    window.location.assign(url)
+  } catch (error) {
+    googleProcesando.value = false
+    toast.error(error.message || 'No se pudo iniciar la vinculación con Google.')
+  }
+}
+
+async function desvincularGoogle() {
+  const ok = await confirmar({
+    titulo: '¿Desvincular cuenta de Google?',
+    mensaje: 'Se revocará el acceso y tus órdenes dejarán de sincronizarse con este calendario.',
+    textoConfirmar: 'Desvincular',
+    tono: 'danger',
+  })
+  if (!ok) return
+  googleProcesando.value = true
+  try {
+    await unlinkGoogleCalendar()
+    google.value = { connected: false, profile: null }
+    toast.success('Cuenta de Google desvinculada.')
+  } catch (error) {
+    toast.error(error.message || 'No se pudo desvincular la cuenta.')
+  } finally {
+    googleProcesando.value = false
   }
 }
 
@@ -299,5 +376,19 @@ async function guardar() {
   overflow-wrap: anywhere;
 }
 .perfil-row dd.is-empty { color: var(--color-text-muted); font-style: italic; }
+
+.google-account { margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--color-border); }
+.google-account__heading { display: flex; gap: var(--space-3); align-items: flex-start; }
+.google-account__heading h3 { margin: 0; font-size: var(--text-md); color: var(--color-text); }
+.google-account__heading p { margin: 3px 0 0; font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.45; }
+.google-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; background: white; border: 1px solid var(--color-border); color: #4285f4; font-weight: 800; }
+.google-mark img { width: 20px; height: 20px; display: block; }
+.google-mark--small { width: 24px; height: 24px; border-radius: 7px; }
+.google-mark--small img { width: 16px; height: 16px; }
+.google-account__loading { margin-top: var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); }
+.google-account__status { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-lg); }
+.google-account__status p { margin: 5px 0 0; color: #334155; font-size: var(--text-sm); overflow-wrap: anywhere; }
+.linked-badge { display: inline-flex; padding: 2px 8px; border-radius: var(--radius-full); background: #dcfce7; color: #166534; font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+.google-link-btn { width: 100%; justify-content: center; margin-top: var(--space-4); }
 
 </style>

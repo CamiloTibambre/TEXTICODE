@@ -4,6 +4,13 @@ import { actualizarOrdenesRetrasadas } from './ordenes.js'
 
 const router = express.Router()
 
+function sincronizarCalendario(idOrden, empresaId) {
+  if (process.env.NODE_ENV === 'test') return
+  import('./googleCalendar.js')
+    .then(modulo => modulo.programarSincronizacionOrden(idOrden, empresaId))
+    .catch(error => console.error('[google/auto] No se pudo programar la reasignación:', error.message))
+}
+
 // Toda ruta de carga de trabajo opera sobre la empresa del token.
 router.use((req, res, next) => {
   if (!req.auth?.empresaId) {
@@ -256,6 +263,7 @@ async function reasignarItem(empresaId, { Id_Orden_Operario, Id_Orden, Id_Operar
       `UPDATE orden_operario SET "Id_Operario" = $1, updated_at = NOW() WHERE "Id_Orden_Operario" = $2 AND "Id_Empresa" = $3`,
       [Id_Operario_Destino, Id_Orden_Operario, empresaId]
     )
+    sincronizarCalendario(fase[0].Id_Orden, empresaId)
 
     return {
       status: 200,
@@ -302,6 +310,7 @@ async function reasignarItem(empresaId, { Id_Orden_Operario, Id_Orden, Id_Operar
         AND "Id_Empresa" = $3
         AND "Estado_Fase" NOT IN (${ESTADOS_FASE_FINALIZADOS_SQL})
     `, [Id_Operario_Destino, Id_Orden, empresaId])
+    sincronizarCalendario(Id_Orden, empresaId)
 
     return {
       status: 200,
@@ -322,6 +331,7 @@ async function reasignarItem(empresaId, { Id_Orden_Operario, Id_Orden, Id_Operar
     `UPDATE orden_produccion SET "Id_Operario" = $1 WHERE "Id_Orden" = $2 AND "Id_Empresa" = $3`,
     [Id_Operario_Destino, Id_Orden, empresaId]
   )
+  sincronizarCalendario(Id_Orden, empresaId)
 
   return {
     status: 200,

@@ -1,0 +1,164 @@
+[
+  {
+    "figura": 1,
+    "archivo": "02-entorno.png",
+    "descripcion": "Versiones de Node, npm y rama activa del proyecto.",
+    "sha256": "ce31163436b6d1f446ed656ad8a913793e19d12bb8e56ecea2c13d62d472adea"
+  },
+  {
+    "figura": 2,
+    "archivo": "01-proyecto-abierto.png",
+    "descripcion": "Proyecto Texticode abierto en Visual Studio Code y servicio frontend iniciado.",
+    "sha256": "45644313fd14337157cec0ca3424abc7f320267d6cdc6a550a16f571951deeed"
+  },
+  {
+    "figura": 3,
+    "archivo": "04-backend-instalado.png",
+    "descripcion": "Verificación real de Jest y Supertest instalados en el backend.",
+    "sha256": "88abb69a289efaa0dfd6f749ccacff7832168af6e9729df337b6226ef38fb841"
+  },
+  {
+    "figura": 4,
+    "archivo": "05-frontend-instalado.png",
+    "descripcion": "Verificación de las dependencias de pruebas del frontend.",
+    "sha256": "495a15982cf496ea6ee6243e8f6adb5eed39c1f418bb9a6515065a105c4ef14b"
+  },
+  {
+    "figura": 5,
+    "archivo": "06-configuracion.png",
+    "descripcion": "Contenido real de la configuración de Jest del backend y frontend.",
+    "sha256": "eb21d3238b35b78459ea2640b73aed125e42ef8d8e9325f8d6b782d3af3b0849"
+  },
+  {
+    "figura": 6,
+    "archivo": "RF-001.png",
+    "descripcion": "Ejecución real filtrada de RF-001. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "d3e0de3619f0f2f14d6fcb39bf35ab1d35cdf3975c1acaf07f79fcc5786e841b"
+  },
+  {
+    "figura": 7,
+    "archivo": "RF-002.png",
+    "descripcion": "Ejecución real filtrada de RF-002. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "f5537b6a325aeaf95ee0e1b72c268334f5ecbffd1e16206561bddb19540f034d"
+  },
+  {
+    "figura": 8,
+    "archivo": "RF-003.png",
+    "descripcion": "Ejecución real filtrada de RF-003. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "fb23d46e5e5d146b5c438af1eb96ca543afb390b69462917ed411c9e52e0358a"
+  },
+  {
+    "figura": 9,
+    "archivo": "RF-004.png",
+    "descripcion": "Ejecución real filtrada de RF-004. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "fbb03a90740af1479129623fe58d5e0dc855a9698698e0835bb2a1c7f3c404e2"
+  },
+  {
+    "figura": 10,
+    "archivo": "RF-005.png",
+    "descripcion": "Ejecución real filtrada de RF-005. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "cae3144e9d3176f03709c56ac3a763f62e23839b5c3870592556d2070d86b633"
+  },
+  {
+    "figura": 11,
+    "archivo": "RF-006.png",
+    "descripcion": "Ejecución real filtrada de RF-006. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "3fe7ab93c1a5929d0cc0e372bc3f9be65fb75c17d7f264750360b09ccbcef6bc"
+  },
+  {
+    "figura": 12,
+    "archivo": "RF-007.png",
+    "descripcion": "Ejecución real filtrada de RF-007. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "a033d355cdb6a680212ee5777e4a18f5240b9c30433b9c73fe20e958bcb5a626"
+  },
+  {
+    "figura": 13,
+    "archivo": "RF-044.png",
+    "descripcion": "Ejecución real filtrada de RF-044. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "80406e570e9ed8dd67fd2fd1f81a6e94cf5c44cbb8bfe731e638061759a7ed30"
+  },
+  {
+    "figura": 14,
+    "archivo": "RF-045.png",
+    "descripcion": "Ejecución real filtrada de RF-045. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "ae38c40f1beea49b29fc22521e3817950f9dab426dcdbeb3648d13f4f64990e6"
+  },
+  {
+    "figura": 15,
+    "archivo": "RF-046.png",
+    "descripcion": "Ejecución real filtrada de RF-046. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "032bc4517def9c219d30fda2b95e6d6b4175439f154b93475cbdf9994cd63a55"
+  },
+  {
+    "figura": 16,
+    "archivo": "RF-047.png",
+    "descripcion": "Ejecución real filtrada de RF-047. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "a2d1ad733d7833ab02f3dfa36a1d6e3066dfcce43a427ceecd01916a4d94e36a"
+  },
+  {
+    "figura": 17,
+    "archivo": "RF-055.png",
+    "descripcion": "Ejecución real filtrada de RF-055. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "b0f00d981c5705eb88d93e0a32210085678aecd2a5a2f72b29faf18309bbb9fa"
+  },
+  {
+    "figura": 18,
+    "archivo": "RF-056.png",
+    "descripcion": "Ejecución real filtrada de RF-056. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "799473eb503c7cf47d7a4cd1c33a387eb7b5623e10a4af07cc58703e29bca005"
+  },
+  {
+    "figura": 19,
+    "archivo": "RF-057.png",
+    "descripcion": "Ejecución real filtrada de RF-057. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "285e8d2bff2993817ce81cb41b58dd7e51a6d49a15c6120eeb5be17802895b5d"
+  },
+  {
+    "figura": 20,
+    "archivo": "RF-058.png",
+    "descripcion": "Ejecución real filtrada de RF-058. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "2fd4104ecedf7178e2f7107277d842e2928278ec3e84a47f48a9ecd3630ac382"
+  },
+  {
+    "figura": 21,
+    "archivo": "RF-059.png",
+    "descripcion": "Ejecución real filtrada de RF-059. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "ebb4859ce0d8b7750813d2fbf36f8f07e7995a2b1c46e46c8fbe214d7998a577"
+  },
+  {
+    "figura": 22,
+    "archivo": "RF-060.png",
+    "descripcion": "Ejecución real filtrada de RF-060. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "b6a69b443c99b75a56fbe138acadc101f57f87403f753826fbb12d3aa67766bc"
+  },
+  {
+    "figura": 23,
+    "archivo": "RF-061.png",
+    "descripcion": "Ejecución real filtrada de RF-061. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "c1c67113391189fe2bc02b92d0936d0029279b9b05a8ae4c5c5314a81da75354"
+  },
+  {
+    "figura": 24,
+    "archivo": "RF-062.png",
+    "descripcion": "Ejecución real filtrada de RF-062. Los casos de otros RF se omiten por el filtro.",
+    "sha256": "ed302be6b1a1b9282d1b6e86c6e2a5d6bff2383be2529a8e08e8bd5313c1b5b3"
+  },
+  {
+    "figura": 25,
+    "archivo": "resumen-backend.png",
+    "descripcion": "Resumen real de la ejecución completa del backend local: 74 casos aprobados.",
+    "sha256": "7e0d08685000d4c7b54c3e0db0df80553a861603fac678b7f4939d87da849314"
+  },
+  {
+    "figura": 26,
+    "archivo": "resumen-frontend.png",
+    "descripcion": "Resumen real de la ejecución completa del frontend local: 62 casos aprobados.",
+    "sha256": "1005796045f41d73c75321e7bc00325b2d06dbef0173abfaa1eeda3c6b637290"
+  },
+  {
+    "figura": 27,
+    "archivo": "aws-ejecucion.png",
+    "descripcion": "Captura original suministrada por Camilo de la ejecución dentro de AWS Windows: 1 suite y 1 prueba aprobadas.",
+    "sha256": "c80298a033f17b1049ffce1044628444dc175f2cab3f364269523dd72e0c07a6"
+  }
+]

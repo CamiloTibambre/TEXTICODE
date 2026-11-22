@@ -109,8 +109,7 @@
     </div>
   </aside>
 
-  <!-- "Mi perfil" del administrador -->
-  <PerfilDrawer v-if="rol === 'admin'" v-model:open="perfilAbierto" />
+  <PerfilDrawer v-model:open="perfilAbierto" />
 
   <!-- Tooltip único, fuera del panel recortado -->
   <Teleport to="body">
@@ -157,7 +156,6 @@ const iconPedidos    = svg(`<path stroke-linecap="round" stroke-linejoin="round"
 const iconSoporte    = svg(`<path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/>`)
 const iconRoles      = svg(`<path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/>`)
 const iconEmpresas   = svg(`<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21"/>`)
-const iconGoogle     = svg(`<path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3.75 8.25h16.5M5.25 5.25h13.5A1.5 1.5 0 0 1 20.25 6.75v12A1.5 1.5 0 0 1 18.75 20.25H5.25a1.5 1.5 0 0 1-1.5-1.5v-12a1.5 1.5 0 0 1 1.5-1.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 13h3v3H8zM13.5 12.5h2.5M13.5 15.5h2.5"/>`, 1.6)
 
 // ── MENÚ POR ROL (misma lógica de roles que antes) ──
 const menuConfig = {
@@ -179,7 +177,6 @@ const menuConfig = {
       { to: '/admin/reportes',        label: 'Reportes',              icon: iconReportes   },
       { to: '/admin/produccion',      label: 'Gestión de Producción', icon: iconProduccion },
       { to: '/admin/eficiencia',      label: 'Gestión de Operarios',  icon: iconEficiencia },
-      { to: '/admin/google-calendar', label: 'Google Calendar',       icon: iconGoogle     },
     ]
   },
   operario: {
@@ -189,7 +186,6 @@ const menuConfig = {
       { to: '/operario/cuenta',          label: 'Cuenta Personal',  icon: iconCuenta  },
       { to: '/operario/tareas',          label: 'Tareas Asignadas', icon: iconTareas  },
       { to: '/operario/avances',         label: 'Reportar Avances', icon: iconAvances },
-      { to: '/operario/google-calendar', label: 'Google Calendar',  icon: iconGoogle  },
     ]
   },
   cliente: {
@@ -200,7 +196,6 @@ const menuConfig = {
       { to: '/cliente/pedidos',         label: 'Pedidos y Entregas',    icon: iconPedidos    },
       { to: '/cliente/soporte',         label: 'Centro de Soporte',     icon: iconSoporte    },
       { to: '/cliente/alertas',         label: 'Alertas de Materiales', icon: iconInventario },
-      { to: '/cliente/google-calendar', label: 'Google Calendar',       icon: iconGoogle     },
     ]
   }
 }
@@ -302,16 +297,13 @@ watch(collapsed, ocultarTooltip)
 watch(() => route.path, ocultarTooltip)
 
 // ── MI PERFIL ──
-// Admin: abre el panel lateral. Operario y cliente: van a su Cuenta Personal.
-const rutaCuenta = { operario: '/operario/cuenta', cliente: '/cliente/cuenta' }
-const perfilAccion  = computed(() => props.rol === 'admin' || !!rutaCuenta[props.rol])
+const perfilAccion  = computed(() => !!auth.idUsuario)
 const perfilAbierto = ref(false)
 
 function abrirPerfil() {
   if (!perfilAccion.value) return
   ocultarTooltip()
-  if (props.rol === 'admin') perfilAbierto.value = true
-  else router.push(rutaCuenta[props.rol])
+  perfilAbierto.value = true
 }
 
 // ── CERRAR SESIÓN ──

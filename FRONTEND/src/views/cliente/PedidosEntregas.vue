@@ -121,8 +121,6 @@
                   <div class="progress-row">
                     <span class="progress-label">Progreso de fabricación</span>
                     <span class="progress-detail">
-                      <strong>{{ o.unidadesRealizadas }}</strong> de <strong>{{ o.cantidad }}</strong>
-                      <span class="progress-pct" :class="{ 'pct-completo': o.progreso === 100 }">· {{ o.progreso }}%</span>
                     </span>
                    </div>
                      <div class="progress-bg">
