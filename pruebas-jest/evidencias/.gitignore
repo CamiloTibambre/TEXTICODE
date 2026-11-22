@@ -1,0 +1,4 @@
+# Perfil temporal del navegador usado para renderizar las evidencias.
+perfil-render/
+# Imágenes de revisión de diseño, no evidencias de ejecución.
+qa-*

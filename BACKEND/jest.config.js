@@ -6,5 +6,6 @@ export default {
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/__tests__/aws/'], // la prueba AWS se corre aparte
   setupFiles: ['<rootDir>/__tests__/helpers/entorno.js'],
   verbose: true,
+  clearMocks: true,                                // reinicia el historial de llamadas entre pruebas
   silent: true,                                    // oculta los console.log de las rutas para que la salida sea limpia
 }
