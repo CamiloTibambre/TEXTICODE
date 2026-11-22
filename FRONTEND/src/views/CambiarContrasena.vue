@@ -107,7 +107,7 @@
                 @blur="focusPass1 = false"
                 @keyup.enter="cambiarPassword"
               />
-              <button class="toggle-pass" @click="verPass1 = !verPass1" type="button" tabindex="-1">
+              <button class="toggle-pass" @click="verPass1 = !verPass1" type="button" tabindex="-1" :aria-label="verPass1 ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="verPass1">
                 <svg v-if="!verPass1" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
@@ -145,7 +145,7 @@
                 @blur="focusPass2 = false"
                 @keyup.enter="cambiarPassword"
               />
-              <button class="toggle-pass" @click="verPass2 = !verPass2" type="button" tabindex="-1">
+              <button class="toggle-pass" @click="verPass2 = !verPass2" type="button" tabindex="-1" :aria-label="verPass2 ? 'Ocultar confirmación' : 'Mostrar confirmación'" :aria-pressed="verPass2">
                 <svg v-if="!verPass2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/>
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
@@ -453,13 +453,13 @@ h1.visible { opacity:1;transform:none; }
 .form-group.focused .input-wrap { border-color:#1f3a52;background:white;box-shadow:0 0 0 3px rgba(31,58,82,0.1); }
 .form-group.has-error .input-wrap { border-color:#f87171;box-shadow:0 0 0 3px rgba(248,113,113,0.1); }
 
-.input-icon { width:16px;height:16px;color:#9ca3af;margin-left:13px;flex-shrink:0;transition:color 0.2s; }
+.input-icon { width:16px;height:16px;color:var(--color-text-muted);margin-left:13px;flex-shrink:0;transition:color 0.2s; }
 .form-group.focused .input-icon { color:#1f3a52; }
 
 .input-wrap input { flex:1;padding:12px 10px 12px 9px;border:none;outline:none;background:transparent;font-size:14px;color:#111827;font-family:inherit; }
 .input-wrap input::placeholder { color:#c4c9d4; }
 
-.toggle-pass { background:none;border:none;cursor:pointer;padding:0 13px;color:#9ca3af;display:flex;align-items:center;transition:color 0.15s; }
+.toggle-pass { background:none;border:none;cursor:pointer;padding:0 13px;color:var(--color-text-muted);display:flex;align-items:center;transition:color 0.15s; }
 .toggle-pass:hover { color:#374151; }
 
 .strength-wrap { display:flex;align-items:center;gap:8px;margin-top:7px; }
@@ -469,15 +469,15 @@ h1.visible { opacity:1;transform:none; }
 .strength-fill.medium { background:#f59e0b; }
 .strength-fill.strong { background:#22c55e; }
 .strength-label { font-size:11.5px;font-weight:600; }
-.strength-label.weak   { color:#ef4444; }
-.strength-label.medium { color:#f59e0b; }
-.strength-label.strong { color:#22c55e; }
+.strength-label.weak   { color:#b91c1c; }
+.strength-label.medium { color:#b45309; }
+.strength-label.strong { color:#15803d; }
 .pass-hints { display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:8px; }
 .pass-hints span { font-size:11.5px;font-weight:500; }
-.hint-ok { color:#16a34a; }
-.hint-no { color:#9ca3af; }
+.hint-ok { color:#15803d; }
+.hint-no { color:var(--color-text-muted); }
 
-.error-msg { display:flex;align-items:center;gap:6px;color:#dc2626;font-size:12.5px;font-weight:500;margin-bottom:13px;padding:9px 12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca; }
+.error-msg { display:flex;align-items:center;gap:6px;color:#b91c1c;font-size:12.5px;font-weight:500;margin-bottom:13px;padding:9px 12px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca; }
 .err-enter-active { transition:all 0.22s ease; }
 .err-leave-active { transition:all 0.18s ease; }
 .err-enter-from,.err-leave-to { opacity:0;transform:translateY(-4px); }
@@ -497,7 +497,7 @@ h1.visible { opacity:1;transform:none; }
 @keyframes popIn { from{opacity:0;transform:scale(0.6)} to{opacity:1;transform:scale(1)} }
 .estado-desc { text-align:center;font-size:13px;color:#6b7280;margin-bottom:18px;line-height:1.55; }
 
-.card-footer { text-align:center;font-size:11px;color:#c4c9d4;margin-top:14px;opacity:0;transition:opacity 0.4s ease 0.62s; }
+.card-footer { text-align:center;font-size:11px;color:var(--color-text-muted);margin-top:14px;opacity:0;transition:opacity 0.4s ease 0.62s; }
 .card-footer.visible { opacity:1; }
 
 @keyframes spin { to{transform:rotate(360deg)} }

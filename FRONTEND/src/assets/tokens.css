@@ -1,0 +1,197 @@
+/* ═══════════════════════════════════════════════════════════════════
+   TEXTICODE — TOKENS DE DISEÑO
+   Fuente única de color, tipografía, espacio, radios, sombras,
+   capas y movimiento. Todo componente nuevo debe usar estas variables
+   en lugar de valores sueltos.
+   Se importa en main.js ANTES de motion.css.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── MARCA ─────────────────────────────────────────────────────── */
+  --color-brand:          #1f3a52;   /* azul petróleo Texticode */
+  --color-brand-hover:    #244b6a;
+  --color-brand-active:   #172c3e;
+  --color-brand-soft:     #e8eef4;   /* fondos suaves de marca */
+  --color-accent:         #2d6a9f;
+  --color-accent-hover:   #255a88;
+  --color-accent-soft:    #e6f0f8;
+  --color-on-brand:       #ffffff;
+
+  /* ── TEXTO (todos ≥ 4.5:1 sobre blanco) ────────────────────────── */
+  --color-text:           #111827;   /* 17.7:1 */
+  --color-text-strong:    #0f172a;
+  --color-text-secondary: #374151;   /* 10.3:1 */
+  --color-text-muted:     #6b7280;   /* 4.8:1 — reemplaza a #9ca3af en texto */
+  --color-text-disabled:  #9ca3af;   /* solo para elementos deshabilitados/decorativos */
+  --color-text-inverse:   #ffffff;
+
+  /* ── SUPERFICIES Y BORDES ──────────────────────────────────────── */
+  --color-bg:             #f1f5f9;   /* fondo de la app */
+  --color-bg-subtle:      #f8fafc;
+  --color-surface:        #ffffff;   /* tarjetas, tablas, modales */
+  --color-surface-muted:  #f9fafb;   /* encabezados de tabla, inputs */
+  --color-surface-hover:  #f3f4f6;
+  --color-surface-glass:  rgba(255, 255, 255, 0.82);
+  --color-border:         #e5e7eb;
+  --color-border-strong:  #d1d5db;   /* bordes de inputs (≥ 3:1 con el foco) */
+  --color-overlay:        rgba(15, 23, 42, 0.45);
+
+  /* ── ESTADOS ───────────────────────────────────────────────────── */
+  --color-success:        #15803d;   /* texto/íconos: 5.0:1 */
+  --color-success-solid:  #16a34a;   /* fondos con texto blanco grande */
+  --color-success-soft:   #dcfce7;
+  --color-danger:         #b91c1c;   /* 6.5:1 */
+  --color-danger-solid:   #dc2626;
+  --color-danger-soft:    #fee2e2;
+  --color-warning:        #92400e;   /* 7.1:1 */
+  --color-warning-solid:  #d97706;
+  --color-warning-soft:   #fef3c7;
+  --color-info:           #1d4ed8;   /* 6.7:1 */
+  --color-info-solid:     #2563eb;
+  --color-info-soft:      #dbeafe;
+
+  /* ── FOCO (WCAG 2.4.7) ─────────────────────────────────────────── */
+  --focus-ring-color:     #2563eb;
+  --focus-ring:           0 0 0 3px rgba(37, 99, 235, 0.35);
+  --focus-outline:        2px solid var(--focus-ring-color);
+  --focus-offset:         2px;
+
+  /* ── TIPOGRAFÍA ────────────────────────────────────────────────── */
+  --font-sans:   Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono:   ui-monospace, 'SFMono-Regular', Consolas, monospace;
+
+  --text-xs:     0.75rem;    /* 12px — mínimo para texto informativo */
+  --text-sm:     0.8125rem;  /* 13px */
+  --text-base:   0.875rem;   /* 14px — cuerpo de la app */
+  --text-md:     1rem;       /* 16px */
+  --text-lg:     1.125rem;   /* 18px */
+  --text-xl:     1.375rem;   /* 22px — títulos de sección */
+  --text-2xl:    1.75rem;    /* 28px — KPIs */
+
+  --weight-regular:  400;
+  --weight-medium:   500;
+  --weight-semibold: 600;
+  --weight-bold:     700;
+
+  --leading-tight:   1.25;
+  --leading-normal:  1.5;
+
+  /* ── ESPACIADO (escala de 4px) ─────────────────────────────────── */
+  --space-0:   0;
+  --space-1:   4px;
+  --space-2:   8px;
+  --space-3:   12px;
+  --space-4:   16px;
+  --space-5:   20px;
+  --space-6:   24px;
+  --space-8:   32px;
+  --space-10:  40px;
+  --space-12:  48px;
+
+  /* ── RADIOS ────────────────────────────────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 999px;
+
+  /* ── SOMBRAS ───────────────────────────────────────────────────── */
+  --shadow-xs:  0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm:  0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md:  0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg:  0 20px 48px rgba(15, 23, 42, 0.12);
+  --shadow-brand: 0 12px 28px rgba(31, 58, 82, 0.25);
+
+  /* ── LAYOUT ────────────────────────────────────────────────────── */
+  --sidebar-width:           260px;
+  --sidebar-width-collapsed: 76px;
+  --topbar-height:           56px;
+  --content-max-width:       1440px;
+  --control-height:          40px;   /* inputs y botones */
+  --control-height-sm:       32px;
+
+  /* ── CAPAS (z-index) ───────────────────────────────────────────── */
+  --z-base:     1;
+  --z-sticky:   10;
+  --z-sidebar:  40;
+  --z-overlay:  900;
+  --z-modal:    1000;
+  --z-toast:    2000;
+  --z-tooltip:  2100;
+
+  /* ── MOVIMIENTO ────────────────────────────────────────────────── */
+  /* Duraciones: todo lo interactivo entre 150 y 350ms */
+  --duration-instant: 80ms;
+  --duration-fast:    150ms;   /* hover, focus, press */
+  --duration-base:    220ms;   /* aparición de elementos, rutas */
+  --duration-slow:    300ms;   /* drawers, modales, sidebar */
+  --duration-slower:  350ms;   /* tope para entradas grandes */
+  --stagger-step:     40ms;    /* retraso entre ítems de una lista */
+
+  /* Curvas */
+  --ease-out:      cubic-bezier(0.22, 1, 0.36, 1);   /* entradas */
+  --ease-in:       cubic-bezier(0.55, 0, 1, 0.45);   /* salidas */
+  --ease-in-out:   cubic-bezier(0.65, 0, 0.35, 1);   /* movimientos de ida y vuelta */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);     /* cambios de color/estado */
+
+  /* Distancias de desplazamiento en animaciones */
+  --motion-shift-sm: 4px;
+  --motion-shift-md: 8px;
+  --motion-shift-lg: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BASE GLOBAL
+   ═══════════════════════════════════════════════════════════════════ */
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+}
+
+/* Foco visible solo para teclado (no aparece al hacer clic con mouse).
+   Las vistas que definen su propio estilo de foco en inputs lo conservan. */
+:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: var(--focus-offset);
+}
+
+/* Utilidad: texto solo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Salto al contenido para navegación con teclado */
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: var(--space-2);
+  z-index: var(--z-tooltip);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-radius: var(--radius-md);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+.skip-link:focus { transform: translateY(0); }

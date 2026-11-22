@@ -1,6 +1,5 @@
 <template>
   <div class="layout">
-    <AppSidebar :rol="rolActual" />
 
     <main class="main">
 
@@ -12,97 +11,28 @@
         <div class="bg-grid"></div>
       </div>
 
-      <!-- TOAST -->
-      <Transition name="toast">
-        <div v-if="message" class="toast" :class="messageType === 'error' ? 'danger' : 'success'">
-          <svg v-if="messageType !== 'error'" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-          </svg>
-          <svg v-else width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303 3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L10.052 3.378c.866-1.5 3.032-1.5 3.898 0L21.303 16.126Z"/>
-          </svg>
-          {{ message }}
-        </div>
-      </Transition>
-
-      <!-- HERO HEADER -->
-      <div class="page-hero" :class="{ 'hero-visible': animVisible }">
-        <div class="hero-left">
-          <div class="hero-icon-wrap">
-            <svg class="hero-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-            </svg>
-            <div class="hero-icon-ring ring-1"></div>
-            <div class="hero-icon-ring ring-2"></div>
-          </div>
-          <div class="hero-text">
-            <h1 class="hero-title">
-              <span
-                v-for="(ch, i) in 'Google Calendar'"
-                :key="i"
-                class="title-char"
-                :style="{ animationDelay: animVisible ? `${i * 35}ms` : '9999s' }"
-              >{{ ch === ' ' ? '\u00A0' : ch }}</span>
-            </h1>
-            <p class="hero-sub">Sincroniza fechas de entrega y recordatorios automáticos con Google Workspace</p>
-          </div>
-        </div>
-        <div class="hero-actions-wrap">
-          <button class="btn btn-refresh" @click="sincronizar" :disabled="working || !status.connected">
-            <svg class="btn-icon" :class="{ 'spin': working }" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <PageHeader
+        titulo="Google Calendar"
+        subtitulo="Sincroniza fechas de entrega y recordatorios automáticos con Google Workspace"
+        icono="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"
+      >
+        <template #acciones>
+          <button type="button" class="tx-btn tx-btn--primary" @click="sincronizar" :disabled="working || !status.connected"
+            :title="!status.connected ? 'Primero vincula tu cuenta de Google' : undefined">
+            <svg width="16" height="16" :class="{ 'spin': working }" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
             </svg>
-            Sincronizar ahora
+            {{ working ? 'Sincronizando…' : 'Sincronizar ahora' }}
           </button>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
-      <!-- STATS -->
-      <div class="stats" :class="{ 'stats-visible': animVisible }">
-        <div class="stat-card" style="transition-delay:0ms">
-          <div class="stat-accent" style="background:#1f3a52"></div>
-          <div class="stat-icon-bg" style="color:#1f3a52">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/>
-            </svg>
-          </div>
-          <h3>{{ esAdmin ? 'Usuarios conectados' : 'Estado vinculación' }}</h3>
-          <p style="color:#1f3a52">{{ esAdmin ? statsConectados : (status.connected ? 'Vinculado' : 'Sin vincular') }}</p>
-        </div>
-        <div class="stat-card" style="transition-delay:80ms">
-          <div class="stat-accent" style="background:#16a34a"></div>
-          <div class="stat-icon-bg" style="color:#16a34a">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-            </svg>
-          </div>
-          <h3>Eventos sincronizados</h3>
-          <p style="color:#16a34a">{{ syncCount }}</p>
-        </div>
-        <div class="stat-card" style="transition-delay:160ms">
-          <div class="stat-accent" style="background:#2563eb"></div>
-          <div class="stat-icon-bg" style="color:#2563eb">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-            </svg>
-          </div>
-          <h3>Próximos eventos</h3>
-          <p style="color:#2563eb">{{ events.length }}</p>
-        </div>
-        <div class="stat-card" style="transition-delay:240ms">
-          <div class="stat-accent" style="background:#d97706"></div>
-          <div class="stat-icon-bg" style="color:#d97706">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
-            </svg>
-          </div>
-          <h3>Recordatorios activos</h3>
-          <p style="color:#d97706">{{ events.length * 2 }}</p>
-        </div>
+      <div class="kpi-grid">
+        <KpiCard v-for="(k, i) in kpis" :key="k.label" v-bind="k" :indice="i" />
       </div>
 
       <!-- FILA PRINCIPAL -->
-      <div class="grid-2" :class="{ 'box-visible': animVisible }" style="margin-bottom:20px">
+      <div class="grid-2" style="margin-bottom:20px">
 
         <!-- ESTADO DE VINCULACIÓN -->
         <div class="table-box box-visible" style="transition-delay:200ms">
@@ -287,9 +217,12 @@
 </template>
 
 <script setup>
+import PageHeader from '../components/PageHeader.vue'
+import KpiCard from '../components/KpiCard.vue'
+import { useToast } from '../composables/useToast'
 import { computed, onMounted, ref } from 'vue'
-import AppSidebar from '../components/AppSidebar.vue'
 import { useAuthStore } from '../stores/auth'
+import { useConfirm } from '../composables/useConfirm'
 import {
   getGoogleAuthUrl,
   getGoogleCalendarStatus,
@@ -300,8 +233,14 @@ import {
   unlinkGoogleUserAdmin,
 } from '../services/api'
 
+const confirmar = useConfirm()
+const toast = useToast()
+
+const ICON_USERS = 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z'
+const ICON_LINK  = 'M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244'
+const ICON_OK    = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+
 const auth        = useAuthStore()
-const animVisible = ref(false)
 const loading     = ref(true)
 const working     = ref(false)
 const status      = ref({ connected: false, profile: null })
@@ -309,8 +248,6 @@ const events      = ref([])
 const connectedUsers = ref([])
 const syncResult  = ref('')
 const syncCount   = ref(0)
-const message     = ref('')
-const messageType = ref('success')
 
 const rolActual = computed(() => {
   const rol = auth.rol
@@ -319,6 +256,15 @@ const rolActual = computed(() => {
 })
 const esAdmin = computed(() => rolActual.value === 'admin')
 const statsConectados = computed(() => connectedUsers.value.filter(u => u.Google_Email).length)
+
+const kpis = computed(() => [
+  esAdmin.value
+    ? { label: 'Usuarios conectados', valor: statsConectados.value, icono: ICON_USERS, tono: 'brand' }
+    : { label: 'Estado de vinculación', texto: status.value.connected ? 'Vinculado' : 'Sin vincular', icono: ICON_LINK, tono: status.value.connected ? 'success' : 'warning' },
+  { label: 'Eventos sincronizados', valor: syncCount.value, icono: ICON_OK,   tono: 'success' },
+  { label: 'Próximos eventos',      valor: events.value.length, icono: ICON_CAL, tono: 'info' },
+  { label: 'Recordatorios activos', valor: events.value.length * 2, icono: ICON_BELL, tono: 'warning', nota: '2 por evento' },
+])
 
 const ICON_CAL  = 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5'
 const ICON_BELL = 'M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0'
@@ -342,9 +288,8 @@ function avatarColor(n) { return PALETTES[(n?.charCodeAt(0) || 0) % PALETTES.len
 function iniciales(n)   { return (n || '').split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() }
 
 function notify(text, type = 'success') {
-  message.value     = text
-  messageType.value = type
-  setTimeout(() => { message.value = '' }, 2800)
+  if (type === 'error') toast.error(text)
+  else toast.success(text)
 }
 
 async function cargarEstado() {
@@ -371,7 +316,13 @@ async function iniciarVinculacion() {
 }
 
 async function desvincular() {
-  if (!confirm('¿Deseas desvincular Google Calendar de tu cuenta?')) return
+  const ok = await confirmar({
+    titulo: '¿Desvincular Google Calendar?',
+    mensaje: 'Tus eventos dejarán de sincronizarse. Podrás vincular tu cuenta de nuevo cuando quieras.',
+    textoConfirmar: 'Desvincular',
+    tono: 'danger',
+  })
+  if (!ok) return
   working.value = true
   try {
     await unlinkGoogleCalendar()
@@ -422,7 +373,13 @@ async function cargarUsuariosGoogle() {
 }
 
 async function desvincularUsuarioAdmin(user) {
-  if (!confirm(`¿Deseas desvincular Google Calendar del usuario ${user.Nombre_Completo}?`)) return
+  const ok = await confirmar({
+    titulo: `¿Desvincular Google Calendar de ${user.Nombre_Completo}?`,
+    mensaje: 'Sus eventos dejarán de sincronizarse hasta que vuelva a vincular su cuenta.',
+    textoConfirmar: 'Desvincular',
+    tono: 'danger',
+  })
+  if (!ok) return
   working.value = true
   try {
     await unlinkGoogleUserAdmin(user.Id_Usuario)
@@ -456,7 +413,6 @@ function formatEventDate(start) {
 onMounted(async () => {
   await cargarEstado()
   await cargarUsuariosGoogle()
-  setTimeout(() => { animVisible.value = true }, 50)
 })
 </script>
 
@@ -477,38 +433,14 @@ onMounted(async () => {
 .bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(31,58,82,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(31,58,82,.04) 1px,transparent 1px); background-size: 40px 40px; }
 
 /* ── HERO ── */
-.page-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; opacity: 0; transform: translateY(-16px); transition: opacity .5s ease, transform .5s ease; }
-.page-hero.hero-visible { opacity: 1; transform: translateY(0); }
-.hero-left { display: flex; align-items: center; gap: 16px; }
-.hero-text { display: flex; flex-direction: column; }
-.hero-icon-wrap { position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: #1f3a52; border-radius: 14px; flex-shrink: 0; }
-.hero-icon { width: 26px; height: 26px; color: white; }
-.hero-icon-ring { position: absolute; border-radius: 50%; border: 1.5px solid #1f3a52; opacity: 0; animation: iconPulse 3s ease-out infinite; }
-.ring-1 { width: 68px; height: 68px; animation-delay: 0s; }
-.ring-2 { width: 86px; height: 86px; animation-delay: .8s; }
 @keyframes iconPulse { 0% { transform: scale(.7); opacity: .5; } 100% { transform: scale(1.4); opacity: 0; } }
-.hero-title { font-size: 24px; font-weight: 700; color: #111827; margin: 0; display: flex; flex-wrap: wrap; }
-.title-char { display: inline-block; opacity: 0; transform: translateY(12px); animation: charReveal .4s ease forwards; }
 @keyframes charReveal { to { opacity: 1; transform: translateY(0); } }
-.hero-sub { font-size: 13px; color: #6b7280; margin: 4px 0 0; }
-.hero-actions-wrap { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .btn { display: flex; align-items: center; gap: 8px; background: #1f3a52; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background .2s, transform .1s; }
 .btn:hover:not(:disabled) { background: #162b3c; transform: translateY(-1px); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-icon { width: 18px; height: 18px; }
 .spin { animation: spinIcon .8s linear infinite; }
 @keyframes spinIcon { to { transform: rotate(360deg); } }
-
-/* ── STATS ── */
-.stats { display: flex; gap: 18px; margin-bottom: 24px; }
-.stat-card { background: white; flex: 1; padding: 20px 20px 20px 24px; border-radius: 14px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity .45s ease, transform .45s ease, box-shadow .2s; }
-.stats-visible .stat-card { opacity: 1; transform: translateY(0); }
-.stat-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,.09); transform: translateY(-3px) !important; }
-.stat-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
-.stat-icon-bg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); opacity: .07; }
-.stat-icon-bg svg { width: 52px; height: 52px; }
-.stat-card h3 { font-size: 13px; color: #6b7280; font-weight: 500; margin: 0 0 10px; }
-.stat-card p { font-size: 30px; font-weight: 800; margin: 0; line-height: 1; }
 
 /* ── GRID ── */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -554,7 +486,7 @@ onMounted(async () => {
 .event-row:hover { border-color: #1f3a52; background: #f0f4f8; }
 .event-date-badge { background: #1f3a52; color: white; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; }
 .event-title-txt { font-size: 13px; font-weight: 500; color: #111827; flex: 1; }
-.event-arrow { color: #9ca3af; flex-shrink: 0; }
+.event-arrow { color: var(--color-text-muted); flex-shrink: 0; }
 .event-arrow svg { width: 14px; height: 14px; }
 
 /* ── USUARIOS ── */
@@ -581,23 +513,12 @@ onMounted(async () => {
 /* ── UTILS ── */
 .cargando-detalle { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px; color: #6b7280; }
 .spinner { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #1f3a52; border-radius: 50%; animation: spinIcon .7s linear infinite; }
-.empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--color-text-muted); }
 .empty-state svg { margin: 0 auto 12px; display: block; opacity: .4; }
 .empty-state p { font-size: 14px; margin: 0; }
-
-/* ── TOAST ── */
-.toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: white; box-shadow: 0 4px 20px rgba(0,0,0,.15); }
-.toast.success { background: #16a34a; }
-.toast.danger  { background: #dc2626; }
-.toast-enter-active { transition: all .3s ease; }
-.toast-leave-active { transition: all .25s ease; }
-.toast-enter-from { opacity: 0; transform: translateY(12px); }
-.toast-leave-to   { opacity: 0; transform: translateY(12px); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 960px) {
   .grid-2 { grid-template-columns: 1fr; }
-  .stats { flex-wrap: wrap; }
-  .stat-card { min-width: calc(50% - 9px); }
 }
 </style>

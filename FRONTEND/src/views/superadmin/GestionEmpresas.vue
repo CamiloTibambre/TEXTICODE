@@ -1,6 +1,5 @@
 <template>
   <div class="layout">
-    <AppSidebar rol="superadmin" />
 
     <main class="main">
 
@@ -11,35 +10,22 @@
         <div class="bg-grid"></div>
       </div>
 
-      <!-- TOAST -->
-      <Transition name="toast">
-        <div v-if="toast.visible" class="toast" :class="toast.type">{{ toast.msg }}</div>
-      </Transition>
-
-      <!-- HERO -->
-      <div class="page-hero" :class="{ 'hero-visible': animVisible }">
-        <div class="hero-left">
-          <div class="hero-icon-wrap">
-            <svg class="hero-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" :d="ICON_EMPRESA"/>
-            </svg>
-          </div>
-          <div class="hero-text">
-            <h1 class="hero-title">Gestión de Empresas</h1>
-            <p class="hero-sub">Administración global de empresas y sus administradores</p>
-          </div>
-        </div>
-        <div class="hero-actions-wrap">
+      <PageHeader
+        titulo="Gestión de Empresas"
+        subtitulo="Administración global de empresas y sus administradores"
+        :icono="ICON_EMPRESA"
+      >
+        <template #acciones>
           <div class="filters">
             <div class="search-box" :class="{ 'search-focus': searchFocus }">
               <svg class="search-ico" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
               </svg>
-              <input v-model="busqueda" type="text" placeholder="Buscar empresas..."
+              <input v-model="busqueda" type="search" placeholder="Buscar por nombre o slug" aria-label="Buscar empresas por nombre o slug"
                 @focus="searchFocus = true" @blur="searchFocus = false">
             </div>
             <div class="select-wrapper">
-              <select v-model="filtroEstado" class="select">
+              <select v-model="filtroEstado" class="select" aria-label="Filtrar por estado">
                 <option value="">Todos los estados</option>
                 <option value="activa">Activas</option>
                 <option value="inactiva">Inactivas</option>
@@ -49,33 +35,35 @@
               </svg>
             </div>
           </div>
-          <button class="btn btn-sec" @click="abrirCorreos">
-            <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <button type="button" class="tx-btn tx-btn--secondary" @click="abrirCorreos">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"/>
             </svg>
             Correos
           </button>
-          
-<button class="btn" @click="abrirCrear">
-            <svg class="btn-icon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <button type="button" class="tx-btn tx-btn--primary" @click="abrirCrear">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
             </svg>
-            Nueva Empresa
+            Nueva empresa
           </button>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
-      <!-- STATS -->
-      <div class="stats" :class="{ 'stats-visible': animVisible }">
-        <div v-for="(s, i) in statsCards" :key="s.label" class="stat-card" :style="{ transitionDelay: animVisible ? `${i * 80}ms` : '0ms' }">
-          <div class="stat-accent" :style="{ background: s.color }"></div>
-          <h3>{{ s.label }}</h3>
-          <p :style="{ color: s.color }">{{ s.value }}</p>
-        </div>
+      <div class="kpi-grid">
+        <KpiCard
+          v-for="(k, i) in kpis"
+          :key="k.label"
+          v-bind="k"
+          :activo="filtroEstado === k.filtro"
+          :cargando="cargando"
+          :indice="i"
+          @click="filtroEstado = k.filtro"
+        />
       </div>
 
       <!-- TABLA -->
-      <div class="table-box" :class="{ 'box-visible': animVisible }">
+      <div class="table-box">
         <div class="table-header-bar">
           <div class="table-header-left">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -94,7 +82,8 @@
           </div>
         </div>
 
-        <table v-else>
+        <div v-else class="tx-table-scroll">
+        <table>
           <thead>
             <tr>
               <th>Empresa</th>
@@ -105,7 +94,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(e, idx) in empresasFiltradas" :key="e.Id_Empresa" class="table-row" :style="{ animationDelay: `${idx * 40}ms` }">
+            <tr v-for="(e, idx) in visibles" :key="e.Id_Empresa" class="table-row" :style="{ '--row-i': Math.min(idx, 12) }">
               <td>
                 <div class="user">
                   <div class="avatar">{{ iniciales(e.Nombre_Empresa) }}</div>
@@ -120,22 +109,22 @@
               <td>{{ formatearFecha(e.Fecha_Creacion) }}</td>
               <td>
                 <div class="actions">
-                  <button class="action-btn" @click="abrirAdmins(e)" title="Administradores">
+                  <button type="button" class="action-btn" @click="abrirAdmins(e)" :aria-label="`Administradores de ${e.Nombre_Empresa}`" title="Administradores">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
                       <path stroke-linecap="round" stroke-linejoin="round" :d="ICON_USERS"/>
                     </svg>
                   </button>
-                  <button class="action-btn edit-btn" @click="abrirEditar(e)" title="Editar">
+                  <button type="button" class="action-btn edit-btn" @click="abrirEditar(e)" :aria-label="`Editar ${e.Nombre_Empresa}`" title="Editar">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
                       <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
                     </svg>
                   </button>
-                  <button v-if="e.Estado !== 'activa'" class="action-btn activate-btn" :disabled="activandoId === e.Id_Empresa" @click="activar(e)" title="Activar">
+                  <button v-if="e.Estado !== 'activa'" type="button" :aria-label="`Activar ${e.Nombre_Empresa}`" class="action-btn activate-btn" :disabled="activandoId === e.Id_Empresa" @click="activar(e)" title="Activar">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
                     </svg>
                   </button>
-                  <button v-if="e.Estado === 'activa'" class="action-btn delete-btn" @click="pedirDesactivar(e)" title="Desactivar">
+                  <button v-if="e.Estado === 'activa'" type="button" class="action-btn delete-btn" @click="pedirDesactivar(e)" :aria-label="`Desactivar ${e.Nombre_Empresa}`" title="Desactivar">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
                     </svg>
@@ -153,292 +142,302 @@
             </tr>
           </tbody>
         </table>
+        </div>
+        <BasePagination
+          v-if="!cargando"
+          v-model:pagina="pagina"
+          v-model:por-pagina="porPagina"
+          :total="empresasFiltradas.length"
+          etiqueta="empresas"
+        />
       </div>
     </main>
 
     <!-- MODAL: NUEVA EMPRESA + ADMINISTRADOR -->
-    <Transition name="modal">
-      <div v-if="modalCrear" class="modal" @click.self="cerrarCrear">
-        <div class="modal-content">
-          <h2>Nueva Empresa</h2>
-          <span class="close" @click="cerrarCrear">×</span>
-
-          <p class="section-title">Datos de la empresa</p>
-
-          <label>Nombre de la empresa</label>
-          <input v-model="formCrear.nombreEmpresa" type="text" placeholder="Ej: Textiles del Norte"
-            :class="{ 'input-error': erroresCrear.nombreEmpresa && tocadoCrear }" @blur="tocadoCrear = true"
-            @input="autoSlug">
-          <span v-if="erroresCrear.nombreEmpresa && tocadoCrear" class="error-msg">{{ erroresCrear.nombreEmpresa }}</span>
-
-          <label>Slug <span class="label-hint">(identificador único, minúsculas y guiones)</span></label>
-          <input v-model="formCrear.slug" type="text" placeholder="textiles-del-norte"
-            :class="{ 'input-error': erroresCrear.slug && tocadoCrear }" @blur="tocadoCrear = true"
-            @input="slugManual = true">
-          <span v-if="erroresCrear.slug && tocadoCrear" class="error-msg">{{ erroresCrear.slug }}</span>
-
-          <p class="section-title">Administrador de la empresa</p>
-
-          <label>Nombre completo</label>
-          <input v-model="formCrear.nombreCompleto" type="text" placeholder="Nombre completo"
-            :class="{ 'input-error': erroresCrear.nombreCompleto && tocadoCrear }" @blur="tocadoCrear = true">
-          <span v-if="erroresCrear.nombreCompleto && tocadoCrear" class="error-msg">{{ erroresCrear.nombreCompleto }}</span>
-
-          <label>Nombre de usuario <span class="label-hint">(para iniciar sesión)</span></label>
-          <input v-model="formCrear.nombreUsuario" type="text" placeholder="Ej: admin_textiles"
-            :class="{ 'input-error': erroresCrear.nombreUsuario && tocadoCrear }" @blur="tocadoCrear = true">
-          <span v-if="erroresCrear.nombreUsuario && tocadoCrear" class="error-msg">{{ erroresCrear.nombreUsuario }}</span>
-
-          <label>Correo electrónico</label>
-          <input v-model="formCrear.correo" type="email" placeholder="admin@empresa.com"
-            :class="{ 'input-error': erroresCrear.correo && tocadoCrear }" @blur="tocadoCrear = true">
-          <span v-if="erroresCrear.correo && tocadoCrear" class="error-msg">{{ erroresCrear.correo }}</span>
-
-          <label>Teléfono <span class="label-hint">(opcional)</span></label>
-          <input v-model="formCrear.telefono" type="tel" inputmode="numeric" maxlength="10" placeholder="3001234567"
-            :class="{ 'input-error': erroresCrear.telefono && tocadoCrear }" @blur="tocadoCrear = true"
-            @input="formCrear.telefono = soloDigitos(formCrear.telefono)">
-          <span v-if="erroresCrear.telefono && tocadoCrear" class="error-msg">{{ erroresCrear.telefono }}</span>
-
-          <label>Contraseña</label>
-          <div class="input-wrap-modal">
-            <input v-model="formCrear.contrasena" :type="verPassCrear ? 'text' : 'password'" placeholder="Contraseña del administrador"
-              :class="{ 'input-error': erroresCrear.contrasena && tocadoCrear }" @blur="tocadoCrear = true" autocomplete="new-password">
-            <button class="toggle-pass-modal" @click="verPassCrear = !verPassCrear" type="button">{{ verPassCrear ? 'Ocultar' : 'Ver' }}</button>
+    <BaseModal
+      :open="modalCrear"
+      titulo="Nueva empresa"
+      descripcion="Se crea junto con su primer administrador, que podrá iniciar sesión de inmediato."
+      tamano="lg"
+      :cerrar-al-clic-fuera="false"
+      @update:open="val => !val && cerrarCrear()"
+    >
+      <form id="form-empresa-crear" class="tx-form" novalidate @submit.prevent="guardarCrear">
+        <fieldset class="tx-form-section">
+          <legend class="tx-form-section__title">Empresa</legend>
+          <div class="tx-form-grid">
+            <BaseField label="Nombre de la empresa" requerido :error="vCrear.error('nombreEmpresa')" v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formCrear.nombreEmpresa" type="text" class="tx-input" placeholder="Ej: Textiles del Norte"
+                autocomplete="organization" required @input="autoSlug" @blur="vCrear.tocar('nombreEmpresa')">
+            </BaseField>
+            <BaseField label="Identificador (slug)" requerido :error="vCrear.error('slug')"
+              hint="Se genera solo. Minúsculas, números y guiones." v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formCrear.slug" type="text" class="tx-input" placeholder="textiles-del-norte"
+                autocapitalize="none" spellcheck="false" required @input="slugManual = true" @blur="vCrear.tocar('slug')">
+            </BaseField>
           </div>
-          <div v-if="formCrear.contrasena" class="pwd-hints">
-            <span v-for="h in hintsPassCrear" :key="h.label" class="pwd-hint" :class="h.ok ? 'hint-ok' : 'hint-no'">{{ h.ok ? '✓' : '✗' }} {{ h.label }}</span>
-          </div>
-          <span v-if="erroresCrear.contrasena && tocadoCrear" class="error-msg">{{ erroresCrear.contrasena }}</span>
+        </fieldset>
 
-          <div class="modal-buttons">
-            <button class="btn-cancel" @click="cerrarCrear">Cancelar</button>
-            <button class="btn-submit" @click="guardarCrear" :disabled="guardando">
-              {{ guardando ? 'Creando...' : 'Crear Empresa' }}
-            </button>
+        <fieldset class="tx-form-section">
+          <legend class="tx-form-section__title">Administrador de la empresa</legend>
+          <div class="tx-form-grid">
+            <BaseField label="Nombre completo" requerido completo :error="vCrear.error('nombreCompleto')" v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formCrear.nombreCompleto" type="text" class="tx-input" placeholder="Ej: Laura Gómez"
+                autocomplete="off" required @blur="vCrear.tocar('nombreCompleto')">
+            </BaseField>
+            <BaseField label="Usuario para iniciar sesión" requerido :error="vCrear.error('nombreUsuario')" v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formCrear.nombreUsuario" type="text" class="tx-input" placeholder="Ej: admin_textiles"
+                autocapitalize="none" spellcheck="false" autocomplete="off" required @blur="vCrear.tocar('nombreUsuario')">
+            </BaseField>
+            <BaseField label="Teléfono" opcional :error="vCrear.error('telefono')" v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formCrear.telefono" type="tel" inputmode="numeric" maxlength="10" class="tx-input"
+                placeholder="3001234567" autocomplete="off"
+                @input="formCrear.telefono = soloDigitos(formCrear.telefono)" @blur="vCrear.tocar('telefono')">
+            </BaseField>
+            <BaseField label="Correo electrónico" requerido completo :error="vCrear.error('correo')" v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formCrear.correo" type="email" class="tx-input" placeholder="admin@empresa.com"
+                autocomplete="off" required @blur="vCrear.tocar('correo')">
+            </BaseField>
+            <BaseField label="Contraseña" requerido completo :error="vCrear.error('contrasena')" v-slot="{ attrs }">
+              <BasePassword v-bind="attrs" v-model="formCrear.contrasena" requisitos :reglas="hintsPassCrear" required
+                placeholder="La usará para iniciar sesión" @blur="vCrear.tocar('contrasena')" />
+            </BaseField>
           </div>
-        </div>
-      </div>
-    </Transition>
+        </fieldset>
+      </form>
+
+      <template #footer>
+        <button type="button" class="tx-btn tx-btn--secondary" :disabled="guardando" @click="cerrarCrear">Cancelar</button>
+        <button type="submit" form="form-empresa-crear" class="tx-btn tx-btn--primary" :disabled="guardando">
+          <span v-if="guardando" class="tx-spinner" aria-hidden="true"></span>
+          {{ guardando ? 'Creando…' : 'Crear empresa' }}
+        </button>
+      </template>
+    </BaseModal>
 
     <!-- MODAL: EDITAR EMPRESA -->
-    <Transition name="modal">
-      <div v-if="modalEditar" class="modal" @click.self="cerrarEditar">
-        <div class="modal-content">
-          <h2>Editar Empresa</h2>
-          <span class="close" @click="cerrarEditar">×</span>
+    <BaseModal
+      :open="modalEditar"
+      titulo="Editar empresa"
+      :descripcion="formEditar.nombreEmpresa || ''"
+      tamano="lg"
+      :cerrar-al-clic-fuera="false"
+      @update:open="val => !val && cerrarEditar()"
+    >
+      <form id="form-empresa-editar" class="tx-form" novalidate @submit.prevent="guardarEditar">
+        <fieldset class="tx-form-section">
+          <legend class="tx-form-section__title">Empresa</legend>
+          <div class="tx-form-grid">
+            <BaseField label="Nombre de la empresa" requerido :error="vEditar.error('nombreEmpresa')" v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formEditar.nombreEmpresa" type="text" class="tx-input" required @blur="vEditar.tocar('nombreEmpresa')">
+            </BaseField>
+            <BaseField label="Identificador (slug)" requerido :error="vEditar.error('slug')" v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formEditar.slug" type="text" class="tx-input" autocapitalize="none" spellcheck="false"
+                required @blur="vEditar.tocar('slug')">
+            </BaseField>
+          </div>
+        </fieldset>
 
-          <label>Nombre de la empresa</label>
-          <input v-model="formEditar.nombreEmpresa" type="text"
-            :class="{ 'input-error': erroresEditar.nombreEmpresa && tocadoEditar }" @blur="tocadoEditar = true">
-          <span v-if="erroresEditar.nombreEmpresa && tocadoEditar" class="error-msg">{{ erroresEditar.nombreEmpresa }}</span>
+        <fieldset class="tx-form-section">
+          <legend class="tx-form-section__title">Correos a clientes y operarios</legend>
+          <div class="tx-form-grid">
+            <BaseField label="Nombre comercial" opcional :error="vEditar.error('nombreComercial')"
+              hint="Lo ven los destinatarios como remitente y en el asunto." v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formEditar.nombreComercial" type="text" maxlength="80" class="tx-input"
+                placeholder="Vacío = nombre de la empresa" @blur="vEditar.tocar('nombreComercial')">
+            </BaseField>
+            <BaseField label="Correo de respuestas" opcional :error="vEditar.error('emailNotificaciones')"
+              hint="Aquí llegan las respuestas a los correos automáticos." v-slot="{ attrs }">
+              <input v-bind="attrs" v-model="formEditar.emailNotificaciones" type="email" maxlength="160" class="tx-input"
+                placeholder="contacto@empresa.com" @blur="vEditar.tocar('emailNotificaciones')">
+            </BaseField>
+          </div>
+        </fieldset>
+      </form>
 
-          <label>Slug</label>
-          <input v-model="formEditar.slug" type="text"
-            :class="{ 'input-error': erroresEditar.slug && tocadoEditar }" @blur="tocadoEditar = true">
-          <span v-if="erroresEditar.slug && tocadoEditar" class="error-msg">{{ erroresEditar.slug }}</span>
+      <template #footer>
+        <button type="button" class="tx-btn tx-btn--secondary" :disabled="guardando" @click="cerrarEditar">Cancelar</button>
+        <button type="submit" form="form-empresa-editar" class="tx-btn tx-btn--primary" :disabled="guardando">
+          <span v-if="guardando" class="tx-spinner" aria-hidden="true"></span>
+          {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </template>
+    </BaseModal>
 
-          <p class="section-title">Correos a clientes y operarios</p>
-
-          <label>Nombre comercial <span class="label-hint">(opcional)</span></label>
-          <input v-model="formEditar.nombreComercial" type="text" maxlength="80" placeholder="Si lo dejas vacío se usa el nombre de la empresa"
-            :class="{ 'input-error': erroresEditar.nombreComercial && tocadoEditar }" @blur="tocadoEditar = true">
-          <span v-if="erroresEditar.nombreComercial && tocadoEditar" class="error-msg">{{ erroresEditar.nombreComercial }}</span>
-          <span class="field-help">Es el nombre que verán los destinatarios como remitente y en el asunto de cada correo.</span>
-
-          <label>Correo de respuestas <span class="label-hint">(opcional)</span></label>
-          <input v-model="formEditar.emailNotificaciones" type="email" maxlength="160" placeholder="contacto@empresa.com"
-            :class="{ 'input-error': erroresEditar.emailNotificaciones && tocadoEditar }" @blur="tocadoEditar = true">
-          <span v-if="erroresEditar.emailNotificaciones && tocadoEditar" class="error-msg">{{ erroresEditar.emailNotificaciones }}</span>
-          <span class="field-help">Cuando alguien responda un correo automático, la respuesta llegará aquí.</span>
-
-          <div class="modal-buttons">
-            <button class="btn-cancel" @click="cerrarEditar">Cancelar</button>
-            <button class="btn-submit" @click="guardarEditar" :disabled="guardando">
-              {{ guardando ? 'Guardando...' : 'Guardar Cambios' }}
+    <!-- PANEL: ADMINISTRADORES DE LA EMPRESA -->
+    <BaseDrawer
+      :open="modalAdmins.visible"
+      titulo="Administradores"
+      :descripcion="modalAdmins.empresa?.Nombre_Empresa || ''"
+      ancho="lg"
+      @update:open="val => !val && cerrarAdmins()"
+    >
+      <div v-if="modalAdmins.cargando" class="admins-list" aria-busy="true">
+        <div v-for="n in 2" :key="n" class="admin-row">
+          <span class="tx-skel tx-skel--circle"></span>
+          <span class="admin-info"><span class="tx-skel tx-skel--line" style="width: 40%"></span><span class="tx-skel tx-skel--line" style="width: 70%"></span></span>
+        </div>
+      </div>
+      <EmptyState
+        v-else-if="modalAdmins.lista.length === 0"
+        titulo="Sin administradores"
+        descripcion="Esta empresa todavía no tiene administradores."
+        compacto
+      />
+      <ul v-else class="admins-list">
+        <li v-for="a in modalAdmins.lista" :key="a.Id_Usuario" class="admin-row">
+          <div class="avatar" aria-hidden="true">{{ iniciales(a.Nombre_Completo) }}</div>
+          <div class="admin-info">
+            <span class="user-name">{{ a.Nombre_Completo }}</span>
+            <span class="user-handle">@{{ a.Nombre_Usuario }} · {{ a.Correo }}</span>
+            <span class="user-handle">{{ a.Telefono || 'Sin teléfono' }}</span>
+          </div>
+          <span class="badge-estado" :class="a.Estado === 'activo' ? 'activa' : 'inactiva'">{{ a.Estado === 'activo' ? 'Activo' : 'Inactivo' }}</span>
+          <div class="actions">
+            <button type="button" class="action-btn edit-btn" @click="abrirEditarAdmin(a)" :aria-label="`Editar a ${a.Nombre_Completo}`" title="Editar">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true" style="display:block"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/></svg>
+            </button>
+            <button v-if="a.Estado !== 'activo'" type="button" :aria-label="`Activar a ${a.Nombre_Completo}`" class="action-btn activate-btn" :disabled="activandoAdminId === a.Id_Usuario" @click="activarAdmin(a)" title="Activar">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true" style="display:block"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+            </button>
+            <button v-if="a.Estado === 'activo'" type="button" class="action-btn delete-btn" @click="pedirInactivarAdmin(a)" :aria-label="`Desactivar a ${a.Nombre_Completo}`" title="Desactivar">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true" style="display:block"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
             </button>
           </div>
+        </li>
+      </ul>
+    </BaseDrawer>
+
+    <!-- MODAL: EDITAR ADMINISTRADOR (se abre encima del panel) -->
+    <BaseModal
+      :open="modalAdmin"
+      titulo="Editar administrador"
+      :descripcion="modalAdmins.empresa?.Nombre_Empresa || ''"
+      tamano="lg"
+      :cerrar-al-clic-fuera="false"
+      @update:open="val => !val && cerrarEditarAdmin()"
+    >
+      <form id="form-admin-editar" class="tx-form" novalidate @submit.prevent="guardarAdmin">
+        <div class="tx-form-grid">
+          <BaseField label="Nombre completo" requerido completo :error="vAdmin.error('nombreCompleto')" v-slot="{ attrs }">
+            <input v-bind="attrs" v-model="formAdmin.nombreCompleto" type="text" class="tx-input" required @blur="vAdmin.tocar('nombreCompleto')">
+          </BaseField>
+          <BaseField label="Usuario para iniciar sesión" requerido :error="vAdmin.error('nombreUsuario')" v-slot="{ attrs }">
+            <input v-bind="attrs" v-model="formAdmin.nombreUsuario" type="text" class="tx-input" autocapitalize="none" spellcheck="false"
+              required @blur="vAdmin.tocar('nombreUsuario')">
+          </BaseField>
+          <BaseField label="Teléfono" opcional :error="vAdmin.error('telefono')" v-slot="{ attrs }">
+            <input v-bind="attrs" v-model="formAdmin.telefono" type="tel" inputmode="numeric" maxlength="10" class="tx-input"
+              @input="formAdmin.telefono = soloDigitos(formAdmin.telefono)" @blur="vAdmin.tocar('telefono')">
+          </BaseField>
+          <BaseField label="Correo electrónico" requerido completo :error="vAdmin.error('correo')" v-slot="{ attrs }">
+            <input v-bind="attrs" v-model="formAdmin.correo" type="email" class="tx-input" required @blur="vAdmin.tocar('correo')">
+          </BaseField>
+          <BaseField label="Nueva contraseña" opcional completo :error="vAdmin.error('contrasena')"
+            hint="Déjala vacía para no cambiarla." v-slot="{ attrs }">
+            <BasePassword v-bind="attrs" v-model="formAdmin.contrasena" requisitos :reglas="hintsPassAdmin"
+              @blur="vAdmin.tocar('contrasena')" />
+          </BaseField>
         </div>
+      </form>
+
+      <template #footer>
+        <button type="button" class="tx-btn tx-btn--secondary" :disabled="guardando" @click="cerrarEditarAdmin">Cancelar</button>
+        <button type="submit" form="form-admin-editar" class="tx-btn tx-btn--primary" :disabled="guardando">
+          <span v-if="guardando" class="tx-spinner" aria-hidden="true"></span>
+          {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </template>
+    </BaseModal>
+
+    <!-- MODAL: ESTADÍSTICAS DE CORREO -->
+    <BaseModal
+      :open="modalCorreos.visible"
+      titulo="Correos enviados"
+      descripcion="Envíos de SendGrid y por empresa en el día elegido."
+      tamano="lg"
+      @update:open="val => !val && cerrarCorreos()"
+    >
+      <div class="correos-fecha">
+        <BaseField label="Día" v-slot="{ attrs }">
+          <input v-bind="attrs" v-model="modalCorreos.fecha" type="date" class="tx-input" @change="cargarCorreos">
+        </BaseField>
       </div>
-    </Transition>
 
-    <!-- MODAL: ADMINISTRADORES DE LA EMPRESA -->
-    <Transition name="modal">
-      <div v-if="modalAdmins.visible" class="modal" @click.self="cerrarAdmins">
-        <div class="modal-content modal-wide">
-          <h2>Administradores — {{ modalAdmins.empresa?.Nombre_Empresa }}</h2>
-          <span class="close" @click="cerrarAdmins">×</span>
-
-          <div v-if="modalAdmins.cargando" class="admins-empty">Cargando...</div>
-          <div v-else-if="modalAdmins.lista.length === 0" class="admins-empty">Esta empresa no tiene administradores.</div>
-          <div v-else class="admins-list">
-            <div v-for="a in modalAdmins.lista" :key="a.Id_Usuario" class="admin-row">
-              <div class="avatar">{{ iniciales(a.Nombre_Completo) }}</div>
-              <div class="admin-info">
-                <span class="user-name">{{ a.Nombre_Completo }}</span>
-                <span class="user-handle">@{{ a.Nombre_Usuario }} · {{ a.Correo }}</span>
-                <span class="user-handle">{{ a.Telefono || 'Sin teléfono' }}</span>
-              </div>
-              <span class="badge-estado" :class="a.Estado === 'activo' ? 'activa' : 'inactiva'">{{ a.Estado === 'activo' ? 'Activo' : 'Inactivo' }}</span>
-              <div class="actions">
-                <button class="action-btn edit-btn" @click="abrirEditarAdmin(a)" title="Editar">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
-                  </svg>
-                </button>
-                <button v-if="a.Estado !== 'activo'" class="action-btn activate-btn" :disabled="activandoAdminId === a.Id_Usuario" @click="activarAdmin(a)" title="Activar">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                  </svg>
-                </button>
-                <button v-if="a.Estado === 'activo'" class="action-btn delete-btn" @click="pedirInactivarAdmin(a)" title="Desactivar">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="display:block">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="modal-buttons">
-            <button class="btn-cancel" @click="cerrarAdmins">Cerrar</button>
-          </div>
+      <div v-if="modalCorreos.cargando" class="correos-grid" aria-busy="true">
+        <span v-for="n in 5" :key="n" class="tx-skel correos-skel"></span>
+      </div>
+      <template v-else-if="modalCorreos.datos">
+        <h3 class="correos-sub">Cuenta completa de SendGrid</h3>
+        <div v-if="modalCorreos.datos.global" class="correos-grid">
+          <div class="correos-card"><span>Enviados</span><strong>{{ modalCorreos.datos.global.enviados }}</strong></div>
+          <div class="correos-card"><span>Entregados</span><strong>{{ modalCorreos.datos.global.entregados }}</strong></div>
+          <div class="correos-card"><span>Abiertos</span><strong>{{ modalCorreos.datos.global.abiertos }}</strong></div>
+          <div class="correos-card"><span>Rebotes</span><strong>{{ modalCorreos.datos.global.rebotes }}</strong></div>
+          <div class="correos-card"><span>Spam</span><strong>{{ modalCorreos.datos.global.spam }}</strong></div>
         </div>
-      </div>
-    </Transition>
+        <p v-else class="correos-aviso">{{ modalCorreos.datos.errorGlobal || 'Sin datos de SendGrid para este día.' }}</p>
 
-    <!-- MODAL: EDITAR ADMINISTRADOR -->
-    <Transition name="modal">
-      <div v-if="modalAdmin" class="modal modal-top" @click.self="cerrarEditarAdmin">
-        <div class="modal-content">
-          <h2>Editar Administrador</h2>
-          <span class="close" @click="cerrarEditarAdmin">×</span>
+        <h3 class="correos-sub">Por empresa</h3>
+        <table class="correos-tabla">
+          <thead><tr><th scope="col">Empresa</th><th scope="col">Enviados</th><th scope="col">Con error</th></tr></thead>
+          <tbody>
+            <tr v-for="x in modalCorreos.datos.empresas" :key="x.Id_Empresa">
+              <td>{{ x.Nombre_Empresa }}</td><td>{{ x.enviados }}</td><td>{{ x.errores }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="correos-nota">Los envíos por empresa se cuentan desde que se activó el registro; los de SendGrid abarcan toda la cuenta.</p>
+      </template>
+      <EmptyState v-else titulo="No pudimos cargar las estadísticas" descripcion="Revisa tu conexión e inténtalo de nuevo." icono="error" compacto>
+        <button type="button" class="tx-btn tx-btn--secondary" @click="cargarCorreos">Reintentar</button>
+      </EmptyState>
 
-          <label>Nombre completo</label>
-          <input v-model="formAdmin.nombreCompleto" type="text"
-            :class="{ 'input-error': erroresAdmin.nombreCompleto && tocadoAdmin }" @blur="tocadoAdmin = true">
-          <span v-if="erroresAdmin.nombreCompleto && tocadoAdmin" class="error-msg">{{ erroresAdmin.nombreCompleto }}</span>
-
-          <label>Nombre de usuario</label>
-          <input v-model="formAdmin.nombreUsuario" type="text"
-            :class="{ 'input-error': erroresAdmin.nombreUsuario && tocadoAdmin }" @blur="tocadoAdmin = true">
-          <span v-if="erroresAdmin.nombreUsuario && tocadoAdmin" class="error-msg">{{ erroresAdmin.nombreUsuario }}</span>
-
-          <label>Correo electrónico</label>
-          <input v-model="formAdmin.correo" type="email"
-            :class="{ 'input-error': erroresAdmin.correo && tocadoAdmin }" @blur="tocadoAdmin = true">
-          <span v-if="erroresAdmin.correo && tocadoAdmin" class="error-msg">{{ erroresAdmin.correo }}</span>
-
-          <label>Teléfono <span class="label-hint">(opcional)</span></label>
-          <input v-model="formAdmin.telefono" type="tel" inputmode="numeric" maxlength="10"
-            :class="{ 'input-error': erroresAdmin.telefono && tocadoAdmin }" @blur="tocadoAdmin = true"
-            @input="formAdmin.telefono = soloDigitos(formAdmin.telefono)">
-          <span v-if="erroresAdmin.telefono && tocadoAdmin" class="error-msg">{{ erroresAdmin.telefono }}</span>
-
-          <label>Nueva contraseña <span class="label-hint">(déjala vacía para no cambiarla)</span></label>
-          <div class="input-wrap-modal">
-            <input v-model="formAdmin.contrasena" :type="verPassAdmin ? 'text' : 'password'" placeholder="Opcional"
-              :class="{ 'input-error': erroresAdmin.contrasena && tocadoAdmin }" @blur="tocadoAdmin = true" autocomplete="new-password">
-            <button class="toggle-pass-modal" @click="verPassAdmin = !verPassAdmin" type="button">{{ verPassAdmin ? 'Ocultar' : 'Ver' }}</button>
-          </div>
-          <div v-if="formAdmin.contrasena" class="pwd-hints">
-            <span v-for="h in hintsPassAdmin" :key="h.label" class="pwd-hint" :class="h.ok ? 'hint-ok' : 'hint-no'">{{ h.ok ? '✓' : '✗' }} {{ h.label }}</span>
-          </div>
-          <span v-if="erroresAdmin.contrasena && tocadoAdmin" class="error-msg">{{ erroresAdmin.contrasena }}</span>
-
-          <div class="modal-buttons">
-            <button class="btn-cancel" @click="cerrarEditarAdmin">Cancelar</button>
-            <button class="btn-submit" @click="guardarAdmin" :disabled="guardando">
-              {{ guardando ? 'Guardando...' : 'Guardar Cambios' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
+      <template #footer>
+        <button type="button" class="tx-btn tx-btn--secondary" @click="cerrarCorreos">Cerrar</button>
+      </template>
+    </BaseModal>
 
     <!-- CONFIRMAR: DESACTIVAR EMPRESA (hay que escribir el nombre) -->
-    <!-- MODAL: ESTADÍSTICAS DE CORREO -->
-    <Transition name="modal">
-      <div v-if="modalCorreos.visible" class="modal" @click.self="cerrarCorreos">
-        <div class="modal-content modal-wide">
-          <h2>Correos enviados</h2>
-          <div class="correos-fecha">
-            <label for="correos-fecha">Día</label>
-            <input id="correos-fecha" type="date" v-model="modalCorreos.fecha" @change="cargarCorreos">
-          </div>
-
-          <div v-if="modalCorreos.cargando" class="admins-empty">Cargando...</div>
-          <template v-else-if="modalCorreos.datos">
-            <h3 class="correos-sub">Cuenta completa de SendGrid</h3>
-            <div v-if="modalCorreos.datos.global" class="correos-grid">
-              <div class="correos-card"><span>Enviados</span><strong>{{ modalCorreos.datos.global.enviados }}</strong></div>
-              <div class="correos-card"><span>Entregados</span><strong>{{ modalCorreos.datos.global.entregados }}</strong></div>
-              <div class="correos-card"><span>Abiertos</span><strong>{{ modalCorreos.datos.global.abiertos }}</strong></div>
-              <div class="correos-card"><span>Rebotes</span><strong>{{ modalCorreos.datos.global.rebotes }}</strong></div>
-              <div class="correos-card"><span>Spam</span><strong>{{ modalCorreos.datos.global.spam }}</strong></div>
-            </div>
-            <p v-else class="correos-aviso">{{ modalCorreos.datos.errorGlobal || 'Sin datos de SendGrid para este día.' }}</p>
-
-            <h3 class="correos-sub">Por empresa</h3>
-            <table class="correos-tabla">
-              <thead><tr><th>Empresa</th><th>Enviados</th><th>Con error</th></tr></thead>
-              <tbody>
-                <tr v-for="x in modalCorreos.datos.empresas" :key="x.Id_Empresa">
-                  <td>{{ x.Nombre_Empresa }}</td><td>{{ x.enviados }}</td><td>{{ x.errores }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p class="correos-nota">Los envíos por empresa se cuentan desde que se activó el registro; los de SendGrid abarcan toda la cuenta.</p>
-          </template>
-
-          <div class="modal-buttons">
-            <button class="btn-cancel" @click="cerrarCorreos">Cerrar</button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <Transition name="modal">
-      <div v-if="confirmEmpresa.visible" class="confirm-overlay" @click.self="confirmEmpresa.visible = false">
-        <div class="confirm-box">
-          <div class="confirm-icon">
-            <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-            </svg>
-          </div>
-          <p class="confirm-title">¿Desactivar «{{ confirmEmpresa.empresa?.Nombre_Empresa }}»?</p>
-          <p class="confirm-sub">Todos sus usuarios dejarán de poder iniciar sesión. Podrás volver a activarla después.</p>
-          <p class="confirm-sub confirm-type">Escribe el nombre de la empresa para confirmar:</p>
-          <input v-model="confirmEmpresa.texto" class="confirm-input" type="text" :placeholder="confirmEmpresa.empresa?.Nombre_Empresa">
-          <div class="confirm-btns">
-            <button class="btn-cancel" @click="confirmEmpresa.visible = false">Cancelar</button>
-            <button class="btn-danger" :disabled="!nombreConfirmado || guardando" @click="confirmarDesactivar">
-              {{ guardando ? 'Desactivando...' : 'Desactivar' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
-    <!-- CONFIRMAR: DESACTIVAR ADMINISTRADOR -->
-    <Transition name="modal">
-      <div v-if="confirmAdmin.visible" class="confirm-overlay" @click.self="confirmAdmin.visible = false">
-        <div class="confirm-box">
-          <p class="confirm-title">¿Desactivar administrador?</p>
-          <p class="confirm-sub">{{ confirmAdmin.admin?.Nombre_Completo }} ya no podrá iniciar sesión.</p>
-          <div class="confirm-btns">
-            <button class="btn-cancel" @click="confirmAdmin.visible = false">Cancelar</button>
-            <button class="btn-danger" :disabled="guardando" @click="confirmarInactivarAdmin">Desactivar</button>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <BaseModal
+      :open="confirmEmpresa.visible"
+      :titulo="`¿Desactivar «${confirmEmpresa.empresa?.Nombre_Empresa || ''}»?`"
+      descripcion="Todos sus usuarios dejarán de poder iniciar sesión. Podrás volver a activarla después."
+      tamano="sm"
+      rol="alertdialog"
+      @update:open="val => !val && (confirmEmpresa.visible = false)"
+    >
+      <form id="form-desactivar-empresa" novalidate @submit.prevent="confirmarDesactivar">
+        <BaseField label="Escribe el nombre de la empresa para confirmar" v-slot="{ attrs }">
+          <input v-bind="attrs" v-model="confirmEmpresa.texto" class="tx-input" type="text" autocomplete="off"
+            :placeholder="confirmEmpresa.empresa?.Nombre_Empresa">
+        </BaseField>
+      </form>
+      <template #footer>
+        <button type="button" class="tx-btn tx-btn--secondary" :disabled="guardando" @click="confirmEmpresa.visible = false">Cancelar</button>
+        <button type="submit" form="form-desactivar-empresa" class="tx-btn tx-btn--danger" :disabled="!nombreConfirmado || guardando">
+          <span v-if="guardando" class="tx-spinner" aria-hidden="true"></span>
+          {{ guardando ? 'Desactivando…' : 'Desactivar empresa' }}
+        </button>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import AppSidebar from '../../components/AppSidebar.vue'
+import PageHeader from '../../components/PageHeader.vue'
+import KpiCard from '../../components/KpiCard.vue'
+import BaseModal from '../../components/base/BaseModal.vue'
+import BaseDrawer from '../../components/base/BaseDrawer.vue'
+import BaseField from '../../components/base/BaseField.vue'
+import BasePassword from '../../components/base/BasePassword.vue'
+import EmptyState from '../../components/base/EmptyState.vue'
+import { useValidacion } from '../../composables/useValidacion'
+import { useConfirm } from '../../composables/useConfirm'
+import BasePagination from '../../components/base/BasePagination.vue'
+import { usePagination } from '../../composables/usePagination'
+import { useToast } from '../../composables/useToast'
+import { ref, computed, onMounted, watch } from 'vue'
 import {
   getEmpresas, crearEmpresa, actualizarEmpresa, desactivarEmpresa, activarEmpresa,
   getEstadisticasCorreos,
@@ -449,18 +448,18 @@ const ICON_EMPRESA = 'M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.
 const ICON_USERS = 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z'
 
 // ── ESTADO GENERAL ──
-const animVisible = ref(false)
 const cargando    = ref(true)
 const guardando   = ref(false)
 const searchFocus = ref(false)
 const busqueda    = ref('')
 const filtroEstado = ref('')
 const empresas    = ref([])
-const toast       = ref({ visible: false, msg: '', type: 'success' })
+const toast       = useToast()
 
+const confirmar = useConfirm()
 function mostrarToast(msg, type = 'success') {
-  toast.value = { visible: true, msg, type }
-  setTimeout(() => (toast.value.visible = false), 3200)
+  if (type === 'danger' || type === 'error') toast.error(msg)
+  else toast.success(msg)
 }
 
 // ── HELPERS ──
@@ -534,10 +533,14 @@ const empresasFiltradas = computed(() => {
     return String(e.Nombre_Empresa).toLowerCase().includes(q) || String(e.Slug).toLowerCase().includes(q)
   })
 })
-const statsCards = computed(() => [
-  { label: 'Total empresas', value: empresas.value.length, color: '#1f3a52' },
-  { label: 'Activas',   value: empresas.value.filter(e => e.Estado === 'activa').length,   color: '#16a34a' },
-  { label: 'Inactivas', value: empresas.value.filter(e => e.Estado !== 'activa').length,   color: '#dc2626' },
+
+const { pagina, porPagina, visibles, reiniciar } = usePagination(empresasFiltradas, { porPagina: 10, clave: 'empresas' })
+watch([busqueda, filtroEstado], reiniciar)
+// Las tarjetas filtran la tabla por estado
+const kpis = computed(() => [
+  { label: 'Total empresas', valor: empresas.value.length, icono: ICON_EMPRESA, tono: 'brand', filtro: '' },
+  { label: 'Activas',   valor: empresas.value.filter(e => e.Estado === 'activa').length, icono: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z', tono: 'success', filtro: 'activa' },
+  { label: 'Inactivas', valor: empresas.value.filter(e => e.Estado !== 'activa').length, icono: 'M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636', tono: 'danger', filtro: 'inactiva' },
 ])
 
 async function cargarEmpresas() {
@@ -545,22 +548,17 @@ async function cargarEmpresas() {
   try {
     empresas.value = await getEmpresas()
   } catch (e) {
-    mostrarToast(e.message || 'Error al cargar las empresas', 'danger')
+    mostrarToast(e.message || 'No se pudieron cargar las empresas. Revisa tu conexión e inténtalo de nuevo.', 'danger')
   } finally {
     cargando.value = false
   }
 }
 
-onMounted(async () => {
-  await cargarEmpresas()
-  setTimeout(() => (animVisible.value = true), 50)
-})
+onMounted(cargarEmpresas)
 
 // ── CREAR EMPRESA + ADMIN ──
 const modalCrear = ref(false)
-const tocadoCrear = ref(false)
 const slugManual = ref(false)
-const verPassCrear = ref(false)
 const formVacioCrear = () => ({ nombreEmpresa: '', slug: '', nombreCompleto: '', nombreUsuario: '', correo: '', telefono: '', contrasena: '' })
 const formCrear = ref(formVacioCrear())
 
@@ -569,22 +567,21 @@ const erroresCrear = computed(() => ({
   ...validarPersona(formCrear.value, { passwordObligatoria: true }),
 }))
 const hintsPassCrear = computed(() => reglasPassword(formCrear.value.contrasena))
+const vCrear = useValidacion(erroresCrear)
 
 function autoSlug() {
   if (!slugManual.value) formCrear.value.slug = slugify(formCrear.value.nombreEmpresa)
 }
 function abrirCrear() {
   formCrear.value = formVacioCrear()
-  tocadoCrear.value = false
+  vCrear.reiniciar()
   slugManual.value = false
-  verPassCrear.value = false
   modalCrear.value = true
 }
 function cerrarCrear() { modalCrear.value = false }
 
 async function guardarCrear() {
-  tocadoCrear.value = true
-  if (Object.keys(erroresCrear.value).length) return
+  if (!(await vCrear.validar())) return
   const f = formCrear.value
   guardando.value = true
   try {
@@ -599,10 +596,10 @@ async function guardarCrear() {
       },
     })
     modalCrear.value = false
-    mostrarToast('Empresa creada con su administrador')
+    mostrarToast('Empresa creada con su administrador.')
     await cargarEmpresas()
   } catch (e) {
-    mostrarToast(e.message || 'No se pudo crear la empresa', 'danger')
+    mostrarToast(e.message || 'No se pudo crear la empresa. Revisa los datos e inténtalo de nuevo.', 'danger')
   } finally {
     guardando.value = false
   }
@@ -610,7 +607,6 @@ async function guardarCrear() {
 
 // ── EDITAR EMPRESA ──
 const modalEditar = ref(false)
-const tocadoEditar = ref(false)
 const idEditar = ref(null)
 const formEditar = ref({ nombreEmpresa: '', slug: '', nombreComercial: '', emailNotificaciones: '' })
 const erroresEditar = computed(() => {
@@ -620,6 +616,7 @@ const erroresEditar = computed(() => {
   if (f.emailNotificaciones && !RE_CORREO.test(f.emailNotificaciones.trim())) e.emailNotificaciones = 'El correo no tiene un formato válido.'
   return e
 })
+const vEditar = useValidacion(erroresEditar)
 
 function abrirEditar(e) {
   idEditar.value = e.Id_Empresa
@@ -629,14 +626,13 @@ function abrirEditar(e) {
     nombreComercial: e.Nombre_Comercial || '',
     emailNotificaciones: e.Email_Notificaciones || '',
   }
-  tocadoEditar.value = false
+  vEditar.reiniciar()
   modalEditar.value = true
 }
 function cerrarEditar() { modalEditar.value = false }
 
 async function guardarEditar() {
-  tocadoEditar.value = true
-  if (Object.keys(erroresEditar.value).length) return
+  if (!(await vEditar.validar())) return
   guardando.value = true
   try {
     await actualizarEmpresa(idEditar.value, {
@@ -646,10 +642,10 @@ async function guardarEditar() {
       Email_Notificaciones: formEditar.value.emailNotificaciones.trim(),
     })
     modalEditar.value = false
-    mostrarToast('Empresa actualizada')
+    mostrarToast('Empresa actualizada.')
     await cargarEmpresas()
   } catch (e) {
-    mostrarToast(e.message || 'No se pudo actualizar la empresa', 'danger')
+    mostrarToast(e.message || 'No se pudo actualizar la empresa. Inténtalo de nuevo.', 'danger')
   } finally {
     guardando.value = false
   }
@@ -669,10 +665,10 @@ async function confirmarDesactivar() {
   try {
     await desactivarEmpresa(confirmEmpresa.value.empresa.Id_Empresa)
     confirmEmpresa.value.visible = false
-    mostrarToast('Empresa desactivada', 'danger')
+    mostrarToast('Empresa desactivada.')
     await cargarEmpresas()
   } catch (e) {
-    mostrarToast(e.message || 'No se pudo desactivar la empresa', 'danger')
+    mostrarToast(e.message || 'No se pudo desactivar la empresa. Inténtalo de nuevo.', 'danger')
   } finally {
     guardando.value = false
   }
@@ -683,10 +679,10 @@ async function activar(e) {
   activandoId.value = e.Id_Empresa
   try {
     await activarEmpresa(e.Id_Empresa)
-    mostrarToast('Empresa activada')
+    mostrarToast('Empresa activada.')
     await cargarEmpresas()
   } catch (err) {
-    mostrarToast(err.message || 'No se pudo activar la empresa', 'danger')
+    mostrarToast(err.message || 'No se pudo activar la empresa. Inténtalo de nuevo.', 'danger')
   } finally {
     activandoId.value = null
   }
@@ -705,7 +701,7 @@ async function cargarCorreos() {
     modalCorreos.value.datos = await getEstadisticasCorreos(modalCorreos.value.fecha || undefined)
   } catch (e) {
     modalCorreos.value.datos = null
-    mostrarToast(e.message || 'No se pudieron cargar las estadísticas', 'error')
+    mostrarToast(e.message || 'No se pudieron cargar las estadísticas. Inténtalo de nuevo.', 'error')
   } finally {
     modalCorreos.value.cargando = false
   }
@@ -725,7 +721,7 @@ async function cargarAdmins() {
   try {
     modalAdmins.value.lista = await getAdministradoresEmpresa(emp.Id_Empresa)
   } catch (e) {
-    mostrarToast(e.message || 'No se pudieron cargar los administradores', 'danger')
+    mostrarToast(e.message || 'No se pudieron cargar los administradores. Inténtalo de nuevo.', 'danger')
   } finally {
     modalAdmins.value.cargando = false
   }
@@ -738,12 +734,11 @@ function cerrarAdmins() { modalAdmins.value.visible = false }
 
 // editar administrador
 const modalAdmin = ref(false)
-const tocadoAdmin = ref(false)
-const verPassAdmin = ref(false)
 const idAdmin = ref(null)
 const formAdmin = ref({ nombreCompleto: '', nombreUsuario: '', correo: '', telefono: '', contrasena: '' })
 const erroresAdmin = computed(() => validarPersona(formAdmin.value, { passwordObligatoria: false }))
 const hintsPassAdmin = computed(() => reglasPassword(formAdmin.value.contrasena))
+const vAdmin = useValidacion(erroresAdmin)
 
 function abrirEditarAdmin(a) {
   idAdmin.value = a.Id_Usuario
@@ -754,15 +749,13 @@ function abrirEditarAdmin(a) {
     telefono: a.Telefono || '',
     contrasena: '',
   }
-  tocadoAdmin.value = false
-  verPassAdmin.value = false
+  vAdmin.reiniciar()
   modalAdmin.value = true
 }
 function cerrarEditarAdmin() { modalAdmin.value = false }
 
 async function guardarAdmin() {
-  tocadoAdmin.value = true
-  if (Object.keys(erroresAdmin.value).length) return
+  if (!(await vAdmin.validar())) return
   const f = formAdmin.value
   guardando.value = true
   try {
@@ -774,10 +767,10 @@ async function guardarAdmin() {
       Contrasena: f.contrasena || undefined,
     })
     modalAdmin.value = false
-    mostrarToast('Administrador actualizado')
+    mostrarToast('Administrador actualizado.')
     await cargarAdmins()
   } catch (e) {
-    mostrarToast(e.message || 'No se pudo actualizar el administrador', 'danger')
+    mostrarToast(e.message || 'No se pudo actualizar el administrador. Inténtalo de nuevo.', 'danger')
   } finally {
     guardando.value = false
   }
@@ -789,28 +782,31 @@ async function activarAdmin(a) {
   activandoAdminId.value = a.Id_Usuario
   try {
     await activarAdministradorEmpresa(modalAdmins.value.empresa.Id_Empresa, a.Id_Usuario)
-    mostrarToast('Administrador activado')
+    mostrarToast('Administrador activado.')
     await cargarAdmins()
   } catch (err) {
-    mostrarToast(err.message || 'No se pudo activar el administrador', 'danger')
+    mostrarToast(err.message || 'No se pudo activar el administrador. Inténtalo de nuevo.', 'danger')
   } finally {
     activandoAdminId.value = null
   }
 }
 
 // desactivar administrador
-const confirmAdmin = ref({ visible: false, admin: null })
-function pedirInactivarAdmin(a) { confirmAdmin.value = { visible: true, admin: a } }
-
-async function confirmarInactivarAdmin() {
+async function pedirInactivarAdmin(a) {
+  const ok = await confirmar({
+    titulo: `¿Desactivar a ${a.Nombre_Completo}?`,
+    mensaje: 'Ya no podrá iniciar sesión. Puedes volver a activarlo cuando quieras.',
+    textoConfirmar: 'Desactivar administrador',
+    tono: 'danger',
+  })
+  if (!ok) return
   guardando.value = true
   try {
-    await inactivarAdministradorEmpresa(modalAdmins.value.empresa.Id_Empresa, confirmAdmin.value.admin.Id_Usuario)
-    confirmAdmin.value.visible = false
-    mostrarToast('Administrador desactivado', 'danger')
+    await inactivarAdministradorEmpresa(modalAdmins.value.empresa.Id_Empresa, a.Id_Usuario)
+    mostrarToast('Administrador desactivado.')
     await cargarAdmins()
   } catch (e) {
-    mostrarToast(e.message || 'No se pudo desactivar el administrador', 'danger')
+    mostrarToast(e.message || 'No se pudo desactivar el administrador. Inténtalo de nuevo.', 'danger')
   } finally {
     guardando.value = false
   }
@@ -829,40 +825,19 @@ async function confirmarInactivarAdmin() {
 .orb-2 { width: 400px; height: 400px; background: #2563eb; bottom: -100px; left: 10%; }
 .bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(31,58,82,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(31,58,82,0.04) 1px, transparent 1px); background-size: 40px 40px; }
 
-/* ── HERO ── */
-.page-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; opacity: 0; transform: translateY(-16px); transition: opacity 0.5s ease, transform 0.5s ease; }
-.page-hero.hero-visible { opacity: 1; transform: translateY(0); }
-.hero-left { display: flex; align-items: center; gap: 16px; }
-.hero-text { display: flex; flex-direction: column; }
-.hero-icon-wrap { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: #1f3a52; border-radius: 14px; flex-shrink: 0; }
-.hero-icon { width: 26px; height: 26px; color: white; }
-.hero-title { font-size: 24px; font-weight: 700; color: #111827; margin: 0; }
-.hero-sub { font-size: 13px; color: #6b7280; margin: 4px 0 0 0; }
-.hero-actions-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
 .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.search-box { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: white; border: 1.5px solid #e5e7eb; border-radius: 10px; transition: border-color 0.2s, box-shadow 0.2s; width: 220px; }
-.search-box.search-focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.search-ico { width: 16px; height: 16px; color: #9ca3af; flex-shrink: 0; }
-.search-box input { border: none; outline: none; width: 100%; font-size: 14px; color: #374151; background: transparent; }
+.search-box { display: flex; align-items: center; gap: 8px; height: var(--control-height); padding: 0 12px; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); transition: border-color var(--duration-fast), box-shadow var(--duration-fast); width: 240px; }
+.search-box.search-focus { border-color: var(--focus-ring-color); box-shadow: var(--focus-ring); }
+.search-ico { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
+.search-box input { border: none; outline: none; width: 100%; font: inherit; font-size: var(--text-base); color: var(--color-text-secondary); background: transparent; }
 .select-wrapper { position: relative; display: inline-flex; align-items: center; }
-.select { padding: 9px 32px 9px 12px; border-radius: 10px; border: 1.5px solid #e5e7eb; font-size: 14px; background: white; appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; transition: border-color 0.2s; }
-.select:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.select-arrow { position: absolute; right: 10px; width: 14px; height: 14px; color: #6b7280; pointer-events: none; }
-.btn { display: flex; align-items: center; gap: 8px; background: #1f3a52; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.2s, transform 0.1s; flex-shrink: 0; }
-.btn:hover { background: #162b3c; transform: translateY(-1px); }
-.btn-icon { width: 18px; height: 18px; }
-
-/* ── STATS ── */
-.stats { display: flex; gap: 18px; margin-bottom: 24px; }
-.stat-card { background: white; flex: 1; padding: 20px 20px 20px 24px; border-radius: 14px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.45s ease, transform 0.45s ease, box-shadow 0.2s; }
-.stats-visible .stat-card { opacity: 1; transform: translateY(0); }
-.stat-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
-.stat-card h3 { font-size: 13px; color: #6b7280; font-weight: 500; margin: 0 0 10px 0; }
-.stat-card p { font-size: 30px; font-weight: 800; margin: 0; line-height: 1; }
+.select { height: var(--control-height); padding: 0 32px 0 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border-strong); font: inherit; font-size: var(--text-base); color: var(--color-text-secondary); background: var(--color-surface); appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; transition: border-color var(--duration-fast), box-shadow var(--duration-fast); }
+.select:focus { border-color: var(--focus-ring-color); box-shadow: var(--focus-ring); }
+.select-arrow { position: absolute; right: 10px; width: 14px; height: 14px; color: var(--color-text-muted); pointer-events: none; }
 
 /* ── TABLA ── */
-.table-box { background: white; border-radius: 14px; border: 1px solid #e5e7eb; overflow: hidden; opacity: 0; transform: translateY(16px); transition: opacity 0.45s ease 0.2s, transform 0.45s ease 0.2s; }
-.box-visible { opacity: 1; transform: translateY(0); }
+.table-box { background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-xs); margin-bottom: var(--space-6); overflow: hidden; animation: tableIn var(--duration-slow) var(--ease-out) 120ms both; }
+@keyframes tableIn { from { opacity: 0; transform: translateY(var(--motion-shift-md)); } to { opacity: 1; transform: none; } }
 .table-header-bar { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; background: #f9fafb; }
 .table-header-left { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #374151; }
 .table-header-left svg { color: #1f3a52; }
@@ -871,7 +846,7 @@ table { width: 100%; border-collapse: collapse; }
 thead { background: #f9fafb; }
 th { text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; padding: 13px 18px; white-space: nowrap; }
 td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
-.table-row { transition: background 0.18s; animation: rowSlideIn 0.35s ease both; }
+.table-row { transition: background 0.18s; animation: rowSlideIn var(--duration-base) var(--ease-out) both; animation-delay: calc(var(--row-i, 0) * 25ms); }
 .table-row:hover td { background: #f8fafc; }
 @keyframes rowSlideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
 
@@ -902,85 +877,22 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 .activate-btn:hover { background: #15803d; }
 .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.empty-state { text-align: center; padding: 48px 20px; color: #9ca3af; }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--color-text-muted); }
 .empty-state svg { margin: 0 auto 12px; display: block; opacity: 0.4; }
 .empty-state p { font-size: 14px; margin: 0; }
 
 /* ── MODALES ── */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
-.modal-top { z-index: 1050; }
-.modal-content { background: white; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; padding: 30px; border-radius: 14px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-.modal-wide { max-width: 680px; }
-.modal-content h2 { font-size: 18px; font-weight: 600; margin: 0 40px 20px 0; }
-.close { position: absolute; top: 16px; right: 20px; font-size: 22px; cursor: pointer; color: #9ca3af; transition: color 0.15s; }
-.close:hover { color: #374151; }
-.section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #1f3a52; margin: 20px 0 0; padding-top: 14px; border-top: 1px solid #f1f5f9; }
-.section-title:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
-.modal-content label { display: block; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; margin-top: 14px; }
-.field-help { display: block; font-size: 11.5px; color: #9ca3af; margin-top: 4px; }
-.label-hint { color: #9ca3af; font-weight: 400; font-size: 11px; }
-.modal-content input, .modal-content select { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s; }
-.modal-content input:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.input-error { border-color: #f87171 !important; }
-.error-msg { font-size: 12px; color: #dc2626; margin-top: 4px; display: block; }
-.input-wrap-modal { display: flex; align-items: center; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #fff; }
-.input-wrap-modal input { flex: 1; border: none !important; outline: none; padding: 10px 12px; font-size: 14px; background: transparent; box-shadow: none !important; }
-.input-wrap-modal:focus-within { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.toggle-pass-modal { background: none; border: none; cursor: pointer; padding: 0 12px; color: #6b7280; font-size: 12px; font-weight: 500; }
-.toggle-pass-modal:hover { color: #1f3a52; }
-.pwd-hints { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-.pwd-hint { font-size: 11.5px; font-weight: 500; padding: 2px 8px; border-radius: 20px; transition: background .2s, color .2s; }
-.hint-ok { background: #dcfce7; color: #166534; }
-.hint-no { background: #f3f4f6; color: #9ca3af; }
-.modal-buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
-.btn-cancel { padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; font-size: 14px; cursor: pointer; transition: background 0.15s; }
-.btn-cancel:hover { background: #f3f4f6; }
-.btn-submit { padding: 10px 20px; border-radius: 8px; border: none; background: #1f3a52; font-size: 14px; font-weight: 500; color: white; cursor: pointer; transition: background 0.2s, opacity 0.2s; }
-.btn-submit:hover:not(:disabled) { background: #162b3c; }
-.btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ── ADMINS ── */
-.admins-empty { padding: 28px 0; text-align: center; color: #9ca3af; font-size: 14px; }
 .admins-list { display: grid; gap: 10px; }
 .admin-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; }
 .admin-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .admin-info .user-handle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ── CONFIRM ── */
-.confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; justify-content: center; align-items: center; z-index: 1100; padding: 20px; }
-.confirm-box { background: white; border-radius: 14px; padding: 28px 32px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-.confirm-icon { color: #f59e0b; margin-bottom: 14px; }
-.confirm-title { font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 6px; }
-.confirm-sub { font-size: 14px; color: #6b7280; margin: 0 0 14px; }
-.confirm-type { margin-bottom: 8px; font-size: 13px; }
-.confirm-input { width: 100%; padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; outline: none; box-sizing: border-box; margin-bottom: 18px; }
-.confirm-input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
-.confirm-btns { display: flex; gap: 10px; justify-content: center; }
-.btn-danger { padding: 10px 20px; border-radius: 8px; border: none; background: #dc2626; color: white; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s, opacity 0.15s; }
-.btn-danger:hover:not(:disabled) { background: #b91c1c; }
-.btn-danger:disabled { opacity: 0.45; cursor: not-allowed; }
-
-/* ── TOAST ── */
-.toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); max-width: 360px; }
-.toast.success { background: #16a34a; }
-.toast.danger { background: #dc2626; }
-
 /* ── TRANSICIONES ── */
-.modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
-.toast-enter-active { transition: all 0.3s ease; }
-.toast-leave-active { transition: all 0.25s ease; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(12px); }
 
-@media (max-width: 960px) {
-  .page-hero { flex-direction: column; align-items: flex-start; }
-  .hero-actions-wrap { width: 100%; }
-  .stats { flex-direction: column; }
-}
 
 /* ── CORREOS ── */
-.btn-sec { background: white; color: #1f3a52; border: 1px solid #d1d5db; }
-.btn-sec:hover { background: #f3f4f6; transform: translateY(-1px); }
 .correos-fecha { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .correos-fecha label { font-size: 13px; color: #6b7280; }
 .correos-fecha input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
@@ -989,7 +901,7 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 .correos-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
 .correos-card span { font-size: 12px; color: #6b7280; }
 .correos-card strong { font-size: 22px; color: #111827; }
-.correos-aviso, .correos-nota { font-size: 12px; color: #9ca3af; margin: 8px 0 0; }
+.correos-aviso, .correos-nota { font-size: 12px; color: var(--color-text-muted); margin: 8px 0 0; }
 .correos-tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
 .correos-tabla th, .correos-tabla td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f0f1f3; }
 .correos-tabla th { font-size: 12px; color: #6b7280; text-transform: uppercase; }

@@ -326,7 +326,7 @@ onUnmounted(() => {
 .tx-icon {
   display: flex;
   align-items: center;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   flex-shrink: 0;
   transition: color 0.18s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -354,7 +354,7 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 .tx-placeholder {
-  color: #9ca3af;
+  color: var(--color-text-muted);
   font-weight: 400;
 }
 
@@ -367,7 +367,7 @@ onUnmounted(() => {
   height: 18px;
   border-radius: 50%;
   background: #dcfce7;
-  color: #16a34a;
+  color: #15803d;
   font-size: 10px;
   font-weight: 800;
   flex-shrink: 0;
@@ -421,7 +421,7 @@ onUnmounted(() => {
   padding: 10px 12px;
   border-bottom: 1px solid #f3f4f6;
 }
-.tx-search-wrap svg { width: 14px; height: 14px; color: #9ca3af; flex-shrink: 0; }
+.tx-search-wrap svg { width: 14px; height: 14px; color: var(--color-text-muted); flex-shrink: 0; }
 .tx-search {
   flex: 1;
   border: none;
@@ -517,7 +517,7 @@ onUnmounted(() => {
 .tx-option-badge {
   font-size: 11px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   background: #f3f4f6;
   padding: 1px 7px;
   border-radius: 999px;
@@ -534,7 +534,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 18px;
-  color: #9ca3af;
+  color: var(--color-text-muted);
   font-size: 13px;
 }
 .tx-empty svg { width: 16px; height: 16px; }

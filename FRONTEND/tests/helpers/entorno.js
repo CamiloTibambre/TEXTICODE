@@ -1,14 +1,18 @@
-global.requestAnimationFrame = () => 1
-global.cancelAnimationFrame = () => {}
+// Ajustes del navegador simulado (jsdom) que las vistas necesitan.
+// Se carga con setupFilesAfterEnv (usa beforeEach/jest, que solo existen después del framework).
+window.HTMLCanvasElement.prototype.getContext = () => null      // el fondo animado del login
+window.requestAnimationFrame = cb => setTimeout(cb, 0)
+window.cancelAnimationFrame = id => clearTimeout(id)
+window.scrollTo = () => {}
+window.confirm = () => true
+Element.prototype.scrollIntoView = function () {}
+window.IntersectionObserver = class { observe() {} unobserve() {} disconnect() {} }
+window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }))
+
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   history.replaceState(null, '', '/')
-  jest.useFakeTimers({ doNotFake: ['requestAnimationFrame', 'cancelAnimationFrame'] })
-  jest.setSystemTime(new Date('2026-11-08T12:00:00-05:00'))
+  // Si una prueba hace una petición sin simularla, falla en vez de salir a la red
   global.fetch = jest.fn(() => Promise.reject(new Error('Petición no prevista en la prueba')))
-  window.confirm = jest.fn(() => true)
-  window.scrollTo = jest.fn()
-  HTMLCanvasElement.prototype.getContext = jest.fn(() => null)
 })
-afterEach(() => { jest.clearAllTimers(); jest.useRealTimers(); jest.restoreAllMocks() })

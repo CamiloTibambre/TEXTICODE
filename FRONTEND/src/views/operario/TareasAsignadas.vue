@@ -1,7 +1,6 @@
 <template>
   
   <div class="layout">
-    <AppSidebar rol="operario" />
 
     <!-- FONDO DECORATIVO -->
     <div class="bg-orbs" aria-hidden="true">
@@ -13,112 +12,50 @@
 
     <main class="main">
 
-      <!-- HERO HEADER -->
-      <div class="hero-section">
-        <div class="hero-icon-wrap">
-          <svg class="hero-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4"/>
-          </svg>
-          <span class="hero-icon-ring ring-1"></span>
-          <span class="hero-icon-ring ring-2"></span>
-        </div>
-
-        <div class="hero-text">
-          <h1>
-            <span
-              v-for="(char, i) in titleChars"
-              :key="i"
-              class="title-char"
-              :style="{ animationDelay: `${i * 35}ms` }"
-            >{{ char === ' ' ? '\u00A0' : char }}</span>
-          </h1>
-          <p class="hero-sub">Gestiona y hace seguimiento a tus órdenes de producción</p>
-        </div>
-
-        <!-- FILTROS en el hero -->
-        <div class="hero-filters">
+      <PageHeader
+        titulo="Tareas Asignadas"
+        subtitulo="Gestiona y haz seguimiento a tus órdenes de producción"
+        icono="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+      >
+        <template #acciones>
           <div class="search-box" :class="{ 'search-focus': searchFocus }">
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z"/>
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
             </svg>
             <input
               v-model="busqueda"
-              placeholder="Buscar tareas..."
+              type="search"
+              placeholder="Buscar tarea o producto"
+              aria-label="Buscar tareas por nombre o producto"
               @focus="searchFocus = true"
               @blur="searchFocus = false"
             />
           </div>
-          <select class="filter-select" v-model="filtroEstado">
-            <option value="">Todos los estados</option>
-            <option value="en-proceso">En Proceso</option>
-            <option value="completado">Completado</option>
-            <option value="retrasado">Retrasada</option>
-          </select>
-          <select class="filter-select" v-model="filtroPrioridad">
+          <select class="filter-select" v-model="filtroPrioridad" aria-label="Filtrar por prioridad">
             <option value="">Todas las prioridades</option>
             <option value="alta">Alta</option>
             <option value="media">Media</option>
             <option value="baja">Baja</option>
           </select>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
-      <!-- STAT CARDS -->
-      <div class="cards" :class="{ 'cards-visible': animVisible }">
-        <div class="stat-card" :style="{ transitionDelay: '0ms' }">
-          <div class="card-accent" style="background: #2563eb"></div>
-          <div class="card-icon-bg">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor">
-              <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M8 12h8M12 8v8"/>
-            </svg>
-          </div>
-          <div class="card-body">
-            <div class="card-label">En Proceso</div>
-            <div class="card-value" style="color: #2563eb">{{ displayEnProceso }}</div>
-          </div>
-        </div>
-        <div class="stat-card" :style="{ transitionDelay: '70ms' }">
-          <div class="card-accent" style="background: #16a34a"></div>
-          <div class="card-icon-bg">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor">
-              <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M8.5 12.5l2.5 2.5 4.5-4.5"/>
-            </svg>
-          </div>
-          <div class="card-body">
-            <div class="card-label">Completadas</div>
-            <div class="card-value" style="color: #16a34a">{{ displayCompletadas }}</div>
-          </div>
-        </div>
-        <div class="stat-card" :style="{ transitionDelay: '140ms' }">
-          <div class="card-accent" style="background: #dc2626"></div>
-          <div class="card-icon-bg">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
-            </svg>
-          </div>
-          <div class="card-body">
-            <div class="card-label">Retrasadas</div>
-            <div class="card-value" style="color: #dc2626">{{ displayRetrasadas }}</div>
-          </div>
-        </div>
-        <div class="stat-card" :style="{ transitionDelay: '210ms' }">
-          <div class="card-accent" style="background: #1f3a52"></div>
-          <div class="card-icon-bg">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor">
-              <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 8v4M12 16h.01"/>
-            </svg>
-          </div>
-          <div class="card-body">
-            <div class="card-label">Total</div>
-            <div class="card-value" style="color: #1f3a52">{{ displayTotal }}</div>
-          </div>
-        </div>
+      <!-- KPIs: filtran por estado -->
+      <div class="kpi-grid" role="group" aria-label="Filtrar tareas por estado">
+        <KpiCard
+          v-for="(k, i) in kpis"
+          :key="k.label"
+          v-bind="k"
+          :activo="filtroEstado === k.filtro"
+          :cargando="cargando"
+          :indice="i"
+          @click="filtroEstado = k.filtro"
+        />
       </div>
 
       <!-- CARGANDO -->
-      <div v-if="cargando" class="loading-wrap">
-        <div class="spinner-load"></div>
-        <p>Cargando tareas...</p>
+      <div v-if="cargando" class="table-box">
+        <SkeletonTable :filas="5" :columnas="5" :con-avatar="false" etiqueta="Cargando tareas" />
       </div>
 
       <!-- SIN SESIÓN -->
@@ -127,7 +64,7 @@
       </div>
 
       <!-- TAREAS -->
-      <div v-else class="table-box" :class="{ 'box-visible': animVisible }" style="transition-delay: 280ms">
+      <div v-else class="table-box">
         <div class="table-header-bar">
           <h3>Mis Tareas</h3>
           <span class="count-badge">{{ tareasFiltradas.length }} tarea{{ tareasFiltradas.length !== 1 ? 's' : '' }}</span>
@@ -143,7 +80,7 @@
                 'task-retrasada':  tarea.estado === 'retrasado',
                 'task-completada': tarea.estado === 'completado'
               }"
-              :style="{ animationDelay: `${idx * 40}ms` }"
+              :style="{ '--row-i': Math.min(idx, 12) }"
             >
               <div class="task-stripe" :class="tarea.estado"></div>
 
@@ -255,8 +192,13 @@
 </template>
 
 <script setup>
+import PageHeader from '../../components/PageHeader.vue'
+import KpiCard from '../../components/KpiCard.vue'
+import SkeletonTable from '../../components/base/SkeletonTable.vue'
+import { useToast } from '../../composables/useToast'
+
+const toast = useToast()
 import { ref, computed, onMounted } from 'vue'
-import AppSidebar from '@/components/AppSidebar.vue'
 import { useAuthStore } from '../../stores/auth'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
@@ -272,22 +214,17 @@ const animVisible     = ref(false)
 const searchFocus     = ref(false)
 const titleChars      = 'Tareas Asignadas'.split('')
 
-const displayEnProceso   = ref(0)
-const displayCompletadas = ref(0)
-const displayRetrasadas = ref(0)
-const displayTotal       = ref(0)
+const ICON_TOTAL = 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
+const ICON_PROC  = 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99'
+const ICON_OK    = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+const ICON_WARN  = 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'
 
-function animateCount(targetRef, target) {
-  let val = 0
-  const steps = 80; const duration = 2000
-  const intervalMs = Math.round(duration / steps)
-  const step = Math.max(0.1, target / steps)
-  const id = setInterval(() => {
-    val += step
-    if (val >= target) { targetRef.value = target; clearInterval(id) }
-    else targetRef.value = Math.floor(val)
-  }, intervalMs)
-}
+const kpis = computed(() => [
+  { label: 'Total',       valor: tareas.value.length,                                       icono: ICON_TOTAL, tono: 'brand',   filtro: '' },
+  { label: 'En proceso',  valor: tareas.value.filter(t => t.estado === 'en-proceso').length, icono: ICON_PROC,  tono: 'info',    filtro: 'en-proceso' },
+  { label: 'Completadas', valor: tareas.value.filter(t => t.estado === 'completado').length, icono: ICON_OK,    tono: 'success', filtro: 'completado' },
+  { label: 'Retrasadas',  valor: tareas.value.filter(t => t.estado === 'retrasado').length,  icono: ICON_WARN,  tono: 'danger',  filtro: 'retrasado' },
+])
 
 onMounted(async () => {
   if (!auth.idUsuario) {
@@ -321,15 +258,10 @@ onMounted(async () => {
     }).sort(ordenarTareas)
   } catch (err) {
     console.error('Error cargando tareas:', err)
+    toast.error('No se pudieron cargar tus tareas. Revisa tu conexión y recarga la página.')
   } finally {
     cargando.value = false
-    setTimeout(() => {
-      animVisible.value = true
-      animateCount(displayEnProceso,   tareas.value.filter(t => t.estado === 'en-proceso').length)
-      animateCount(displayCompletadas, tareas.value.filter(t => t.estado === 'completado').length)
-      animateCount(displayRetrasadas, tareas.value.filter(t => t.estado === 'retrasado').length)
-      animateCount(displayTotal,       tareas.value.length)
-    }, 80)
+    animVisible.value = true
   }
 })
 
@@ -382,55 +314,34 @@ const tareasFiltradas = computed(() =>
 @keyframes orbDrift3 { from { transform: translate(0,0) scale(1); } to { transform: translate(-20px,30px) scale(1.1); } }
 
 /* HERO */
-.hero-section { display: flex; align-items: center; gap: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px 28px; margin-bottom: 28px; box-shadow: 0 2px 12px rgba(31,58,82,0.06); flex-wrap: wrap; }
-.hero-icon-wrap { width: 56px; height: 56px; background: #1f3a52; border-radius: 14px; display: flex; align-items: center; justify-content: center; position: relative; flex-shrink: 0; }
-.hero-icon { width: 28px; height: 28px; color: white; position: relative; z-index: 1; }
-.hero-icon-ring { position: absolute; border-radius: 50%; border: 2px solid #1f3a52; animation: iconPulse 2.4s ease-out infinite; }
-.ring-1 { width: 72px; height: 72px; opacity: 0.25; }
-.ring-2 { width: 90px; height: 90px; opacity: 0.12; animation-delay: 0.5s; }
 @keyframes iconPulse { from { transform: scale(0.7); opacity: 0.4; } to { transform: scale(1.4); opacity: 0; } }
 
-.hero-text { flex: 1; min-width: 200px; }
-.hero-text h1 { font-size: 26px; font-weight: 700; color: #111827; margin: 0 0 6px; display: flex; flex-wrap: wrap; }
-.title-char { display: inline-block; animation: charReveal 0.4s ease both; }
 @keyframes charReveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.hero-sub { font-size: 14px; color: #6b7280; margin: 0; }
 
-.hero-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.search-box { display: flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 10px; border: 1.5px solid #e5e7eb; background: #f9fafb; transition: border-color 0.2s, box-shadow 0.2s; }
-.search-box.search-focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.08); background: white; }
-.search-box svg { color: #9ca3af; flex-shrink: 0; }
-.search-box input { border: none; background: transparent; font-size: 14px; color: #374151; outline: none; width: 180px; }
-.search-box input::placeholder { color: #9ca3af; }
-.filter-select { padding: 9px 12px; border-radius: 10px; border: 1.5px solid #e5e7eb; background: #f9fafb; font-size: 14px; color: #374151; cursor: pointer; outline: none; transition: border-color 0.2s; }
-.filter-select:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.08); }
+.search-box { display: flex; align-items: center; gap: 8px; height: var(--control-height); padding: 0 12px; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); transition: border-color var(--duration-fast), box-shadow var(--duration-fast); width: 240px; }
+.search-box.search-focus { border-color: var(--focus-ring-color); box-shadow: var(--focus-ring); }
+.search-box svg { color: var(--color-text-muted); flex-shrink: 0; }
+.search-box input { border: none; outline: none; width: 100%; font: inherit; font-size: var(--text-base); color: var(--color-text-secondary); background: transparent; }
+.search-box input::placeholder { color: var(--color-text-muted); }
+.filter-select { height: var(--control-height); padding: 0 32px 0 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border-strong); background: var(--color-surface) url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2714%27 height=%2714%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke-width=%272%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 d=%27m19.5 8.25-7.5 7.5-7.5-7.5%27/%3E%3C/svg%3E") no-repeat right 10px center; appearance: none; -webkit-appearance: none; font: inherit; font-size: var(--text-base); color: var(--color-text-secondary); cursor: pointer; outline: none; transition: border-color var(--duration-fast), box-shadow var(--duration-fast); }
+.filter-select:focus { border-color: var(--focus-ring-color); box-shadow: var(--focus-ring); }
 
 /* STAT CARDS */
-.cards { display: grid; grid-template-columns: repeat(4,1fr); gap: 18px; margin-bottom: 24px; }
-.stat-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 20px 18px; position: relative; overflow: hidden; opacity: 0; transform: translateY(14px); transition: opacity 0.4s ease, transform 0.4s ease, box-shadow 0.2s; }
-.cards-visible .stat-card { opacity: 1; transform: none; }
-.stat-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); transform: translateY(-2px) !important; }
-.card-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 12px 0 0 12px; }
-.card-icon-bg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); opacity: 0.06; width: 52px; height: 52px; }
-.card-icon-bg svg { width: 100%; height: 100%; color: #1f3a52; }
-.card-body { padding-left: 8px; }
-.card-label { font-size: 13px; color: #6b7280; font-weight: 500; margin-bottom: 6px; }
-.card-value { font-size: 28px; font-weight: 700; }
 
 /* TABLE BOX */
-.table-box { background: white; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); opacity: 0; transform: translateY(14px); transition: opacity 0.45s ease, transform 0.45s ease; }
-.box-visible { opacity: 1; transform: none; }
+.table-box { background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-xs); margin-bottom: var(--space-6); overflow: hidden; animation: tableIn var(--duration-slow) var(--ease-out) 120ms both; }
+@keyframes tableIn { from { opacity: 0; transform: translateY(var(--motion-shift-md)); } to { opacity: 1; transform: none; } }
 .table-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
 .table-header-bar h3 { font-size: 15px; font-weight: 600; color: #111827; margin: 0; }
 .count-badge { background: #1f3a52; color: white; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
 
 /* TASKS LIST */
-.tasks-list { display: flex; flex-direction: column; }
+/* Dos columnas en escritorio (antes una sola columna a todo el ancho) */
+.tasks-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: var(--space-3); padding: var(--space-3); align-items: start; }
 
 /* TASK CARD */
-.task-card { background: white; border-bottom: 1px solid #f3f4f6; display: flex; overflow: hidden; transition: background 0.15s, transform 0.2s; animation: rowSlideIn 0.35s ease both; }
-.task-card:last-child { border-bottom: none; }
-.task-card:hover { background: #f9fafb; transform: translateX(3px); }
+.task-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); display: flex; overflow: hidden; transition: background var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast) var(--ease-out); animation: rowSlideIn var(--duration-base) var(--ease-out) both; animation-delay: calc(var(--row-i, 0) * 30ms); }
+.task-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 @keyframes rowSlideIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
 .task-card.task-retrasada { background: linear-gradient(135deg, #fef2f2 0%, #ffffff 60%); }
 .task-card.task-completada { background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 60%); }
@@ -447,9 +358,9 @@ const tareasFiltradas = computed(() =>
 .task-id     { font-size: 13px; font-weight: 700; color: #1f3a52; }
 
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.badge.en-proceso { background: #dbeafe; color: #2563eb; }
+.badge.en-proceso { background: #dbeafe; color: #1d4ed8; }
 .badge.completado  { background: #dcfce7; color: #15803d; }
-.badge.retrasado   { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+.badge.retrasado   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 .badge.prioridad.alta  { background: #fee2e2; color: #991b1b; }
 .badge.prioridad.media { background: #fef3c7; color: #92400e; }
 .badge.prioridad.baja  { background: #f0fdf4; color: #166534; }
@@ -462,14 +373,14 @@ const tareasFiltradas = computed(() =>
 .task-meta   { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; margin-bottom: 18px; }
 .meta-item   { display: flex; align-items: flex-start; gap: 8px; color: #6b7280; }
 .meta-item svg { flex-shrink: 0; margin-top: 2px; }
-.meta-label  { font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+.meta-label  { font-size: 11px; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
 .meta-value  { font-size: 14px; font-weight: 600; color: #111827; }
 .fecha-vencida { color: #dc2626 !important; }
 
 .prendas-val   { display: flex; align-items: baseline; gap: 3px; }
 .prendas-val strong { font-size: 16px; color: #1f3a52; }
-.prendas-sep   { color: #9ca3af; font-size: 13px; }
-.prendas-total { font-size: 13px; color: #9ca3af; }
+.prendas-sep   { color: var(--color-text-muted); font-size: 13px; }
+.prendas-total { font-size: 13px; color: var(--color-text-muted); }
 
 /* PROGRESS */
 .progress-label { display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; margin-bottom: 6px; }
@@ -480,12 +391,10 @@ const tareasFiltradas = computed(() =>
 .progress-fill.fill-retrasado { background: #dc2626; }
 
 /* LOADING */
-.loading-wrap { display: flex; flex-direction: column; align-items: center; padding: 60px; gap: 14px; color: #9ca3af; font-size: 14px; }
-.spinner-load { width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #1f3a52; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* EMPTY */
-.empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 24px; color: #9ca3af; font-size: 14px; text-align: center; }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 24px; color: var(--color-text-muted); font-size: 14px; text-align: center; }
 
 /* TRANSITIONS */
 .row-enter-active { transition: opacity 0.3s ease, transform 0.3s ease; }

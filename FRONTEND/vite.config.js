@@ -4,6 +4,8 @@ import { fileURLToPath, URL } from 'node:url'
 import fs from 'fs'
 
 export default defineConfig({
+  // Pages uses /TEXTICODE/; other hosts keep their existing root path.
+  base: process.env.VITE_BASE || '/',
   plugins: [vue()],
   resolve: {
     alias: {

@@ -1,6 +1,5 @@
 <template>
   <div class="layout">
-    <AppSidebar rol="admin" />
 
     <main class="main">
 
@@ -12,42 +11,12 @@
         <div class="bg-grid"></div>
       </div>
 
-      <!-- TOAST -->
-      <Transition name="toast">
-        <div v-if="toast.visible" class="toast" :class="toast.type">
-          <svg v-if="toast.type === 'success'" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-          </svg>
-          <svg v-else width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9.303 3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L10.052 3.378c.866-1.5 3.032-1.5 3.898 0L21.303 16.126Z"/>
-          </svg>
-          {{ toast.msg }}
-        </div>
-      </Transition>
-
-      <!-- HERO HEADER -->
-      <div class="page-hero" :class="{ 'hero-visible': animVisible }">
-        <div class="hero-left">
-          <div class="hero-icon-wrap">
-            <svg class="hero-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
-            </svg>
-            <div class="hero-icon-ring ring-1"></div>
-            <div class="hero-icon-ring ring-2"></div>
-          </div>
-          <div class="hero-text">
-            <h1 class="hero-title">
-              <span
-                v-for="(ch, i) in 'Gestión de Operarios'"
-                :key="i"
-                class="title-char"
-                :style="{ animationDelay: animVisible ? `${i * 35}ms` : '9999s' }"
-              >{{ ch === ' ' ? '\u00A0' : ch }}</span>
-            </h1>
-            <p class="hero-sub">Rendimiento, productividad y carga de trabajo en tiempo real</p>
-          </div>
-        </div>
-        <div class="hero-actions-wrap">
+      <PageHeader
+        titulo="Gestión de Operarios"
+        subtitulo="Rendimiento, productividad y carga de trabajo en tiempo real"
+        icono="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+      >
+        <template #acciones>
           <div class="filters">
             <div class="search-box" :class="{ 'search-focus': searchFocus }">
               <svg class="search-ico" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -55,14 +24,15 @@
               </svg>
               <input
                 v-model="busqueda"
-                type="text"
-                placeholder="Buscar operario..."
+                type="search"
+                placeholder="Buscar operario"
+                aria-label="Buscar operario por nombre"
                 @focus="searchFocus = true"
                 @blur="searchFocus = false"
               >
             </div>
             <div class="select-wrapper" v-if="vistaActiva === 'eficiencia'">
-              <select v-model="filtroRendimiento" class="select">
+              <select v-model="filtroRendimiento" class="select" aria-label="Filtrar por rendimiento">
                 <option value="">Todos los rendimientos</option>
                 <option value="Alto">Alto</option>
                 <option value="Medio">Medio</option>
@@ -73,7 +43,7 @@
               </svg>
             </div>
             <div class="select-wrapper" v-if="vistaActiva === 'carga'">
-              <select v-model="filtroCarga" class="select">
+              <select v-model="filtroCarga" class="select" aria-label="Filtrar por carga de trabajo">
                 <option value="">Todos los estados</option>
                 <option value="sobrecargado">Sobrecargados</option>
                 <option value="normal">Normal</option>
@@ -84,14 +54,14 @@
               </svg>
             </div>
           </div>
-          <button class="btn btn-refresh" @click="vistaActiva === 'eficiencia' ? cargarDatos() : cargarVistaCarga()" :disabled="cargando || cargandoCarga">
-            <svg class="btn-icon" :class="{ 'spin': cargando || cargandoCarga }" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <button type="button" class="tx-btn tx-btn--secondary" @click="vistaActiva === 'eficiencia' ? cargarDatos() : cargarVistaCarga()" :disabled="cargando || cargandoCarga">
+            <svg width="16" height="16" :class="{ 'spin': cargando || cargandoCarga }" aria-hidden="true" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
             </svg>
             Actualizar
           </button>
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <!-- VIEW SWITCH -->
       <div class="view-switch-wrap" :class="{ 'box-visible': animVisible }">
@@ -117,36 +87,26 @@
       <Transition name="vista">
         <section v-if="vistaActiva === 'eficiencia'" key="eficiencia">
 
-          <!-- STATS -->
-          <div v-if="cargando" class="stats">
-            <div v-for="i in 4" :key="i" class="stat-card skeleton-card">
-              <div class="skeleton-line skeleton-sm"></div>
-              <div class="skeleton-line skeleton-lg"></div>
-            </div>
-          </div>
-          <div v-else class="stats" :class="{ 'stats-visible': animVisible }">
-            <div
-              v-for="(s, i) in statsCards"
-              :key="i"
-              class="stat-card"
-              :style="{ transitionDelay: animVisible ? `${i * 80}ms` : '0ms' }"
-            >
-              <div class="stat-accent" :style="{ background: s.accentColor }"></div>
-              <div class="stat-icon-bg" :style="{ color: s.accentColor }">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" :d="s.iconPath"/>
-                </svg>
-              </div>
-              <h3>{{ s.label }}</h3>
-              <p :style="{ color: s.accentColor }">{{ s.display }}</p>
-            </div>
+          <div class="kpi-grid">
+            <KpiCard
+              v-for="(k, i) in kpisEficiencia"
+              :key="k.label"
+              v-bind="k"
+              :activo="k.filtro !== undefined && filtroRendimiento === k.filtro"
+              :cargando="cargando"
+              :indice="i"
+              v-on="k.filtro !== undefined ? { click: () => (filtroRendimiento = k.filtro) } : {}"
+            />
           </div>
 
           <!-- MODAL DETALLE OPERARIO -->
-          <Transition name="modal">
-            <div v-if="modalDetalle" class="modal" @click.self="cerrarModal">
-              <div class="modal-content modal-detalle">
-                <span class="close" @click="cerrarModal">×</span>
+          <BaseDrawer
+            :open="modalDetalle"
+            :titulo="operarioActivo?.Nombre_Completo || 'Detalle del operario'"
+            descripcion="Métricas, historial de rendimiento y órdenes asignadas"
+            ancho="xl"
+            @update:open="v => !v && cerrarModal()"
+          >
 
                 <div v-if="operarioActivo" class="detalle-inner">
 
@@ -337,7 +297,7 @@
                                         <span class="obs-admin-inline">{{ obs.Admin }}</span>
                                         <div class="obs-meta-right">
                                           <span class="obs-fecha-inline">{{ formatFechaObs(obs.Fecha) }}</span>
-                                          <button class="btn-obs-eliminar" @click="eliminarObservacion(obs.Id_Observacion, o.Id_Orden)">
+                                          <button type="button" class="btn-obs-eliminar" aria-label="Eliminar observación" title="Eliminar observación" @click="eliminarObservacion(obs.Id_Observacion, o.Id_Orden)">
                                             <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                               <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
                                             </svg>
@@ -351,13 +311,15 @@
                                     <textarea
                                       v-model="nuevaObsXOrden[o.Id_Orden]"
                                       class="obs-textarea-inline"
-                                      :placeholder="`Describe el problema de la orden #${o.Id_Orden}...`"
+                                      :aria-label="`Nueva observación para la orden ${o.Id_Orden}`"
+                                      :placeholder="`Describe el problema de la orden #${o.Id_Orden}…`"
                                       maxlength="500"
                                       rows="2"
                                     ></textarea>
                                     <div class="obs-form-inline-footer">
                                       <span class="obs-chars">{{ (nuevaObsXOrden[o.Id_Orden] || '').length }}/500</span>
                                       <button
+                                        type="button"
                                         class="btn-obs-guardar-inline"
                                         @click="guardarObservacionOrden(o)"
                                         :disabled="!nuevaObsXOrden[o.Id_Orden]?.trim() || guardandoObsOrden === o.Id_Orden"
@@ -377,13 +339,12 @@
                 </div>
 
                 <div v-else class="cargando-detalle">
-                  <div class="spinner"></div>
-                  Cargando...
+                  <SkeletonCard variante="contenido" :lineas="2" />
+                  <div class="kpi-grid" style="margin-top: 16px">
+                    <SkeletonCard v-for="i in 4" :key="i" variante="kpi" />
+                  </div>
                 </div>
-
-              </div>
-            </div>
-          </Transition>
+          </BaseDrawer>
 
           <!-- TABLA PRINCIPAL -->
           <div class="table-box" :class="{ 'box-visible': animVisible }" style="transition-delay:240ms">
@@ -416,14 +377,15 @@
               <button class="btn" @click="cargarDatos">Reintentar</button>
             </div>
 
-            <table v-else>
+            <div v-else class="tx-table-scroll">
+            <table>
               <thead>
                 <tr>
                   <th class="th-rank">#</th>
-                  <th class="th-sortable" @click="sortBy('Nombre_Completo')">
+                  <th class="th-sortable" tabindex="0" :aria-sort="ariaSort('Nombre_Completo')" @click="sortBy('Nombre_Completo')" @keydown.enter.prevent="sortBy('Nombre_Completo')" @keydown.space.prevent="sortBy('Nombre_Completo')">
                     <span class="th-inner">Operario <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-neutral"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg></span>
                   </th>
-                  <th class="th-sortable" @click="sortBy('prendas_por_dia')">
+                  <th class="th-sortable" tabindex="0" :aria-sort="ariaSort('prendas_por_dia')" @click="sortBy('prendas_por_dia')" @keydown.enter.prevent="sortBy('prendas_por_dia')" @keydown.space.prevent="sortBy('prendas_por_dia')">
                     <span class="th-inner">Prendas / día <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="sort-neutral"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg></span>
                   </th>
                   <th>Total producidas</th>
@@ -436,13 +398,13 @@
               <tbody>
                 <TransitionGroup name="row">
                   <tr
-                    v-for="(op, idx) in operariosOrdenados"
+                    v-for="(op, idx) in operariosVisibles"
                     :key="op.Id_Usuario"
                     class="table-row"
-                    :style="{ animationDelay: `${idx * 40}ms` }"
+                    :style="{ '--row-i': Math.min(idx, 12) }"
                   >
                     <td class="td-rank">
-                      <span class="rank-num" :class="{ 'rank-gold': idx === 0, 'rank-silver': idx === 1, 'rank-bronze': idx === 2 }">{{ idx + 1 }}</span>
+                      <span class="rank-num" :class="{ 'rank-gold': rankDe(idx) === 1, 'rank-silver': rankDe(idx) === 2, 'rank-bronze': rankDe(idx) === 3 }">{{ rankDe(idx) }}</span>
                     </td>
                     <td>
                       <div class="user">
@@ -475,7 +437,7 @@
                     <td><span class="completadas-cell">{{ op.ordenes_completadas }}</span></td>
                     <td><span class="badge-rendimiento" :class="op.rendimiento?.toLowerCase()">{{ op.rendimiento }}</span></td>
                     <td>
-                      <button class="action-btn" @click="verDetalle(op.Id_Usuario)">
+                      <button type="button" class="action-btn" :aria-label="`Ver detalle de ${op.Nombre_Completo}`" title="Ver detalle" @click="verDetalle(op.Id_Usuario)">
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/>
                           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
@@ -494,6 +456,14 @@
                 </tr>
               </tbody>
             </table>
+            </div>
+            <BasePagination
+              v-if="!cargando"
+              v-model:pagina="paginaRanking"
+              v-model:por-pagina="porPaginaRanking"
+              :total="operariosOrdenados.length"
+              etiqueta="operarios"
+            />
           </div>
 
         </section>
@@ -503,45 +473,16 @@
       <Transition name="vista">
         <section v-if="vistaActiva === 'carga'" key="carga" class="carga-wrap">
 
-          <div v-if="cargandoCarga" class="stats">
-            <div v-for="i in 4" :key="i" class="stat-card skeleton-card">
-              <div class="skeleton-line skeleton-sm"></div>
-              <div class="skeleton-line skeleton-lg"></div>
-            </div>
-          </div>
-          <div v-else class="stats stats-visible">
-            <div class="stat-card" style="transition-delay:0ms">
-              <div class="stat-accent" style="background:#1f3a52"></div>
-              <div class="stat-icon-bg" style="color:#1f3a52">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" :d="ICON_USERS"/></svg>
-              </div>
-              <h3>Total Operarios</h3>
-              <p style="color:#1f3a52">{{ cargaResumen.total_operarios || 0 }}</p>
-            </div>
-            <div class="stat-card" style="transition-delay:80ms">
-              <div class="stat-accent" style="background:#16a34a"></div>
-              <div class="stat-icon-bg" style="color:#16a34a">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
-              </div>
-              <h3>Disponibles</h3>
-              <p style="color:#16a34a">{{ cargaResumen.disponibles || 0 }}</p>
-            </div>
-            <div class="stat-card" style="transition-delay:160ms">
-              <div class="stat-accent" style="background:#2563eb"></div>
-              <div class="stat-icon-bg" style="color:#2563eb">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/></svg>
-              </div>
-              <h3>Carga Normal</h3>
-              <p style="color:#2563eb">{{ cargaResumen.normales || 0 }}</p>
-            </div>
-            <div class="stat-card" style="transition-delay:240ms">
-              <div class="stat-accent" style="background:#dc2626"></div>
-              <div class="stat-icon-bg" style="color:#dc2626">
-                <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" :d="ICON_ALERT"/></svg>
-              </div>
-              <h3>Sobrecargados</h3>
-              <p style="color:#dc2626">{{ cargaResumen.sobrecargados || 0 }}</p>
-            </div>
+          <div class="kpi-grid">
+            <KpiCard
+              v-for="(k, i) in kpisCarga"
+              :key="k.label"
+              v-bind="k"
+              :activo="filtroCarga === k.filtro"
+              :cargando="cargandoCarga"
+              :indice="i"
+              @click="filtroCarga = k.filtro"
+            />
           </div>
 
           <!-- BOTÓN REASIGNAR ÓRDENES -->
@@ -583,7 +524,8 @@
                 </div>
               </div>
 
-              <table v-else>
+              <div v-else class="tx-table-scroll">
+              <table>
                 <thead>
                   <tr>
                     <th>Operario</th>
@@ -597,7 +539,7 @@
                 </thead>
                 <tbody>
                   <tr
-                    v-for="op in cargaOperariosFiltrados"
+                    v-for="op in cargaVisibles"
                     :key="op.Id_Usuario"
                     class="table-row"
                     :class="{ 'fila-sobrecarga': op.estado_carga === 'sobrecargado' }"
@@ -636,7 +578,7 @@
                       <span class="badge-carga" :class="op.estado_carga">{{ estadoCargaLabel(op.estado_carga) }}</span>
                     </td>
                     <td>
-                      <button class="action-btn" @click="verDetalleCarga(op)" title="Ver órdenes activas">
+                      <button type="button" class="action-btn" @click="verDetalleCarga(op)" :aria-label="`Ver órdenes activas de ${op.Nombre_Completo}`" title="Ver órdenes activas">
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178Z"/>
                           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
@@ -654,13 +596,23 @@
                   </tr>
                 </tbody>
               </table>
+              </div>
+              <BasePagination
+                v-if="!cargandoCarga"
+                v-model:pagina="paginaCarga"
+                v-model:por-pagina="porPaginaCarga"
+                :total="cargaOperariosFiltrados.length"
+                etiqueta="operarios"
+              />
             </div>
 
             <!-- MODAL DETALLE CARGA -->
-            <Transition name="modal">
-              <div v-if="modalCarga" class="modal" @click.self="modalCarga = false">
-                <div class="modal-content">
-                  <span class="close" @click="modalCarga = false">×</span>
+            <BaseDrawer
+              v-model:open="modalCarga"
+              :titulo="cargaDetalle?.Nombre_Completo || 'Carga de trabajo'"
+              descripcion="Órdenes activas y fechas límite"
+              ancho="lg"
+            >
                   <div v-if="cargaDetalle" class="detalle-inner">
                     <div class="detalle-header">
                       <div class="detalle-avatar" :style="{ background: avatarBg(cargaDetalle.Nombre_Completo), color: avatarColor(cargaDetalle.Nombre_Completo) }">
@@ -720,9 +672,7 @@
                     </div>
                     <div v-else class="sin-ordenes">Sin órdenes activas</div>
                   </div>
-                </div>
-              </div>
-            </Transition>
+            </BaseDrawer>
           </template>
 
           <!-- PANEL DE REASIGNACIÓN -->
@@ -829,8 +779,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
-import AppSidebar from '../../components/AppSidebar.vue'
+import { ref, computed, onMounted, reactive, watch } from 'vue'
 import {
   getEficienciaOperarios,
   getEficienciaOperario,
@@ -838,6 +787,18 @@ import {
   reasignarOrdenPorCarga,
 } from '../../services/api.js'
 import { useAuthStore } from '../../stores/auth'
+import PageHeader from '../../components/PageHeader.vue'
+import KpiCard from '../../components/KpiCard.vue'
+import BaseDrawer from '../../components/base/BaseDrawer.vue'
+import BasePagination from '../../components/base/BasePagination.vue'
+import SkeletonCard from '../../components/base/SkeletonCard.vue'
+import { usePagination } from '../../composables/usePagination'
+import { useToast } from '../../composables/useToast'
+
+const toast = useToast()
+import { useConfirm } from '../../composables/useConfirm'
+
+const confirmar = useConfirm()
 
 const auth = useAuthStore()
 
@@ -883,15 +844,14 @@ const ordenesReasignActivo   = ref([])
 const cargandoOrdenesReasign = ref(false)
 const reasignando            = ref(null)
 
-const toast = ref({ visible: false, msg: '', type: 'success' })
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 const authHeaders = () => auth.authHeader()
 
 // ── TOAST ──
 function mostrarToast(msg, type = 'success') {
-  toast.value = { visible: true, msg, type }
-  setTimeout(() => toast.value.visible = false, 2800)
+  if (type === 'danger' || type === 'error') toast.error(msg)
+  else toast.success(msg)
 }
 
 // ── FIX: Normalizar números que PostgreSQL devuelve como string ──
@@ -917,7 +877,7 @@ async function cargarDatos() {
     // FIX: convertir strings de pg a números reales
     operarios.value = data.map(normalizarOperario)
   } catch (e) {
-    error.value = e.message || 'Error al cargar los datos de eficiencia'
+    error.value = e.message || 'No se pudieron cargar los datos de eficiencia. Inténtalo de nuevo.'
     mostrarToast(error.value, 'danger')
   } finally {
     cargando.value = false
@@ -932,7 +892,7 @@ async function cargarVistaCarga() {
     cargaOperarios.value = carga.data || []
     cargaResumen.value   = carga.resumen || {}
   } catch (e) {
-    mostrarToast(e.message || 'Error cargando la vista de carga', 'danger')
+    mostrarToast(e.message || 'No se pudo cargar la carga de trabajo. Inténtalo de nuevo.', 'danger')
   } finally {
     cargandoCarga.value = false
   }
@@ -953,7 +913,7 @@ async function verDetalleCarga(op) {
     const json = await res.json()
     if (json.ok) cargaDetalleOrdenes.value = json.data?.ordenes_activas_detalle || []
   } catch {
-    mostrarToast('Error al cargar detalle de carga', 'danger')
+    mostrarToast('No se pudo cargar el detalle de carga. Inténtalo de nuevo.', 'danger')
   } finally {
     cargandoCargaDetalle.value = false
   }
@@ -977,7 +937,7 @@ async function verDetalle(id) {
     operarioActivo.value = normalizarOperario(data)
     cargarHistorial(id, 'semana')
   } catch (e) {
-    mostrarToast('Error al cargar el detalle', 'danger')
+    mostrarToast('No se pudo cargar el detalle. Inténtalo de nuevo.', 'danger')
     modalDetalle.value = false
   }
 }
@@ -998,7 +958,7 @@ async function cargarHistorial(id, periodo) {
     const res  = await fetch(`${BASE}/eficiencia/operarios/${id}/historial?periodo=${periodo}`, { headers: authHeaders() })
     const json = await res.json()
     if (json.ok) historial.value = json.data
-  } catch { mostrarToast('Error al cargar el historial', 'danger') }
+  } catch { mostrarToast('No se pudo cargar el historial. Inténtalo de nuevo.', 'danger') }
   finally { cargandoHistorial.value = false }
 }
 
@@ -1034,12 +994,18 @@ async function guardarObservacionOrden(orden) {
     const json2 = await res2.json()
     obsXOrden[id] = json2.data || []
     mostrarToast(`Observación guardada en orden #${id}`)
-  } catch { mostrarToast('Error al guardar la observación', 'danger') }
+  } catch { mostrarToast('No se pudo guardar la observación. Inténtalo de nuevo.', 'danger') }
   finally { guardandoObsOrden.value = null }
 }
 
 async function eliminarObservacion(idObservacion, idOrden) {
-  if (!confirm('¿Eliminar esta observación? Esta acción no se puede deshacer.')) return
+  const ok = await confirmar({
+    titulo: '¿Eliminar esta observación?',
+    mensaje: 'Esta acción no se puede deshacer.',
+    textoConfirmar: 'Eliminar observación',
+    tono: 'danger',
+  })
+  if (!ok) return
   try {
     const res = await fetch(`${BASE}/eficiencia/observaciones/${idObservacion}`, { method: 'DELETE', headers: authHeaders() })
     if (!res.ok) throw new Error()
@@ -1048,8 +1014,8 @@ async function eliminarObservacion(idObservacion, idOrden) {
       const orden = operarioActivo.value.ordenes_detalle?.find(o => o.Id_Orden === idOrden)
       if (orden) orden.tiene_problema = false
     }
-    mostrarToast('Observación eliminada')
-  } catch { mostrarToast('Error al eliminar la observación', 'danger') }
+    mostrarToast('Observación eliminada.')
+  } catch { mostrarToast('No se pudo eliminar la observación. Inténtalo de nuevo.', 'danger') }
 }
 
 // ── ORDENAMIENTO ──
@@ -1082,6 +1048,27 @@ const cargaOperariosFiltrados = computed(() => {
   )
 })
 
+// ── PAGINACIÓN ──
+const {
+  pagina: paginaRanking, porPagina: porPaginaRanking, visibles: operariosVisibles,
+  desde: desdeRanking, reiniciar: reiniciarRanking,
+} = usePagination(operariosOrdenados, { porPagina: 10, clave: 'eficiencia' })
+const {
+  pagina: paginaCarga, porPagina: porPaginaCarga, visibles: cargaVisibles, reiniciar: reiniciarCarga,
+} = usePagination(cargaOperariosFiltrados, { porPagina: 10, clave: 'carga' })
+watch([busqueda, filtroRendimiento, sortKey, sortDir], reiniciarRanking)
+watch([busqueda, filtroCarga], reiniciarCarga)
+
+// Posición real en el ranking (no solo dentro de la página)
+function rankDe(idx) {
+  return desdeRanking.value + idx
+}
+
+function ariaSort(key) {
+  if (sortKey.value !== key) return 'none'
+  return sortDir.value === 1 ? 'ascending' : 'descending'
+}
+
 // ── STATS COUNTS ──
 const statsCounts = computed(() => ({
   total:    operarios.value.length,
@@ -1094,6 +1081,24 @@ const ICON_USERS  = 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.12
 const ICON_TROPHY = 'M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0'
 const ICON_ALERT  = 'M12 9v3.75m9.303 3.376c.866 1.5-.217 3.374-1.948 3.374H4.645c-1.73 0-2.813-1.874-1.948-3.374L10.052 3.378c.866-1.5 3.032-1.5 3.898 0L21.303 16.126ZM12 15.75h.007v.008H12v-.008Z'
 const ICON_DOWN   = 'M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181'
+
+const ICON_BOLT  = 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z'
+const ICON_CHECK = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+
+// Total, Alto y Bajo filtran la tabla por rendimiento; Retrasos es solo informativo
+const kpisEficiencia = computed(() => [
+  { label: 'Total operarios',    valor: statsCounts.value.total,    icono: ICON_USERS,  tono: 'brand',   filtro: '' },
+  { label: 'Rendimiento alto',   valor: statsCounts.value.alto,     icono: ICON_TROPHY, tono: 'success', filtro: 'Alto' },
+  { label: 'Rendimiento bajo',   valor: statsCounts.value.bajo,     icono: ICON_DOWN,   tono: 'warning', filtro: 'Bajo' },
+  { label: 'Órdenes en retraso', valor: statsCounts.value.retrasos, icono: ICON_ALERT,  tono: 'danger' },
+])
+
+const kpisCarga = computed(() => [
+  { label: 'Total operarios', valor: Number(cargaResumen.value.total_operarios) || 0, icono: ICON_USERS, tono: 'brand',   filtro: '' },
+  { label: 'Disponibles',     valor: Number(cargaResumen.value.disponibles) || 0,     icono: ICON_CHECK, tono: 'success', filtro: 'disponible' },
+  { label: 'Carga normal',    valor: Number(cargaResumen.value.normales) || 0,        icono: ICON_BOLT,  tono: 'info',    filtro: 'normal' },
+  { label: 'Sobrecargados',   valor: Number(cargaResumen.value.sobrecargados) || 0,   icono: ICON_ALERT, tono: 'danger',  filtro: 'sobrecargado' },
+])
 
 const statsCards = computed(() => [
   { label: 'Total Operarios',    display: statsCounts.value.total,    accentColor: '#1f3a52', iconPath: ICON_USERS  },
@@ -1147,7 +1152,7 @@ async function seleccionarOperarioReasign(op) {
     const json = await res.json()
     if (json.ok) ordenesReasignActivo.value = json.data?.ordenes_activas_detalle || []
   } catch {
-    mostrarToast('Error al cargar las órdenes del operario', 'danger')
+    mostrarToast('No se pudieron cargar las órdenes del operario. Inténtalo de nuevo.', 'danger')
   } finally {
     cargandoOrdenesReasign.value = false
   }
@@ -1171,7 +1176,7 @@ async function reasignarOrden(orden, destino) {
     const actualizado = cargaOperarios.value.find(o => o.Id_Usuario === operarioReasignActivo.value?.Id_Usuario)
     operarioReasignActivo.value = actualizado || null
   } catch (e) {
-    mostrarToast(e.message || 'Error al reasignar la orden', 'danger')
+    mostrarToast(e.message || 'No se pudo reasignar la orden. Inténtalo de nuevo.', 'danger')
   } finally {
     reasignando.value = null
   }
@@ -1229,31 +1234,18 @@ function formatFechaObs(f) {
 .bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(31,58,82,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(31,58,82,0.04) 1px, transparent 1px); background-size: 40px 40px; }
 
 /* ── HERO ── */
-.page-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; opacity: 0; transform: translateY(-16px); transition: opacity 0.5s ease, transform 0.5s ease; }
-.page-hero.hero-visible { opacity: 1; transform: translateY(0); }
-.hero-left { display: flex; align-items: center; gap: 16px; }
-.hero-text { display: flex; flex-direction: column; }
-.hero-icon-wrap { position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: #1f3a52; border-radius: 14px; flex-shrink: 0; }
-.hero-icon { width: 26px; height: 26px; color: white; }
-.hero-icon-ring { position: absolute; border-radius: 50%; border: 1.5px solid #1f3a52; opacity: 0; animation: iconPulse 3s ease-out infinite; }
-.ring-1 { width: 68px; height: 68px; animation-delay: 0s; }
-.ring-2 { width: 86px; height: 86px; animation-delay: 0.8s; }
 @keyframes iconPulse { 0% { transform: scale(0.7); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 0; } }
-.hero-title { font-size: 24px; font-weight: 700; color: #111827; margin: 0; display: flex; flex-wrap: wrap; }
-.title-char { display: inline-block; opacity: 0; transform: translateY(12px); animation: charReveal 0.4s ease forwards; }
 @keyframes charReveal { to { opacity: 1; transform: translateY(0); } }
-.hero-sub { font-size: 13px; color: #6b7280; margin: 4px 0 0; }
-.hero-actions-wrap { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
 .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.search-box { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: white; border: 1.5px solid #e5e7eb; border-radius: 10px; transition: border-color 0.2s, box-shadow 0.2s; width: 220px; }
-.search-box.search-focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.search-ico { width: 16px; height: 16px; color: #9ca3af; flex-shrink: 0; }
-.search-box input { border: none; outline: none; width: 100%; font-size: 14px; color: #374151; background: transparent; }
-.search-box input::placeholder { color: #9ca3af; }
+.search-box { display: flex; align-items: center; gap: 8px; height: var(--control-height); padding: 0 12px; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); transition: border-color var(--duration-fast), box-shadow var(--duration-fast); width: 240px; }
+.search-box.search-focus { border-color: var(--focus-ring-color); box-shadow: var(--focus-ring); }
+.search-ico { width: 16px; height: 16px; color: var(--color-text-muted); flex-shrink: 0; }
+.search-box input { border: none; outline: none; width: 100%; font: inherit; font-size: var(--text-base); color: var(--color-text-secondary); background: transparent; }
+.search-box input::placeholder { color: var(--color-text-muted); }
 .select-wrapper { position: relative; display: inline-flex; align-items: center; }
-.select { padding: 9px 32px 9px 12px; border-radius: 10px; border: 1.5px solid #e5e7eb; font-size: 14px; background: white; appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; transition: border-color 0.2s; }
-.select:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.select-arrow { position: absolute; right: 10px; width: 14px; height: 14px; color: #6b7280; pointer-events: none; }
+.select { height: var(--control-height); padding: 0 32px 0 12px; border-radius: var(--radius-md); border: 1px solid var(--color-border-strong); font: inherit; font-size: var(--text-base); color: var(--color-text-secondary); background: var(--color-surface); appearance: none; -webkit-appearance: none; outline: none; cursor: pointer; transition: border-color var(--duration-fast), box-shadow var(--duration-fast); }
+.select:focus { border-color: var(--focus-ring-color); box-shadow: var(--focus-ring); }
+.select-arrow { position: absolute; right: 10px; width: 14px; height: 14px; color: var(--color-text-muted); pointer-events: none; }
 .btn { display: flex; align-items: center; gap: 8px; background: #1f3a52; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background 0.2s, transform 0.1s; flex-shrink: 0; }
 .btn:hover:not(:disabled) { background: #162b3c; transform: translateY(-1px); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1267,7 +1259,7 @@ function formatFechaObs(f) {
 .view-switch-track { position: relative; display: flex; background: white; border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 4px; gap: 4px; box-shadow: 0 2px 12px rgba(31,58,82,0.08); width: 100%; }
 .view-switch-slider { position: absolute; top: 4px; left: 4px; width: calc(50% - 6px); bottom: 4px; background: #1f3a52; border-radius: 10px; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 2px 8px rgba(31,58,82,0.3); }
 .view-switch-slider.slider-carga { transform: translateX(calc(100% + 4px)); }
-.switch-btn { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 24px; border-radius: 10px; border: none; background: transparent; font-size: 14px; font-weight: 600; color: #9ca3af; cursor: pointer; transition: color 0.25s ease; white-space: nowrap; flex: 1; }
+.switch-btn { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 14px 24px; border-radius: 10px; border: none; background: transparent; font-size: 14px; font-weight: 600; color: var(--color-text-muted); cursor: pointer; transition: color 0.25s ease; white-space: nowrap; flex: 1; }
 .switch-btn svg { transition: stroke 0.25s ease; flex-shrink: 0; }
 .switch-btn.active { color: white; }
 .switch-btn.active svg { stroke: white; }
@@ -1283,17 +1275,6 @@ function formatFechaObs(f) {
 .vista-enter-from { opacity: 0; transform: translateY(12px); }
 .vista-leave-to   { opacity: 0; transform: translateY(-8px); }
 
-/* ── STATS ── */
-.stats { display: flex; gap: 18px; margin-bottom: 24px; }
-.stat-card { background: white; flex: 1; padding: 20px 20px 20px 24px; border-radius: 14px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.45s ease, transform 0.45s ease, box-shadow 0.2s; }
-.stats-visible .stat-card { opacity: 1; transform: translateY(0); }
-.stat-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.09); transform: translateY(-3px) !important; }
-.stat-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
-.stat-icon-bg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); opacity: 0.07; }
-.stat-icon-bg svg { width: 52px; height: 52px; }
-.stat-card h3 { font-size: 13px; color: #6b7280; font-weight: 500; margin: 0 0 10px; }
-.stat-card p { font-size: 30px; font-weight: 800; margin: 0; line-height: 1; }
-.skeleton-card { pointer-events: none; min-height: 90px; }
 .skeleton-line { display: block; border-radius: 999px; background: #e5e7eb; animation: shimmer 1.3s ease-in-out infinite; }
 @keyframes shimmer { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 .skeleton-sm { width: 45%; height: 12px; margin-bottom: 16px; }
@@ -1325,12 +1306,13 @@ table { width: 100%; border-collapse: collapse; }
 thead { background: #f9fafb; }
 th { text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; padding: 13px 18px; white-space: nowrap; }
 .th-rank { width: 48px; text-align: center; }
+.th-sortable:focus-visible { outline: var(--focus-outline); outline-offset: -2px; }
 .th-sortable { cursor: pointer; user-select: none; }
 .th-sortable:hover { color: #1f3a52; }
 .th-inner { display: inline-flex; align-items: center; gap: 6px; }
 .sort-neutral { opacity: 0.35; }
 td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
-.table-row { transition: background 0.18s; animation: rowSlideIn 0.35s ease both; }
+.table-row { transition: background 0.18s; animation: rowSlideIn var(--duration-base) var(--ease-out) both; animation-delay: calc(var(--row-i, 0) * 25ms); }
 .table-row:hover td { background: #f8fafc; }
 .fila-sobrecarga td { background: #fff8f8 !important; }
 .fila-sobrecarga:hover td { background: #fee2e2 !important; }
@@ -1357,7 +1339,7 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 .num-cell { font-size: 14px; font-weight: 600; color: #374151; }
 .retraso-cell { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #6b7280; }
 .retraso-activo { color: #dc2626; }
-.completadas-cell { font-weight: 600; color: #16a34a; }
+.completadas-cell { font-weight: 600; color: #15803d; }
 
 /* ── BARRA CARGA ── */
 .carga-bar-wrap { display: flex; align-items: center; gap: 8px; }
@@ -1370,8 +1352,8 @@ td { padding: 14px 18px; font-size: 14px; border-top: 1px solid #f1f5f9; }
 .badge-rendimiento.medio { background: #dbeafe; color: #1d4ed8; }
 .badge-rendimiento.bajo  { background: #fee2e2; color: #b91c1c; }
 .tendencia-cell { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; cursor: help; }
-.tendencia-cell.subiendo { background: #dcfce7; color: #16a34a; }
-.tendencia-cell.bajando  { background: #fee2e2; color: #dc2626; }
+.tendencia-cell.subiendo { background: #dcfce7; color: #15803d; }
+.tendencia-cell.bajando  { background: #fee2e2; color: #b91c1c; }
 .tendencia-cell.estable  { background: #f1f5f9; color: #6b7280; }
 .th-tendencia { text-align: center; }
 td:has(.tendencia-cell) { text-align: center; }
@@ -1406,7 +1388,7 @@ td:has(.tendencia-cell) { text-align: center; }
 .skeleton-date  { width: 80px; height: 14px; }
 
 /* ── EMPTY / ERROR ── */
-.empty-state, .error-state { text-align: center; padding: 48px 20px; color: #9ca3af; }
+.empty-state, .error-state { text-align: center; padding: 48px 20px; color: var(--color-text-muted); }
 .empty-state svg, .error-state svg { margin: 0 auto 12px; display: block; opacity: 0.4; }
 .empty-state p, .error-state p { font-size: 14px; margin: 0 0 12px; }
 .error-state { color: #dc2626; }
@@ -1414,7 +1396,7 @@ td:has(.tendencia-cell) { text-align: center; }
 /* ── MODAL ── */
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
 .modal-content { background: white; width: 100%; max-width: 780px; max-height: 90vh; overflow-y: auto; padding: 30px; border-radius: 16px; position: relative; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
-.close { position: absolute; top: 16px; right: 20px; font-size: 22px; cursor: pointer; color: #9ca3af; background: none; border: none; transition: color 0.15s; }
+.close { position: absolute; top: 16px; right: 20px; font-size: 22px; cursor: pointer; color: var(--color-text-muted); background: none; border: none; transition: color 0.15s; }
 .close:hover { color: #374151; }
 .detalle-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
 .detalle-avatar { width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; flex-shrink: 0; }
@@ -1422,12 +1404,12 @@ td:has(.tendencia-cell) { text-align: center; }
 .detalle-usuario { font-size: 13px; color: #6b7280; margin-bottom: 6px; }
 .detalle-metricas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
 .metrica-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
-.metrica-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+.metrica-label { font-size: 11px; color: var(--color-text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
 .metrica-valor { font-size: 22px; font-weight: 800; }
 .metrica-valor.azul    { color: #2563eb; }
-.metrica-valor.verde   { color: #16a34a; }
+.metrica-valor.verde   { color: #15803d; }
 .metrica-valor.rojo    { color: #dc2626; }
-.metrica-valor.amarillo { color: #d97706; }
+.metrica-valor.amarillo { color: #b45309; }
 .detalle-ordenes-titulo { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 12px; }
 .tabla-ordenes { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tabla-ordenes th { text-align: left; padding: 9px 12px; background: #f9fafb; font-size: 11px; font-weight: 600; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
@@ -1439,7 +1421,7 @@ td:has(.tendencia-cell) { text-align: center; }
 .avance-bar  { flex: 1; height: 5px; background: #e5e7eb; border-radius: 999px; overflow: hidden; min-width: 50px; }
 .avance-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
 .avance-txt  { font-size: 11px; color: #6b7280; white-space: nowrap; }
-.sin-ordenes { text-align: center; padding: 30px; color: #9ca3af; font-size: 14px; }
+.sin-ordenes { text-align: center; padding: 30px; color: var(--color-text-muted); font-size: 14px; }
 .cargando-detalle { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 60px; color: #6b7280; }
 .spinner { width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #1f3a52; border-radius: 50%; animation: spinIcon 0.7s linear infinite; }
 
@@ -1452,14 +1434,14 @@ td:has(.tendencia-cell) { text-align: center; }
 .obs-panel-td { padding: 0 !important; }
 .obs-panel { background: #f8fafc; border-top: 2px solid #1f3a52; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
 .obs-panel-header { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #1f3a52; }
-.obs-loading { font-size: 12px; color: #9ca3af; }
-.obs-empty-inline { font-size: 12px; color: #9ca3af; font-style: italic; }
+.obs-loading { font-size: 12px; color: var(--color-text-muted); }
+.obs-empty-inline { font-size: 12px; color: var(--color-text-muted); font-style: italic; }
 .obs-lista-inline { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; }
 .obs-item-inline { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; }
 .obs-meta-inline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
 .obs-meta-right { display: flex; align-items: center; gap: 6px; }
 .obs-admin-inline { font-size: 11px; font-weight: 700; color: #1f3a52; }
-.obs-fecha-inline { font-size: 10px; color: #9ca3af; }
+.obs-fecha-inline { font-size: 10px; color: var(--color-text-muted); }
 .obs-texto-inline { font-size: 12px; color: #374151; margin: 0; line-height: 1.5; }
 .btn-obs-eliminar { width: 22px; height: 22px; border-radius: 5px; border: 1px solid #fecaca; background: #fff5f5; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #dc2626; transition: all 0.15s; flex-shrink: 0; }
 .btn-obs-eliminar:hover { background: #fee2e2; border-color: #dc2626; }
@@ -1467,7 +1449,7 @@ td:has(.tendencia-cell) { text-align: center; }
 .obs-textarea-inline { border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 9px 12px; font-size: 12px; color: #374151; resize: vertical; outline: none; transition: border-color 0.2s; font-family: inherit; background: white; }
 .obs-textarea-inline:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.08); }
 .obs-form-inline-footer { display: flex; align-items: center; justify-content: space-between; }
-.obs-chars { font-size: 10px; color: #9ca3af; }
+.obs-chars { font-size: 10px; color: var(--color-text-muted); }
 .btn-obs-guardar-inline { background: #1f3a52; color: white; border: none; border-radius: 7px; padding: 7px 16px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 .btn-obs-guardar-inline:hover:not(:disabled) { background: #162d42; }
 .btn-obs-guardar-inline:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -1484,28 +1466,28 @@ td:has(.tendencia-cell) { text-align: center; }
 .tab-btn { padding: 4px 12px; border-radius: 999px; border: 1.5px solid #e5e7eb; background: white; font-size: 11px; font-weight: 600; color: #6b7280; cursor: pointer; text-transform: capitalize; transition: all 0.15s; }
 .tab-btn:hover { border-color: #1f3a52; color: #1f3a52; }
 .tab-btn.tab-active { background: #1f3a52; color: white; border-color: #1f3a52; }
-.historial-loading { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #9ca3af; padding: 8px 0; }
+.historial-loading { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-text-muted); padding: 8px 0; }
 .tendencia-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; }
 .tendencia-icono { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.tendencia-icono.subiendo { background: #dcfce7; color: #16a34a; }
-.tendencia-icono.bajando  { background: #fee2e2; color: #dc2626; }
+.tendencia-icono.subiendo { background: #dcfce7; color: #15803d; }
+.tendencia-icono.bajando  { background: #fee2e2; color: #b91c1c; }
 .tendencia-icono.estable  { background: #f1f5f9; color: #6b7280; }
 .tendencia-label { font-size: 14px; font-weight: 700; }
-.tendencia-label.subiendo { color: #16a34a; }
+.tendencia-label.subiendo { color: #15803d; }
 .tendencia-label.bajando  { color: #dc2626; }
 .tendencia-label.estable  { color: #6b7280; }
-.tendencia-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.tendencia-sub { font-size: 11px; color: var(--color-text-muted); margin-top: 2px; }
 .historial-comparativa { display: flex; align-items: center; gap: 10px; }
 .periodo-card { flex: 1; border-radius: 10px; padding: 12px 14px; border: 1.5px solid #e5e7eb; }
 .periodo-actual   { background: white; border-color: #1f3a52; }
 .periodo-anterior { background: #f9fafb; }
-.periodo-label  { font-size: 10px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+.periodo-label  { font-size: 10px; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
 .periodo-stat   { display: flex; align-items: baseline; gap: 4px; margin-bottom: 4px; }
 .periodo-num      { font-size: 22px; font-weight: 800; color: #1f3a52; }
-.periodo-num-gris { font-size: 22px; font-weight: 800; color: #9ca3af; }
-.periodo-unit   { font-size: 11px; color: #9ca3af; }
+.periodo-num-gris { font-size: 22px; font-weight: 800; color: var(--color-text-muted); }
+.periodo-unit   { font-size: 11px; color: var(--color-text-muted); }
 .periodo-detalle{ font-size: 10px; color: #6b7280; }
-.periodo-vs     { font-size: 11px; font-weight: 700; color: #9ca3af; flex-shrink: 0; }
+.periodo-vs     { font-size: 11px; font-weight: 700; color: var(--color-text-muted); flex-shrink: 0; }
 
 /* ── PANEL DE REASIGNACIÓN ── */
 .reasignacion-wrap { background: white; border-radius: 14px; border: 1px solid #e5e7eb; padding: 22px; }
@@ -1528,30 +1510,18 @@ td:has(.tendencia-cell) { text-align: center; }
 .orden-id-tag { font-size: 11px; font-weight: 600; color: #1f3a52; background: #e0e7ee; padding: 2px 8px; border-radius: 999px; }
 .orden-reasign-meta { font-size: 12px; color: #6b7280; margin-top: 4px; }
 .sugerencias-wrap { border-top: 1px dashed #e5e7eb; padding-top: 12px; }
-.sugerencias-titulo { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+.sugerencias-titulo { font-size: 11px; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
 .sugerencia-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
 .avatar-sm { width: 28px; height: 28px; font-size: 10px; }
 .btn-reasignar-mini { margin-left: auto; background: #1f3a52; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; white-space: nowrap; }
 .btn-reasignar-mini:hover:not(:disabled) { background: #162d42; }
 .btn-reasignar-mini:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ── TOAST ── */
-.toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-.toast.success { background: #16a34a; }
-.toast.danger  { background: #dc2626; }
 .modal-enter-active, .modal-leave-active { transition: opacity 0.2s ease; }
 .modal-enter-from, .modal-leave-to { opacity: 0; }
-.toast-enter-active { transition: all 0.3s ease; }
-.toast-leave-active { transition: all 0.25s ease; }
-.toast-enter-from { opacity: 0; transform: translateY(12px); }
-.toast-leave-to   { opacity: 0; transform: translateY(12px); }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 960px) {
-  .page-hero { flex-direction: column; align-items: flex-start; }
-  .hero-actions-wrap { width: 100%; }
-  .stats { flex-wrap: wrap; }
-  .stat-card { min-width: calc(50% - 9px); }
   .detalle-metricas { grid-template-columns: repeat(2, 1fr); }
   .view-switch-track { width: 100%; }
 }

@@ -1,6 +1,5 @@
 <template>
   <div class="layout">
-    <AppSidebar rol="operario" />
 
     <main class="main">
 
@@ -11,32 +10,18 @@
         <div class="bg-grid"></div>
       </div>
 
-      <!-- HERO HEADER -->
-      <div class="hero-header" :class="{ 'hero-in': mounted }">
-        <div class="hero-icon-wrap">
-          <div class="hero-icon-box">
-            <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="white" shape-rendering="geometricPrecision" style="display:block">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-            </svg>
-          </div>
-          <div class="pulse-ring ring-1"></div>
-          <div class="pulse-ring ring-2"></div>
-        </div>
-        <div class="hero-text">
-          <h1 class="hero-title">
-            <span v-for="(c, i) in titleChars" :key="i"
-              class="title-char"
-              :class="{ 'char-visible': mounted }"
-              :style="{ transitionDelay: mounted ? `${i * 35}ms` : '0ms' }">{{ c === ' ' ? '\u00A0' : c }}</span>
-          </h1>
-          <p class="hero-sub">Tu perfil y actividad de operario</p>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Cuenta Personal"
+        subtitulo="Tu perfil y actividad de operario"
+        icono="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+      />
 
       <!-- CARGANDO -->
-      <div v-if="cargando" class="loading-wrap">
-        <div class="loader-ring"></div>
-        <p class="loading-text">Cargando perfil...</p>
+      <div v-if="cargando" class="cuenta-skeleton">
+        <SkeletonCard variante="contenido" :lineas="2" />
+        <div class="kpi-grid">
+          <SkeletonCard v-for="i in 3" :key="i" variante="kpi" />
+        </div>
       </div>
 
       <!-- ERROR -->
@@ -137,22 +122,8 @@
             </div>
           </div>
 
-          <!-- STATS CARDS -->
-          <div class="stats-row">
-            <div class="stat-card" v-for="(s, i) in statsCards" :key="s.label"
-              :style="{ '--i': i }">
-              <div class="stat-accent" :style="{ background: s.color }"></div>
-              <div class="stat-icon-bg" :style="{ color: s.color }">
-                <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="currentColor" style="display:block">
-                  <path stroke-linecap="round" stroke-linejoin="round" :d="s.icon"/>
-                </svg>
-              </div>
-              <div class="stat-body">
-                <div class="stat-value" :style="{ color: s.color }">{{ s.display }}</div>
-                <div class="stat-label">{{ s.label }}</div>
-                <div class="stat-sub">{{ s.sub }}</div>
-              </div>
-            </div>
+          <div class="kpi-grid">
+            <KpiCard v-for="(k, i) in kpis" :key="k.label" v-bind="k" :indice="i" />
           </div>
 
           <!-- ACTIVIDAD RECIENTE -->
@@ -197,11 +168,10 @@
                   <div class="tl-sub">Cliente: {{ o.Cliente || '—' }} · Cantidad: {{ o.Cantidad }}</div>
                   <div class="tl-prog">
                     <div class="tl-prog-bar">
-                      <div class="tl-prog-fill" :class="badgeClass(o.Estado)"
-                        :style="{ width: mounted ? progresoEstado(o.Estado) + '%' : '0%',
-                                  transition: `width 1s ease ${500 + i * 80}ms` }"></div>
+                      <div class="tl-prog-fill" :class="[badgeClass(o.Estado), { 'fill-in': mounted }]"
+                        :style="{ width: progresoOrden(o) + '%', '--row-i': Math.min(i, 10) }"></div>
                     </div>
-                    <span class="tl-prog-txt">{{ progresoEstado(o.Estado) }}%</span>
+                    <span class="tl-prog-txt">{{ progresoOrden(o) }}%</span>
                   </div>
                   <div class="tl-fecha">{{ formatFecha(o.Fecha_Limite) }}</div>
                 </div>
@@ -213,55 +183,62 @@
       </template>
     </main>
 
-    <!-- MODAL EDITAR -->
-    <Transition name="modal">
-      <div v-if="modalVisible" class="modal-overlay" @click.self="cerrarModal">
-        <div class="modal-container">
-          <div class="modal-header">
-            <h3 class="modal-title">Editar Perfil</h3>
-            <button class="modal-close" @click="cerrarModal">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="form-group"><label class="form-label">Nombre Completo</label><input v-model="formEdicion.Nombre_Completo" type="text" class="form-input" @keypress="soloLetras"></div>
-            <div class="form-group"><label class="form-label">Correo Electrónico</label><input v-model="formEdicion.Correo" type="email" class="form-input"></div>
-            <div class="form-group"><label class="form-label">Teléfono</label><input v-model="formEdicion.Telefono" type="tel" class="form-input"></div>
-            <div class="form-group">
-              <label class="form-label">Contraseña</label>
-              <div class="input-wrap">
-                <input v-model="formEdicion.Contrasena" :type="mostrarPassword ? 'text' : 'password'" class="form-input" placeholder="••••••••">
-                <button class="toggle-pass" @click="mostrarPassword = !mostrarPassword" type="button">
-                  <svg v-if="!mostrarPassword" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0Z"/></svg>
-                  <svg v-else fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"/></svg>
-                </button>
-              </div>
-              <div v-if="formEdicion.Contrasena" class="pwd-hints">
-                <span v-for="h in passwordHints" :key="h.label" class="pwd-hint" :class="h.ok ? 'hint-ok' : 'hint-no'">
-                  {{ h.ok ? '✓' : '✗' }} {{ h.label }}
-                </span>
-              </div>
-              <p class="pwd-note">Déjala vacía si no deseas cambiarla.</p>
-            </div>
-          </div>
-          <div v-if="errorGuardar" class="error-inline">{{ errorGuardar }}</div>
-          <div class="modal-footer">
-            <button class="btn-cancelar" @click="cerrarModal">Cancelar</button>
-            <button class="btn-guardar" :disabled="guardando" @click="guardarCambios">{{ guardando ? 'Guardando...' : 'Guardar Cambios' }}</button>
-          </div>
+    <!-- MODAL EDITAR PERFIL -->
+    <BaseModal
+      :open="modalVisible"
+      titulo="Editar perfil"
+      descripcion="Tus datos de contacto y acceso."
+      tamano="md"
+      :cerrar-al-clic-fuera="false"
+      @update:open="val => !val && cerrarModal()"
+    >
+      <form id="form-perfil" class="tx-form" novalidate @submit.prevent="guardarCambios">
+        <Transition name="tx-field-msg">
+          <p v-if="errorGuardar" class="tx-form-alert" role="alert">{{ errorGuardar }}</p>
+        </Transition>
+        <div class="tx-form-grid">
+          <BaseField label="Nombre completo" requerido completo :error="v.error('Nombre_Completo')" v-slot="{ attrs }">
+            <input v-bind="attrs" v-model="formEdicion.Nombre_Completo" type="text" class="tx-input" autocomplete="name"
+              required @keypress="soloLetras" @blur="v.tocar('Nombre_Completo')">
+          </BaseField>
+          <BaseField label="Correo electrónico" requerido :error="v.error('Correo')" v-slot="{ attrs }">
+            <input v-bind="attrs" v-model="formEdicion.Correo" type="email" class="tx-input" autocomplete="email"
+              required @blur="v.tocar('Correo')">
+          </BaseField>
+          <BaseField label="Teléfono" opcional v-slot="{ attrs }">
+            <input v-bind="attrs" v-model="formEdicion.Telefono" type="tel" class="tx-input" autocomplete="tel" placeholder="+57 300 000 0000">
+          </BaseField>
+          <BaseField label="Nueva contraseña" opcional completo :error="v.error('Contrasena')"
+            hint="Déjala vacía si no quieres cambiarla." v-slot="{ attrs }">
+            <BasePassword v-bind="attrs" v-model="formEdicion.Contrasena" requisitos :reglas="passwordHints"
+              @blur="v.tocar('Contrasena')" />
+          </BaseField>
         </div>
-      </div>
-    </Transition>
+      </form>
+      <template #footer>
+        <button type="button" class="tx-btn tx-btn--secondary" :disabled="guardando" @click="cerrarModal">Cancelar</button>
+        <button type="submit" form="form-perfil" class="tx-btn tx-btn--primary" :disabled="guardando">
+          <span v-if="guardando" class="tx-spinner" aria-hidden="true"></span>
+          {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
+        </button>
+      </template>
+    </BaseModal>
 
-    <Transition name="toast">
-      <div v-if="toast.visible" class="toast" :class="'toast-' + toast.type">{{ toast.msg }}</div>
-    </Transition>
   </div>
 </template>
 
 <script setup>
+import PageHeader from '../../components/PageHeader.vue'
+import KpiCard from '../../components/KpiCard.vue'
+import SkeletonCard from '../../components/base/SkeletonCard.vue'
+import BaseModal from '../../components/base/BaseModal.vue'
+import BaseField from '../../components/base/BaseField.vue'
+import BasePassword from '../../components/base/BasePassword.vue'
+import { useValidacion } from '../../composables/useValidacion'
+import { useToast } from '../../composables/useToast'
+
+const toast = useToast()
 import { ref, computed, onMounted } from 'vue'
-import AppSidebar from '../../components/AppSidebar.vue'
 import { useAuthStore } from '../../stores/auth'
 import { getUsuario, actualizarUsuario, getOrdenesDeOperario } from '../../services/api'
 
@@ -287,6 +264,17 @@ const passwordHints = computed(() => {
   ]
 })
 
+const erroresPerfil = computed(() => ({
+  Nombre_Completo: !formEdicion.value.Nombre_Completo?.trim()
+    ? 'Escribe tu nombre completo.'
+    : /[0-9]/.test(formEdicion.value.Nombre_Completo) ? 'El nombre no puede tener números.' : '',
+  Correo: !formEdicion.value.Correo?.trim()
+    ? 'Escribe tu correo electrónico.'
+    : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formEdicion.value.Correo.trim()) ? 'Escribe un correo válido, por ejemplo nombre@empresa.com.' : '',
+  Contrasena: validarContrasena(formEdicion.value.Contrasena || '') || '',
+}))
+const v = useValidacion(erroresPerfil)
+
 // ── PALETA DE AVATARES ──
 const PALETTES = [
   { bg: '#dbeafe', color: '#1d4ed8' },
@@ -299,21 +287,6 @@ const PALETTES = [
 function avatarBg(n)    { return PALETTES[(n?.charCodeAt(0) || 0) % PALETTES.length].bg }
 function avatarColor(n) { return PALETTES[(n?.charCodeAt(0) || 0) % PALETTES.length].color }
 
-const displayCompletadas = ref(0)
-const displayEnProceso   = ref(0)
-const displayTotal       = ref(0)
-
-function animateCount(targetRef, target) {
-  let val = 0
-  const steps = 80; const duration = 2000
-  const intervalMs = Math.round(duration / steps)
-  const step = Math.max(0.1, target / steps)
-  const id = setInterval(() => {
-    val += step
-    if (val >= target) { targetRef.value = target; clearInterval(id) }
-    else targetRef.value = Math.floor(val)
-  }, intervalMs)
-}
 
 const mounted         = ref(false)
 const cargando        = ref(true)
@@ -322,8 +295,6 @@ const error           = ref('')
 const errorGuardar    = ref('')
 const guardando       = ref(false)
 const modalVisible    = ref(false)
-const mostrarPassword = ref(false)
-const toast           = ref({ visible: false, msg: '', type: 'success' })
 const perfil          = ref({})
 const ordenes         = ref([])
 const formEdicion     = ref({})
@@ -352,19 +323,13 @@ const contactItems = computed(() => [
   },
 ])
 
-const statsCards = computed(() => [
-  {
-    label: 'Completadas', sub: 'Órdenes finalizadas', display: displayCompletadas.value, color: '#16a34a',
-    icon: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
-  },
-  {
-    label: 'En Proceso', sub: 'Producción activa', display: displayEnProceso.value, color: '#2563eb',
-    icon: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
-  },
-  {
-    label: 'Total', sub: 'Órdenes asignadas', display: displayTotal.value, color: '#1f3a52',
-    icon: 'M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z'
-  },
+const kpis = computed(() => [
+  { label: 'Completadas', nota: 'Órdenes finalizadas', valor: ordenes.value.filter(o => o.Estado === 'Completada').length, tono: 'success',
+    icono: 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
+  { label: 'En proceso',  nota: 'Producción activa',  valor: ordenes.value.filter(o => o.Estado === 'En Proceso').length, tono: 'info',
+    icono: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
+  { label: 'Total',       nota: 'Órdenes asignadas',  valor: ordenes.value.length, tono: 'brand',
+    icono: 'M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z' },
 ])
 
 function formatFecha(fecha) {
@@ -377,8 +342,14 @@ function nodeClass(estado) {
 function badgeClass(estado) {
   return { 'Completada': 'badge-completada', 'En Proceso': 'badge-proceso', 'Pausado': 'badge-pausado' }[estado] || 'badge-pausado'
 }
-function progresoEstado(estado) {
-  return { 'Completada': 100, 'En Proceso': 58, 'Pausado': 28 }[estado] ?? 0
+// Progreso real de la orden (prendas realizadas / total). Antes se mostraba
+// un valor fijo por estado (58% "En Proceso", 28% "Pausado").
+function progresoOrden(o) {
+  if (o.Estado === 'Completada') return 100
+  const total = Number(o.Unidades ?? o.Cantidad ?? 0)
+  const hechas = Number(o.Unidades_Realizadas ?? 0)
+  if (!total) return 0
+  return Math.min(100, Math.round((hechas / total) * 100))
 }
 
 async function cargarDatos() {
@@ -393,42 +364,38 @@ async function cargarDatos() {
     } catch { ordenes.value = [] }
     finally { cargandoOrdenes.value = false }
   } catch (e) {
-    error.value = e.message || 'Error al cargar el perfil.'
+    error.value = e.message || 'No se pudo cargar tu perfil. Revisa tu conexión e inténtalo de nuevo.'
   } finally {
     cargando.value = false
-    setTimeout(() => {
-      mounted.value = true
-      animateCount(displayCompletadas, ordenes.value.filter(o => o.Estado === 'Completada').length)
-      animateCount(displayEnProceso,   ordenes.value.filter(o => o.Estado === 'En Proceso').length)
-      animateCount(displayTotal,       ordenes.value.length)
-    }, 80)
+    requestAnimationFrame(() => requestAnimationFrame(() => { mounted.value = true }))
   }
 }
 
 onMounted(cargarDatos)
 
-function abrirModal() { formEdicion.value = { ...perfil.value, Contrasena: '' }; mostrarPassword.value = false; errorGuardar.value = ''; modalVisible.value = true }
+function abrirModal() { v.reiniciar(); formEdicion.value = { ...perfil.value, Contrasena: '' }; errorGuardar.value = ''; modalVisible.value = true }
 function cerrarModal() { modalVisible.value = false; errorGuardar.value = '' }
 function soloLetras(e) {
   if (!/^[A-Za-zÁÉÍÓÚáéíóúÀÈÌÒÙàèìòùÄËÏÖÜäëïöüÑñ\s'-]$/.test(e.key)) e.preventDefault()
 }
 
 async function guardarCambios() {
-  if (!formEdicion.value.Nombre_Completo?.trim() || !formEdicion.value.Correo?.trim()) { errorGuardar.value = 'Nombre y correo son obligatorios.'; return }
-  if (/[0-9]/.test(formEdicion.value.Nombre_Completo)) { errorGuardar.value = 'El nombre no puede contener números.'; return }
-  const errPwd = validarContrasena(formEdicion.value.Contrasena)
-  if (errPwd) { errorGuardar.value = errPwd; return }
+  errorGuardar.value = ''
+  if (!(await v.validar())) return
   guardando.value = true; errorGuardar.value = ''
   try {
     const payload = { Id_Rol: perfil.value.Id_Rol, Nombre_Completo: formEdicion.value.Nombre_Completo, Nombre_Usuario: perfil.value.Nombre_Usuario, Correo: formEdicion.value.Correo, Telefono: formEdicion.value.Telefono || null, Estado: perfil.value.Estado, Contrasena: formEdicion.value.Contrasena || null }
     await actualizarUsuario(auth.idUsuario, payload)
     perfil.value = { ...perfil.value, ...payload }
     if (auth.usuario) auth.usuario.Nombre_Completo = formEdicion.value.Nombre_Completo
-    cerrarModal(); mostrarToast('Perfil actualizado correctamente', 'success')
-  } catch (e) { errorGuardar.value = e.message || 'Error al guardar los cambios.' }
+    cerrarModal(); mostrarToast('Perfil actualizado.')
+  } catch (e) { errorGuardar.value = e.message || 'No se pudieron guardar los cambios. Inténtalo de nuevo.' }
   finally { guardando.value = false }
 }
-function mostrarToast(msg, type = 'success') { toast.value = { visible: true, msg, type }; setTimeout(() => { toast.value.visible = false }, 2800) }
+function mostrarToast(msg, type = 'success') {
+  if (type === 'danger' || type === 'error') toast.error(msg)
+  else toast.success(msg)
+}
 </script>
 
 <style scoped>
@@ -457,42 +424,31 @@ function mostrarToast(msg, type = 'success') { toast.value = { visible: true, ms
 @keyframes orbDrift { from { transform: translate(0,0) scale(1); } to { transform: translate(28px,18px) scale(1.07); } }
 
 /* ═══ HERO HEADER ═══ */
-.hero-header {
-  position: relative; z-index: 1;
-  display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
-  opacity: 0; transform: translateY(-14px);
-  transition: opacity .5s ease, transform .5s cubic-bezier(.34,1.56,.64,1);
-}
-.hero-header.hero-in { opacity: 1; transform: none; }
-.hero-icon-wrap { position: relative; width: 56px; height: 56px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-.hero-icon-box {
-  width: 52px; height: 52px; border-radius: 14px;
-  background: linear-gradient(135deg, #1f3a52, #2d5f8a);
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 4px 16px rgba(31,58,82,.35); position: relative; z-index: 2;
-}
-.pulse-ring { position: absolute; border-radius: 50%; border: 2px solid rgba(31,58,82,.25); animation: pulseExpand 2.8s ease-out infinite; }
-.ring-1 { width: 68px; height: 68px; animation-delay: 0s; }
-.ring-2 { width: 84px; height: 84px; animation-delay: .7s; }
 @keyframes pulseExpand { 0% { transform: scale(.7); opacity: .7; } 100% { transform: scale(1.3); opacity: 0; } }
-.hero-text { flex: 1; }
-.hero-title { font-size: 26px; font-weight: 800; color: #111827; margin: 0 0 4px; display: flex; flex-wrap: wrap; }
-.title-char { display: inline-block; opacity: 0; transform: translateY(8px); transition: opacity .3s ease, transform .3s ease; }
-.title-char.char-visible { opacity: 1; transform: none; }
-.hero-sub { font-size: 13px; color: #9ca3af; margin: 0; }
 
 /* ══════════════════════════════════════════
    CARD UNIFICADA PERFIL + CONTACTO
 ══════════════════════════════════════════ */
 .profile-contact-card {
   background: linear-gradient(135deg, #111827 0%, #1f3a52 55%, #0f2236 100%);
-  border-radius: 18px; padding: 26px 28px; margin-bottom: 20px;
-  opacity: 0; transform: translateY(22px) scale(0.97);
-  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: var(--radius-xl); padding: 18px 22px; margin-bottom: var(--space-4);
+  opacity: 0; transform: translateY(var(--motion-shift-md));
+  transition: opacity var(--duration-slow) var(--ease-out), transform var(--duration-slow) var(--ease-out);
   box-shadow: 0 8px 32px rgba(15,34,54,0.3);
   position: relative; overflow: hidden;
 }
 .profile-contact-card.banner-in { opacity: 1; transform: none; }
+
+/* En escritorio ancho: identidad y contacto en una sola fila (menos alto) */
+@media (min-width: 1200px) {
+  .profile-contact-card {
+    display: grid;
+    grid-template-columns: minmax(300px, auto) 1fr;
+    align-items: center;
+    column-gap: var(--space-6);
+  }
+  .profile-contact-card .pc-divider { display: none; }
+}
 
 /* ═══ ENGRANAJES ═══ */
 .gear-deco { position: absolute; pointer-events: none; }
@@ -588,23 +544,7 @@ function mostrarToast(msg, type = 'success') { toast.value = { visible: true, ms
 }
 
 /* ═══ STATS CARDS ═══ */
-.stats-row { position: relative; z-index: 1; display: flex; gap: 16px; margin-bottom: 20px; }
-.stat-card {
-  flex: 1; position: relative; overflow: hidden;
-  display: flex; align-items: center; gap: 16px;
-  background: white; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px 20px;
-  opacity: 0; transform: translateY(18px) scale(.96);
-  animation: statIn .5s cubic-bezier(.34,1.56,.64,1) calc(var(--i, 0) * 90ms + 160ms) both;
-  transition: box-shadow .2s, transform .2s;
-}
-.stat-card:hover { box-shadow: 0 6px 22px rgba(0,0,0,.09); transform: translateY(-3px) !important; }
 @keyframes statIn { from{opacity:0;transform:translateY(18px) scale(.96)} 60%{transform:translateY(-3px)} to{opacity:1;transform:none} }
-.stat-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 14px 0 0 14px; }
-.stat-icon-bg { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); opacity: .07; }
-.stat-body { flex: 1; position: relative; z-index: 1; }
-.stat-value { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; margin-bottom: 4px; }
-.stat-label { font-size: 13px; font-weight: 700; color: #111827; }
-.stat-sub   { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
 /* ═══ CARD ACTIVIDAD ═══ */
 .card {
@@ -651,82 +591,45 @@ function mostrarToast(msg, type = 'success') { toast.value = { visible: true, ms
 .badge-proceso    { background: #dbeafe; color: #1d4ed8; }
 .badge-pausado    { background: #fef3c7; color: #92400e; }
 .tl-desc  { font-size: 13px; color: #374151; font-weight: 500; margin-bottom: 3px; }
-.tl-sub   { font-size: 12px; color: #9ca3af; margin-bottom: 8px; }
-.tl-fecha { font-size: 11px; color: #d1d5db; margin-top: 6px; }
+.tl-sub   { font-size: 12px; color: var(--color-text-muted); margin-bottom: 8px; }
+.tl-fecha { font-size: 11px; color: var(--color-text-muted); margin-top: 6px; }
 .tl-prog { display: flex; align-items: center; gap: 8px; }
 .tl-prog-bar { flex: 1; height: 5px; background: #f3f4f6; border-radius: 999px; overflow: hidden; }
-.tl-prog-fill { height: 100%; border-radius: 999px; }
+.tl-prog-fill { height: 100%; border-radius: 999px; transform: scaleX(0); transform-origin: left; transition: transform var(--duration-slower) var(--ease-out); transition-delay: calc(var(--row-i, 0) * 50ms + 150ms); }
+.tl-prog-fill.fill-in { transform: scaleX(1); }
 .tl-prog-fill.badge-completada { background: #16a34a; }
 .tl-prog-fill.badge-proceso    { background: #2563eb; }
 .tl-prog-fill.badge-pausado    { background: #d97706; }
 .tl-prog-txt { font-size: 11px; font-weight: 700; color: #374151; min-width: 30px; }
 
 /* ═══ LOADING / SKELETON ═══ */
-.loading-wrap { display: flex; flex-direction: column; align-items: center; padding: 80px 0; gap: 18px; position: relative; z-index: 1; }
-.loader-ring { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #e5e7eb; border-top-color: #1f3a52; animation: spin .8s linear infinite; }
 @keyframes spin { to{transform:rotate(360deg)} }
-.loading-text { font-size: 14px; color: #9ca3af; }
 .loading-inline { display: flex; flex-direction: column; gap: 10px; }
 .skeleton-row { height: 60px; border-radius: 10px; background: linear-gradient(90deg, #f3f4f6 0%, #fafafa 40%, #f3f4f6 80%); background-size: 300% 100%; animation: skeletonWave 1.6s ease-in-out infinite; }
 @keyframes skeletonWave { 0%{background-position:200% 0} 100%{background-position:-100% 0} }
-.empty-msg { font-size: 13px; color: #9ca3af; padding: 16px 0; }
+.empty-msg { font-size: 13px; color: var(--color-text-muted); padding: 16px 0; }
 
 /* ═══ EMPTY SESSION ═══ */
 .empty-session { display: flex; flex-direction: column; align-items: center; padding: 80px 24px; gap: 12px; text-align: center; position: relative; z-index: 1; }
 .empty-icon-hex { width: 72px; height: 72px; border-radius: 16px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; animation: hexFloat 3s ease-in-out infinite; }
 @keyframes hexFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
 .empty-title { font-size: 16px; font-weight: 600; color: #374151; }
-.empty-sub   { font-size: 13px; color: #9ca3af; max-width: 300px; }
+.empty-sub   { font-size: 13px; color: var(--color-text-muted); max-width: 300px; }
 
 /* ═══ ERROR ═══ */
 .error-banner { display: flex; align-items: center; gap: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px 18px; color: #991b1b; font-size: 14px; margin-bottom: 20px; position: relative; z-index: 1; }
 .btn-retry { margin-left: auto; background: #991b1b; color: white; border: none; border-radius: 6px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
 
 /* ═══ MODAL ═══ */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal-container { background: white; border-radius: 16px; width: 460px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.15); animation: modalIn .35s cubic-bezier(.34,1.56,.64,1) both; }
 @keyframes modalIn { from{opacity:0;transform:scale(.85) translateY(20px)} to{opacity:1;transform:none} }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 0; }
-.modal-title  { font-size: 17px; font-weight: 600; color: #111827; }
-.modal-close  { background: none; border: none; cursor: pointer; color: #6b7280; padding: 4px; border-radius: 6px; transition: background .15s, transform .2s; }
-.modal-close:hover { background: #f3f4f6; transform: rotate(90deg); }
-.modal-body   { padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; }
-.form-group   { display: flex; flex-direction: column; gap: 5px; }
-.form-label   { font-size: 12px; font-weight: 600; color: #374151; }
-.form-input   { border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #111827; outline: none; transition: border-color .2s, box-shadow .2s; }
-.form-input:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,.1); }
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid #f3f4f6; }
-.btn-cancelar { background: white; color: #374151; border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 18px; font-size: 13px; cursor: pointer; }
-.btn-guardar  { background: #1f3a52; color: white; border: none; border-radius: 8px; padding: 9px 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s; }
-.btn-guardar:hover:not(:disabled) { background: #2d5580; }
-.btn-guardar:disabled { opacity: .6; cursor: not-allowed; }
-.input-wrap { display: flex; align-items: center; border: 1.5px solid #e5e7eb; border-radius: 8px; background: #fff; }
-.input-wrap:focus-within { border-color: #1f3a52; }
-.input-wrap .form-input { flex: 1; border: none; outline: none; padding: 10px 12px; box-shadow: none !important; }
-.toggle-pass { background: none; border: none; cursor: pointer; padding: 0 10px; color: #9ca3af; transition: color .15s; }
-.toggle-pass:hover { color: #374151; }
-.error-inline { color: #dc2626; font-size: 13px; padding: 6px 24px; }
-.pwd-hints { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-.pwd-hint { font-size: 11.5px; font-weight: 500; padding: 2px 8px; border-radius: 20px; transition: background .2s, color .2s; }
-.hint-ok { background: #dcfce7; color: #166534; }
-.hint-no { background: #f3f4f6; color: #9ca3af; }
-.pwd-note { font-size: 11px; color: #9ca3af; margin-top: 4px; }
 
 /* ═══ TOAST ═══ */
-.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 2000; }
-.toast-success { background: #166534; color: white; }
-.toast-danger  { background: #991b1b; color: white; }
-.toast-enter-active { animation: toastIn .35s cubic-bezier(.34,1.56,.64,1) both; }
-.toast-leave-active { animation: toastOut .25s ease both; }
 @keyframes toastIn  { from{opacity:0;transform:translateY(14px) scale(.9)} to{opacity:1;transform:none} }
 @keyframes toastOut { from{opacity:1} to{opacity:0;transform:translateY(8px)} }
-.modal-enter-active, .modal-leave-active { transition: opacity .25s ease; }
-.modal-enter-from, .modal-leave-to { opacity: 0; }
 
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 960px) {
   .main { padding: 20px 16px; }
-  .stats-row { flex-direction: column; }
   .pc-contact-grid { grid-template-columns: 1fr 1fr; }
   .pc-edit-btn { width: 100%; justify-content: center; }
 }

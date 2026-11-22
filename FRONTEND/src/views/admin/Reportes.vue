@@ -1,6 +1,5 @@
 <template>
   <div class="layout">
-    <AppSidebar rol="admin" />
     <main class="content">
 
       <div class="bg-orbs" aria-hidden="true">
@@ -10,49 +9,26 @@
         <div class="bg-grid"></div>
       </div>
 
-      <!-- HERO HEADER -->
-      <div class="page-hero" :class="{ 'hero-visible': animVisible }">
-        <div class="hero-left">
-          <div class="hero-icon-wrap">
-            <svg class="hero-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"/>
-            </svg>
-            <div class="hero-icon-ring ring-1"></div>
-            <div class="hero-icon-ring ring-2"></div>
-          </div>
-          <div class="hero-text">
-            <h1 class="hero-title">
-              <span v-for="(ch, i) in 'Reportes'" :key="i"
-                class="title-char" :style="{ animationDelay: animVisible ? `${i * 35}ms` : '9999s' }">{{ ch === ' ' ? '\u00A0' : ch }}</span>
-            </h1>
-            <p class="hero-sub">Análisis y exportación de datos de la operación</p>
-          </div>
-        </div>
+      <PageHeader
+        titulo="Reportes"
+        subtitulo="Análisis y exportación de datos de la operación"
+        icono="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
+      />
 
+      <div class="kpi-grid">
+        <KpiCard
+          v-for="(k, i) in kpis"
+          :key="k.label"
+          v-bind="k"
+          :cargando="cargando"
+          :indice="i"
+        />
       </div>
 
-      <!-- STATS CARDS -->
-      <div class="cards" :class="{ 'cards-visible': animVisible }">
-        <div v-for="(s, i) in statCards" :key="i" class="stat-card" :style="{ transitionDelay: animVisible ? `${i * 80}ms` : '0ms' }">
-          <div class="stat-accent" :style="{ background: s.accent }"></div>
-          <div class="stat-icon-bg" :style="{ color: s.accent }">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" :d="s.icon"/>
-            </svg>
-          </div>
-          <h3>{{ s.label }}</h3>
-          <p :style="{ color: s.accent }">{{ s.display }}</p>
-          <div class="stat-change" :style="{ color: s.changeColor }">
-            <svg v-if="s.changeIcon" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="change-icon">
-              <path stroke-linecap="round" stroke-linejoin="round" :d="s.changeIcon"/>
-            </svg>
-            {{ s.change }}
-          </div>
-        </div>
-      </div>
-
+      <!-- Gráfico y lista de reportes lado a lado en escritorio -->
+      <div class="reportes-grid">
       <!-- GRÁFICO DE BARRAS -->
-      <section class="table-box" :class="{ 'box-visible': animVisible }" style="transition-delay: 160ms">
+      <section class="table-box table-box--chart">
         <div class="table-header-bar">
           <div class="table-header-left">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -65,8 +41,8 @@
 
         <!-- CHART con tooltip posicionado ABAJO cuando la barra es alta -->
         <div class="chart-container">
-          <div class="chart">
-            <div v-for="(mes, idx) in meses" :key="mes.nombre" class="bar-col"
+          <div class="chart" :class="{ 'bars-in': barrasListas }">
+            <div v-for="(mes, idx) in meses" :key="mes.nombre" class="bar-col" :style="{ '--bar-i': idx }"
               @mouseenter="hoveredBar = idx" @mouseleave="hoveredBar = null">
               <div class="bar-wrapper">
                 <div class="bar-total" :class="{ 'bar-hovered': hoveredBar === idx, 'bar-empty': (mes.completadas + mes.pendientes) === 0 }"
@@ -103,7 +79,7 @@
       </section>
 
       <!-- REPORTES DISPONIBLES -->
-      <section class="table-box" :class="{ 'box-visible': animVisible }" style="transition-delay: 280ms">
+      <section class="table-box table-box--reports">
         <div class="table-header-bar">
           <div class="table-header-left">
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -114,7 +90,7 @@
           </div>
           <div class="filters-right">
             <div class="select-wrapper">
-              <select v-model="mesFiltro" class="type-select">
+              <select v-model="mesFiltro" class="type-select" aria-label="Filtrar por período">
                 <option value="">Todos los períodos</option>
                 <option v-for="key in mesesDisponibles" :key="key" :value="key">{{ mesLabel(key) }}</option>
               </select>
@@ -123,7 +99,7 @@
               </svg>
             </div>
             <div class="select-wrapper">
-              <select v-model="tipoFiltro" class="type-select">
+              <select v-model="tipoFiltro" class="type-select" aria-label="Filtrar por tipo de reporte">
                 <option value="">Todos los tipos</option>
                 <option>Pedidos</option>
                 <option>Eficiencia</option>
@@ -140,7 +116,7 @@
           <TransitionGroup name="report" tag="div" class="report-list">
             <div v-for="(r, idx) in reportes" :key="r.titulo" class="report-card"
               :class="{ 'report-downloading': r.downloading, 'report-exporting': r.exporting }"
-              :style="{ animationDelay: `${idx * 45}ms` }">
+              :style="{ '--row-i': Math.min(idx, 10) }">
               <div class="report-card-top">
                 <div class="report-icon-wrap">
                   <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="report-svg">
@@ -186,39 +162,35 @@
             </div>
           </TransitionGroup>
 
-          <div v-if="reportes.length === 0" class="empty-state">
-            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-            </svg>
-            <p>No hay reportes para este tipo</p>
-          </div>
+          <EmptyState
+            v-if="reportes.length === 0"
+            icono="documento"
+            titulo="No hay reportes de este tipo"
+            descripcion="Elige otro tipo o vuelve a mostrar todos."
+            compacto
+          >
+            <button type="button" class="tx-btn tx-btn--secondary tx-btn--sm" @click="tipoFiltro = ''">Ver todos los tipos</button>
+          </EmptyState>
         </div>
       </section>
+      </div>
 
     </main>
 
-    <!-- TOAST -->
-    <Transition name="toast">
-      <div v-if="toast.visible" class="toast" :class="toast.type">
-        <svg v-if="toast.type === 'success'" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-        </svg>
-        <svg v-else width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-        </svg>
-        {{ toast.msg }}
-      </div>
-    </Transition>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import AppSidebar from '../../components/AppSidebar.vue'
 import { getMateriales, getOrdenes, getUsuarios, getEficienciaOperarios, getHistorialInventario } from '../../services/api.js'
+import PageHeader from '../../components/PageHeader.vue'
+import KpiCard from '../../components/KpiCard.vue'
+import EmptyState from '../../components/base/EmptyState.vue'
+import { useToast } from '../../composables/useToast'
 
-const animVisible = ref(false)
-const toast = ref({ visible: false, msg: '', type: 'success' })
+const toast = useToast()
+const cargando = ref(true)
+const barrasListas = ref(false)
 const tipoFiltro = ref('')
 const mesFiltro = ref('') // '' = todos los períodos
 const hoveredBar = ref(null)
@@ -231,62 +203,44 @@ const materialesData = ref([])
 const eficienciaData = ref([])
 const errorEficiencia = ref(false)
 const stockBajoRef = ref(0)
-const statsDisplay = reactive({ total: 0, completados: 0, tasa: 0, pendientes: 0 })
+const stats = reactive({ total: 0, completados: 0, tasa: 0, pendientes: 0 })
 
-const statCards = computed(() => [
-  {
-    label: 'Pedidos Totales', display: statsDisplay.total,
-    accent: '#1f3a52', changeColor: '#2563eb', change: '+8.3%',
-    changeIcon: 'M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941',
-    icon: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z',
-  },
-  {
-    label: 'Pedidos Completados', display: statsDisplay.completados,
-    accent: '#16a34a', changeColor: '#16a34a', change: '+12.5%',
-    changeIcon: 'M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941',
-    icon: 'M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-  },
-  {
-    label: 'Tasa Completación', display: statsDisplay.tasa + '%',
-    accent: '#7c3aed', changeColor: '#7c3aed', change: '+2.3%',
-    changeIcon: 'M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941',
-    icon: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
-  },
-  {
-    label: 'Pedidos Pendientes', display: statsDisplay.pendientes,
-    accent: '#94a3b8', changeColor: '#94a3b8', change: '5% del total',
-    changeIcon: null,
-    icon: 'M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941',
-  },
+const ICON_BARS  = 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z'
+const ICON_CHECK = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+const ICON_RATE  = 'M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z'
+const ICON_CLOCK = 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'
+
+// Las notas salen de los datos reales (antes había porcentajes de
+// "tendencia" escritos a mano que no correspondían a nada).
+const kpis = computed(() => [
+  { label: 'Pedidos totales',      valor: stats.total,       icono: ICON_BARS,  tono: 'brand' },
+  { label: 'Pedidos completados',  valor: stats.completados, icono: ICON_CHECK, tono: 'success',
+    nota: stats.total ? `${pct(stats.completados)}% del total` : '' },
+  { label: 'Tasa de completación', valor: stats.tasa, sufijo: '%', decimales: 1, icono: ICON_RATE, tono: 'violet' },
+  { label: 'Pedidos en proceso',   valor: stats.pendientes,  icono: ICON_CLOCK, tono: 'warning',
+    nota: stats.total ? `${pct(stats.pendientes)}% del total` : '' },
 ])
+
+function pct(n) {
+  return stats.total ? Math.round((n / stats.total) * 100) : 0
+}
 
 onMounted(async () => {
   await cargarDatos()
-  setTimeout(() => animVisible.value = true, 50)
-  setTimeout(() => animateBars(), 250)
+  animateBars()
 })
 
+// Mantiene la firma anterior para no tocar cada llamada
 function mostrarToast(msg, type = 'success') {
-  toast.value = { visible: true, msg, type }
-  setTimeout(() => { toast.value.visible = false }, 2800)
-}
-
-function animateCount(key, target, isDecimal = false) {
-  let val = 0
-  const steps = 36; const step = target / steps; let count = 0
-  const iv = setInterval(() => {
-    count++; val += step
-    if (count >= steps) { statsDisplay[key] = isDecimal ? target : Math.round(target); clearInterval(iv) }
-    else statsDisplay[key] = isDecimal ? parseFloat(val.toFixed(1)) : Math.round(val)
-  }, 22)
+  if (type === 'danger' || type === 'error') toast.error(msg)
+  else toast.success(msg)
 }
 
 function animateStats(total, completados, pendientes) {
-  const tasa = total > 0 ? parseFloat(((completados / total) * 100).toFixed(1)) : 0
-  animateCount('total', total)
-  animateCount('completados', completados)
-  animateCount('tasa', tasa, true)
-  animateCount('pendientes', pendientes)
+  stats.total       = total
+  stats.completados = completados
+  stats.pendientes  = pendientes
+  stats.tasa        = total > 0 ? parseFloat(((completados / total) * 100).toFixed(1)) : 0
 }
 
 async function cargarDatos() {
@@ -334,7 +288,9 @@ async function cargarDatos() {
     actualizarReportesPorPeriodo()
     actualizarInventarioPorPeriodo()
   } catch {
-    mostrarToast('No fue posible cargar los reportes.', 'danger')
+    mostrarToast('No se pudieron cargar los datos de reportes. Revisa tu conexión y recarga la página.', 'danger')
+  } finally {
+    cargando.value = false
   }
 }
 
@@ -369,31 +325,20 @@ async function actualizarEficienciaPorPeriodo() {
       : `${eficienciaData.value.length} operario(s) evaluado(s) · ${sufijo}`
 }
 
+// Las barras se dibujan con su altura final y entran con transform: scaleY
+// (solo transform → 60 fps), en lugar de cambiar la altura cuadro a cuadro.
 function animateBars() {
-  barHeights.value   = meses.value.map(() => 0)
-  pendingHeights.value = meses.value.map(() => 0)
   const totals   = meses.value.map(mes => mes.completadas + mes.pendientes)
   const maxTotal = Math.max(...totals, 1)
-  meses.value.forEach((mes, index) => {
-    const totalMes    = mes.completadas + mes.pendientes
-    const totalTarget = totalMes === 0 ? 18 : Math.max(42, (totalMes / maxTotal) * 170)
-    const pendingTarget = totalMes === 0 ? 0 : Math.max(8, totalTarget * (mes.pendientes / totalMes))
-    let val = 0; const steps = 30; const step = totalTarget / steps; let count = 0
-    setTimeout(() => {
-      const iv = setInterval(() => {
-        count++; val += step
-        if (count >= steps) {
-          barHeights.value[index]    = totalTarget
-          pendingHeights.value[index] = Math.min(pendingTarget, totalTarget)
-          clearInterval(iv)
-        } else {
-          const current = Math.min(val, totalTarget)
-          barHeights.value[index]    = current
-          pendingHeights.value[index] = totalTarget === 0 ? 0 : Math.min((current / totalTarget) * pendingTarget, pendingTarget)
-        }
-      }, 18)
-    }, index * 55)
+  barHeights.value = meses.value.map(mes => {
+    const t = mes.completadas + mes.pendientes
+    return t === 0 ? 18 : Math.max(42, (t / maxTotal) * 170)
   })
+  pendingHeights.value = meses.value.map((mes, i) => {
+    const t = mes.completadas + mes.pendientes
+    return t === 0 ? 0 : Math.min(Math.max(8, barHeights.value[i] * (mes.pendientes / t)), barHeights.value[i])
+  })
+  requestAnimationFrame(() => requestAnimationFrame(() => { barrasListas.value = true }))
 }
 
 const reportesData = reactive([
@@ -990,7 +935,7 @@ async function exportarExcel(r) {
     mostrarToast(`"${r.titulo}" exportado como Excel`, 'excel')
   } catch (err) {
     console.error(err)
-    mostrarToast('Error al exportar Excel: ' + err.message, 'danger')
+    mostrarToast('No se pudo exportar a Excel: ' + err.message, 'danger')
   } finally {
     r.exporting = false
   }
@@ -1077,43 +1022,40 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
 @keyframes orbDrift3 { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px,30px) scale(0.9); } }
 .bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(31,58,82,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(31,58,82,0.04) 1px, transparent 1px); background-size: 40px 40px; }
 
-/* HERO */
-.page-hero { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; opacity: 0; transform: translateY(-16px); transition: opacity 0.5s ease, transform 0.5s ease; }
-.page-hero.hero-visible { opacity: 1; transform: translateY(0); }
-.hero-left { display: flex; align-items: center; gap: 16px; }
-.hero-text { display: flex; flex-direction: column; }
-.hero-icon-wrap { position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; background: #1f3a52; border-radius: 14px; flex-shrink: 0; }
-.hero-icon { width: 26px; height: 26px; color: white; }
-.hero-icon-ring { position: absolute; border-radius: 50%; border: 1.5px solid #1f3a52; opacity: 0; animation: iconPulse 3s ease-out infinite; }
-.ring-1 { width: 68px; height: 68px; animation-delay: 0s; }
-.ring-2 { width: 86px; height: 86px; animation-delay: 0.8s; }
-@keyframes iconPulse { 0% { transform: scale(0.7); opacity: 0.5; } 100% { transform: scale(1.4); opacity: 0; } }
-.hero-title { font-size: 24px; font-weight: 700; color: #111827; margin: 0; display: flex; flex-wrap: wrap; }
-.title-char { display: inline-block; opacity: 0; transform: translateY(12px); animation: charReveal 0.4s ease forwards; }
-@keyframes charReveal { to { opacity: 1; transform: translateY(0); } }
-.hero-sub { font-size: 13px; color: #6b7280; margin: 4px 0 0 0; }
-.filters-right { display: flex; align-items: center; gap: 10px; }
-.select-wrapper { position: relative; display: inline-flex; align-items: center; }
-.type-select { padding: 9px 36px 9px 14px; border-radius: 10px; border: 1.5px solid #e5e7eb; background: white; font-size: 14px; color: #374151; appearance: none; -webkit-appearance: none; cursor: pointer; min-width: 190px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-.type-select:focus { border-color: #1f3a52; box-shadow: 0 0 0 3px rgba(31,58,82,0.1); }
-.select-arrow { position: absolute; right: 10px; width: 14px; height: 14px; color: #6b7280; pointer-events: none; }
-
-/* STATS */
-.cards { display: flex; gap: 18px; margin-bottom: 28px; }
-.stat-card { background: white; flex: 1; padding: 20px 20px 20px 24px; border-radius: 14px; border: 1px solid #e5e7eb; position: relative; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.45s ease, transform 0.45s ease, box-shadow 0.2s; }
-.cards-visible .stat-card { opacity: 1; transform: translateY(0); }
-.stat-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.09); transform: translateY(-3px) !important; }
-.stat-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
-.stat-icon-bg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); opacity: 0.07; }
-.stat-icon-bg svg { width: 52px; height: 52px; }
-.stat-card h3 { font-size: 13px; color: #6b7280; font-weight: 500; margin: 0 0 10px 0; }
-.stat-card p  { font-size: 30px; font-weight: 800; margin: 0 0 8px; line-height: 1; }
-.stat-change  { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; }
-.change-icon  { width: 14px; height: 14px; flex-shrink: 0; }
-
 /* TABLE BOX */
-.table-box { background: white; border-radius: 14px; border: 1px solid #e5e7eb; margin-bottom: 28px; overflow: visible; opacity: 0; transform: translateY(16px); transition: opacity 0.45s ease, transform 0.45s ease; }
-.box-visible { opacity: 1; transform: translateY(0); }
+/* Filtros de la lista de reportes */
+.filters-right { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.select-wrapper { position: relative; display: inline-flex; align-items: center; }
+.type-select {
+  height: var(--control-height-sm); padding: 0 32px 0 12px; border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong); background: var(--color-surface);
+  font: inherit; font-size: var(--text-sm); color: var(--color-text-secondary);
+  appearance: none; -webkit-appearance: none; cursor: pointer; min-width: 150px; outline: none;
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+}
+.type-select:hover { border-color: #9ca3af; }
+.type-select:focus { border-color: var(--focus-ring-color); box-shadow: var(--focus-ring); }
+.select-arrow { position: absolute; right: 10px; width: 14px; height: 14px; color: var(--color-text-muted); pointer-events: none; }
+.table-box--reports .table-header-bar { flex-wrap: wrap; gap: var(--space-2); }
+
+/* Gráfico + reportes en dos columnas (escritorio ancho) */
+.reportes-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+@media (max-width: 1180px) {
+  .reportes-grid { grid-template-columns: 1fr; }
+}
+.table-box {
+  background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs); overflow: visible;
+  animation: boxIn var(--duration-slow) var(--ease-out) both;
+}
+.table-box--chart   { animation-delay: 80ms; }
+.table-box--reports { animation-delay: 140ms; display: flex; flex-direction: column; }
+@keyframes boxIn { from { opacity: 0; transform: translateY(var(--motion-shift-md)); } to { opacity: 1; transform: none; } }
 .table-header-bar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; background: #f9fafb; border-radius: 14px 14px 0 0; }
 .table-header-left { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: #374151; }
 .table-header-left svg { color: #1f3a52; }
@@ -1121,7 +1063,7 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
 
 /* ── CHART — con overflow visible para tooltip ── */
 .chart-container { overflow: visible; padding: 0 20px; }
-.chart { display: flex; align-items: flex-end; gap: 16px; height: 220px; margin: 60px 0 16px; position: relative; overflow: visible; }
+.chart { display: flex; align-items: flex-end; gap: 16px; height: 200px; margin: 40px 0 12px; position: relative; overflow: visible; }
 .bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; cursor: pointer; position: relative; overflow: visible; }
 .bar-wrapper { display: flex; align-items: flex-end; width: 100%; justify-content: center; position: relative; overflow: visible; }
 
@@ -1131,7 +1073,16 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
   min-height: 4px; transition: background 0.2s, transform 0.15s;
   overflow: visible; /* CLAVE: permite que el tooltip salga del área */
 }
-.bar-total.bar-hovered { background: #2d5580; transform: scaleX(1.05); }
+/* Entrada de barras: solo transform (scaleY desde la base) */
+.bar-total {
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform var(--duration-slower) var(--ease-out), background var(--duration-fast) var(--ease-standard);
+  transition-delay: calc(var(--bar-i, 0) * 50ms), 0s;
+}
+.chart.bars-in .bar-total { transform: scaleY(1); }
+.chart.bars-in .bar-total.bar-hovered { transform: scaleX(1.05); transition-delay: 0s; }
+.bar-total.bar-hovered { background: #2d5580; }
 .bar-total.bar-empty { background: #e2e8f0; } /* mes sin pedidos: gris de la web, no azul */
 .bar-total.bar-empty.bar-hovered { background: #cbd5e1; }
 .bar-pending-strip { width: 100%; background: #94a3b8; border-radius: 0; min-height: 0; }
@@ -1176,24 +1127,27 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
 
 .bar-tooltip strong { font-size: 13px; margin-bottom: 2px; }
 .bar-label { font-size: 13px; font-weight: 600; color: #374151; margin-top: 8px; }
-.bar-sub   { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+.bar-sub   { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
 .bar-counts { display: flex; gap: 6px; font-size: 12px; font-weight: 600; margin-top: 2px; }
 .c-dark   { color: #1f3a52; }
-.c-orange { color: #94a3b8; }
-.legend   { display: flex; gap: 20px; font-size: 13px; color: #374151; justify-content: center; margin: 0 20px 20px; border-radius: 0 0 14px 14px; }
+.c-orange { color: var(--color-text-muted); }
+.legend   { display: flex; gap: 20px; font-size: 13px; color: #374151; justify-content: center; margin: 0 20px 16px; }
 .legend-item { display: flex; align-items: center; gap: 6px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .dot-dark   { background: #1f3a52; }
 .dot-orange { background: #94a3b8; }
 
 /* REPORT LIST — mismo diseño que la card de la app móvil */
-.report-list-wrap { padding: 16px 20px; border-radius: 0 0 14px 14px; overflow: hidden; }
-.report-list { display: flex; flex-direction: column; gap: 12px; }
+.report-list-wrap { padding: var(--space-3) var(--space-4); max-height: 412px; overflow-y: auto; scrollbar-width: thin; }
+@media (max-width: 1180px) { .report-list-wrap { max-height: none; } }
+.report-list { display: flex; flex-direction: column; gap: var(--space-2); }
 .report-card {
-  display: flex; flex-direction: column; gap: 12px;
-  padding: 14px; border: 1px solid #e5e7eb; border-radius: 18px;
-  background: #f8fafc; transition: border-color 0.2s, box-shadow 0.2s;
-  animation: rowSlideIn 0.35s ease both;
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+  background: var(--color-bg-subtle);
+  transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+  animation: rowSlideIn var(--duration-base) var(--ease-out) both;
+  animation-delay: calc(var(--row-i, 0) * 30ms);
 }
 .report-card:hover { border-color: #d1d5db; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .report-downloading { border-color: #bfdbfe !important; background: #eff6ff !important; }
@@ -1205,8 +1159,8 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
 .report-svg { width: 17px; height: 17px; color: #1f3a52; }
 .report-info { flex: 1; min-width: 0; }
 .report-title { font-size: 13px; font-weight: 700; color: #111827; margin-bottom: 2px; }
-.report-subtitle { font-size: 11px; color: #9ca3af; }
-.badge-generado { flex-shrink: 0; background: #dcfce7; color: #16a34a; font-size: 9px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
+.report-subtitle { font-size: var(--text-xs); color: var(--color-text-muted); }
+.badge-generado { flex-shrink: 0; background: #dcfce7; color: #15803d; font-size: 9px; font-weight: 700; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
 
 /* Fila de 3 botones (Ver / PDF / Excel) — alineados a la derecha, sin ocupar todo el ancho */
 .report-actions { display: flex; justify-content: flex-end; gap: 6px; }
@@ -1220,39 +1174,28 @@ function slugify(value) { return value.toLowerCase().replace(/\s+/g, '-') }
 .rep-btn:active:not(:disabled) { transform: scale(0.97); }
 .rep-btn-ver   { background: #1f3a52; border-color: #1f3a52; color: #fff; }
 .rep-btn-ver:hover:not(:disabled)   { background: #2d5580; }
-.rep-btn-pdf   { background: #fef2f2; border-color: rgba(220,38,38,0.4); color: #dc2626; }
+.rep-btn-pdf   { background: #fef2f2; border-color: rgba(220,38,38,0.4); color: #b91c1c; }
 .rep-btn-pdf:hover:not(:disabled)   { background: #fee2e2; }
-.rep-btn-excel { background: #dcfce7; border-color: rgba(22,163,74,0.4); color: #16a34a; }
+.rep-btn-excel { background: #dcfce7; border-color: rgba(22,163,74,0.4); color: #15803d; }
 .rep-btn-excel:hover:not(:disabled) { background: #bbf7d0; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner { animation: spin 0.8s linear infinite; }
 
-.empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; }
+.empty-state { text-align: center; padding: 40px 20px; color: var(--color-text-muted); }
 .empty-state svg { margin: 0 auto 12px; display: block; opacity: 0.4; }
 .empty-state p { font-size: 14px; margin: 0; }
 
-/* TOAST */
-.toast { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-size: 14px; font-weight: 500; color: white; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-.toast.success { background: #16a34a; }
-.toast.excel   { background: #15803d; }
-.toast.danger  { background: #dc2626; }
-
 /* TRANSITIONS */
-.toast-enter-active { transition: all 0.3s ease; }
-.toast-leave-active { transition: all 0.25s ease; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(12px); }
 .tip-enter-active { transition: all 0.15s ease; }
 .tip-leave-active { transition: all 0.1s ease; }
 .tip-enter-from, .tip-leave-to { opacity: 0; transform: translateX(-50%) translateY(4px); }
-.report-enter-active { transition: all 0.3s ease; }
-.report-leave-active { transition: all 0.25s ease; }
+.report-enter-active { transition: opacity var(--duration-base) var(--ease-out), transform var(--duration-base) var(--ease-out); }
+.report-leave-active { transition: opacity var(--duration-fast) var(--ease-in), transform var(--duration-fast) var(--ease-in); animation: none; }
 .report-enter-from { opacity: 0; transform: translateY(-8px); }
 .report-leave-to   { opacity: 0; transform: translateY(-8px); }
 
 @media (max-width: 900px) {
-  .page-hero { flex-direction: column; align-items: flex-start; gap: 14px; }
-  .cards { flex-direction: column; }
   .type-select { width: 100%; }
 }
 </style>

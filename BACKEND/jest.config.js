@@ -1,9 +1,11 @@
+// Configuración de Jest para el BACKEND (proyecto en ESM: "type": "module")
 export default {
   testEnvironment: 'node',
-  transform: {},
-  testMatch: ['<rootDir>/__tests__/**/*.test.js'],
-  testPathIgnorePatterns: ['/__tests__/aws/'],
+  transform: {},                                   // sin Babel: Node ejecuta ESM nativo
+  testMatch: ['<rootDir>/__tests__/**/*.test.js'], // solo nuestras pruebas Jest (la carpeta test/ es de node:test)
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/__tests__/aws/'], // la prueba AWS se corre aparte
   setupFiles: ['<rootDir>/__tests__/helpers/entorno.js'],
   verbose: true,
-  clearMocks: true,
+  clearMocks: true,                                // reinicia el historial de llamadas entre pruebas
+  silent: true,                                    // oculta los console.log de las rutas para que la salida sea limpia
 }
