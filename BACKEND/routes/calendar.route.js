@@ -10,6 +10,8 @@ import {
   getConnectedGoogleRow,
   getUserOrders,
   createOrUpdateCalendarEvent,
+  revokeAndDeleteGoogleTokens,
+  programarSincronizacionUsuario,
 } from './googleCalendar.js'
 
 const router = express.Router()
@@ -18,8 +20,8 @@ const router = express.Router()
 router.get('/status', requireAuth, async (req, res) => {
   await ensureGoogleSchema()
   const { rows } = await db.query(
-    `SELECT "Google_Email" FROM google_calendar_tokens WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2`,
-    [req.auth.id, req.auth.empresaId]
+    `SELECT "Google_Email" FROM google_calendar_tokens WHERE "Id_Usuario" = $1`,
+    [req.auth.id]
   )
   const row = rows[0]
   res.json({ connected: !!row, calendarEmail: row?.Google_Email || null })
@@ -35,6 +37,7 @@ router.post('/connect', requireAuth, async (req, res) => {
     const tokenPayload = await exchangeMobileAuthCode(serverAuthCode)
     const profile = await getGoogleProfile(tokenPayload.access_token)
     await upsertGoogleTokens(req.auth.id, profile, tokenPayload, req.auth.empresaId)
+    programarSincronizacionUsuario(req.auth.id, req.auth.empresaId)
     res.json({ connected: true, calendarEmail: profile.email })
   } catch (err) {
     console.error('[calendar/connect]', err.message)
@@ -45,7 +48,7 @@ router.post('/connect', requireAuth, async (req, res) => {
 // DELETE /api/calendar/connect
 router.delete('/connect', requireAuth, async (req, res) => {
   await ensureGoogleSchema()
-  await db.query('DELETE FROM google_calendar_tokens WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2', [req.auth.id, req.auth.empresaId])
+  await revokeAndDeleteGoogleTokens(req.auth.id)
   res.json({ mensaje: 'Google Calendar desvinculado correctamente.' })
 })
 
@@ -65,8 +68,8 @@ router.post('/sync', requireAuth, async (req, res) => {
     }
 
     await db.query(
-      'UPDATE google_calendar_tokens SET "Last_Sync_At" = now(), "Updated_At" = now() WHERE "Id_Usuario" = $1 AND "Id_Empresa" = $2',
-      [req.auth.id, req.auth.empresaId]
+      'UPDATE google_calendar_tokens SET "Last_Sync_At" = now(), "Updated_At" = now() WHERE "Id_Usuario" = $1',
+      [req.auth.id]
     )
 
     res.json({ creados, actualizados, total: orders.length })

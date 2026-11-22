@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import http from 'http'
 import { env, validateEnv } from './config/env.js'
 import { requireAuth } from './middleware/auth.js'
 import { requireRoles } from './middleware/roles.js'
@@ -10,6 +11,7 @@ import {
   limiteTokenRecuperacion,
 } from './middleware/rateLimit.js'
 import { checkDatabaseConnection } from './db.js'
+import { inicializarRealtime } from './services/realtime.js'
 
 import usuariosRouter       from './routes/usuarios.js'
 import materialesRouter     from './routes/materiales.js'
@@ -30,13 +32,14 @@ import empresasRouter       from './routes/empresas.js'
 import rolesSuperadminRouter from './routes/roles_superadmin.js'
 
 const app = express()
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'https://localhost:5173',
+].filter(Boolean)
 
 app.use(cors({ 
-  origin: [
-    process.env.FRONTEND_URL,
-    'http://localhost:5173',
-    'https://localhost:5173',
-  ] 
+  origin: allowedOrigins,
 }))
 app.use(express.json({ limit: '10mb' }))
 
@@ -129,7 +132,9 @@ export async function startServer() {
     process.exit(1)
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = http.createServer(app)
+  inicializarRealtime(server, allowedOrigins)
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
   })
 }

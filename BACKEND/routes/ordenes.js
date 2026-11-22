@@ -4,6 +4,13 @@ import { hasRole, requireRoles, requireSelfParamOrRoles } from '../middleware/ro
 
 const router = Router()
 
+function sincronizarCalendario(idOrden, empresaId) {
+  if (process.env.NODE_ENV === 'test') return
+  import('./googleCalendar.js')
+    .then(modulo => modulo.programarSincronizacionOrden(idOrden, empresaId))
+    .catch(error => console.error('[google/auto] No se pudo programar la orden:', error.message))
+}
+
 // Helper: sincroniza órdenes que hayan superado su fecha límite y sigan en 'En Proceso'
 export async function actualizarOrdenesRetrasadas(empresaId) {
   try {
@@ -215,6 +222,7 @@ router.post('/', requireRoles('admin'), async (req, res) => {
       empresaId,
     ])
     res.status(201).json({ mensaje: 'Orden creada', Id_Orden: rows[0].Id_Orden })
+    sincronizarCalendario(rows[0].Id_Orden, empresaId)
   } catch (err) {
     if (err.code === '23503')
       return res.status(400).json({ error: 'Cliente, material u operario no existe o no pertenece a esta empresa' })
@@ -280,6 +288,7 @@ router.put('/:id', requireRoles('admin'), async (req, res) => {
       return res.status(404).json({ error: 'Orden no encontrada' })
 
     res.json({ mensaje: 'Orden actualizada' })
+    sincronizarCalendario(req.params.id, empresaId)
 
   } catch (err) {
     if (err.code === '23503')
@@ -298,6 +307,7 @@ router.delete('/:id', requireRoles('admin'), async (req, res) => {
     )
     if (rowCount === 0) return res.status(404).json({ error: 'Orden no encontrada' })
     res.json({ mensaje: 'Orden eliminada' })
+    sincronizarCalendario(req.params.id, req.auth.empresaId)
   } catch (err) {
     if (err.code === '23503')
       return res.status(409).json({ error: 'No se puede eliminar la orden porque tiene registros asociados.' })
