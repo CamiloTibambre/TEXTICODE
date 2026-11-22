@@ -17,7 +17,20 @@
             </span>
             <img src="/img/LogoTexticode.png" alt="">
           </span>
-          <img class="logo-mini" src="/img/LogoTexticodeMini.jpg" alt="" aria-hidden="true">
+          <!-- Ícono vectorial: nítido y toma el color del tema (azul / blanco) -->
+          <svg class="logo-mini" viewBox="0 0 48 48" aria-hidden="true">
+            <defs>
+              <mask id="tx-mask-sidebar">
+                <rect width="48" height="48" fill="#fff"/>
+                <circle cx="22" cy="22" r="13.2" fill="none" stroke="#000" stroke-width="1.6"/>
+                <circle cx="18.2" cy="18.2" r="2.5" fill="#000"/><circle cx="25.8" cy="18.2" r="2.5" fill="#000"/>
+                <circle cx="18.2" cy="25.8" r="2.5" fill="#000"/><circle cx="25.8" cy="25.8" r="2.5" fill="#000"/>
+                <path d="M31.4 26.5 43.6 32.1 38.2 34.2 43.6 39.6 41.1 41.8 36 36.4 33.7 40.5Z" fill="#000" stroke="#000" stroke-width="3.4" stroke-linejoin="round"/>
+              </mask>
+            </defs>
+            <circle cx="22" cy="22" r="18" fill="currentColor" mask="url(#tx-mask-sidebar)"/>
+            <path d="M31.4 26.5 43.6 32.1 38.2 34.2 43.6 39.6 41.1 41.8 36 36.4 33.7 40.5Z" fill="currentColor" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"/>
+          </svg>
         </RouterLink>
 
         <div class="panel-label">
@@ -49,42 +62,21 @@
 
       <!-- Footer: tema + usuario + cerrar sesión -->
       <div class="sidebar-footer">
-        <!-- Selector de tema (expandido) -->
-        <div class="theme-switch" role="radiogroup" aria-label="Tema de color">
-          <button
-            v-for="op in opcionesTema"
-            :key="op.valor"
-            type="button"
-            role="radio"
-            class="theme-opt"
-            :class="{ active: modoTema === op.valor }"
-            :aria-checked="modoTema === op.valor"
-            :tabindex="collapsed ? -1 : 0"
-            @click="setModo(op.valor)"
-          >{{ op.label }}</button>
-        </div>
-
-        <!-- Selector de tema (contraído): un botón que rota entre modos -->
+        <!-- Tema: sol / luna (igual que en la landing) -->
         <button
           type="button"
-          class="theme-mini"
-          :aria-label="`Tema: ${etiquetaTema}. Cambiar`"
-          :tabindex="collapsed ? 0 : -1"
-          @click="siguienteTema"
-          @mouseenter="mostrarTooltip($event, `Tema: ${etiquetaTema}`)"
+          class="theme-btn"
+          :aria-label="esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          @click="alternarTema"
+          @mouseenter="mostrarTooltip($event, esOscuro ? 'Modo claro' : 'Modo oscuro', true)"
           @mouseleave="ocultarTooltip"
-          @focus="mostrarTooltip($event, `Tema: ${etiquetaTema}`)"
+          @focus="mostrarTooltip($event, esOscuro ? 'Modo claro' : 'Modo oscuro', true)"
           @blur="ocultarTooltip"
         >
-          <svg v-if="modoTema === 'claro'" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
-          </svg>
-          <svg v-else-if="modoTema === 'oscuro'" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
-          </svg>
-          <svg v-else width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"/>
-          </svg>
+          <Transition name="theme-ico" mode="out-in">
+            <svg v-if="esOscuro" key="sol" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>
+            <svg v-else key="luna" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>
+          </Transition>
         </button>
 
         <component
@@ -335,18 +327,13 @@ function ocultarTooltip() {
 watch(collapsed, ocultarTooltip)
 watch(() => route.path, ocultarTooltip)
 
-// ── TEMA (claro / oscuro / auto) ──
-const { modo: modoTema, setModo } = useTheme()
-const opcionesTema = [
-  { valor: 'claro',  label: 'Claro'  },
-  { valor: 'oscuro', label: 'Oscuro' },
-  { valor: 'auto',   label: 'Auto'   },
-]
-const etiquetaTema = computed(() => opcionesTema.find(o => o.valor === modoTema.value)?.label || '')
-function siguienteTema() {
-  const i = opcionesTema.findIndex(o => o.valor === modoTema.value)
-  setModo(opcionesTema[(i + 1) % opcionesTema.length].valor)
-  tooltip.text = `Tema: ${etiquetaTema.value}`
+// ── TEMA (sol / luna) ──
+// Comparte la preferencia con la landing. Si estaba en "auto",
+// el primer clic la fija al modo contrario al que se ve ahora.
+const { esOscuro, setModo } = useTheme()
+function alternarTema() {
+  setModo(esOscuro.value ? 'claro' : 'oscuro')
+  if (tooltip.visible) tooltip.text = esOscuro.value ? 'Modo claro' : 'Modo oscuro'
 }
 
 // ── MI PERFIL ──
@@ -519,8 +506,7 @@ async function pedirCerrarSesion() {
   width: 40px;
   height: 40px;
   margin-top: -20px;
-  border-radius: var(--radius-md);
-  object-fit: cover;
+  color: var(--color-brand);
   opacity: 0;
   transform: scale(0.8);
   transition: opacity var(--duration-base) var(--ease-out), transform var(--duration-slow) var(--ease-out);
@@ -831,64 +817,30 @@ async function pedirCerrarSesion() {
 }
 .sidebar.collapsed .logout-text { opacity: 0; }
 
-/* ═══════════ SELECTOR DE TEMA ═══════════ */
-.theme-switch {
+/* ═══════════ TEMA: SOL / LUNA ═══════════ */
+.theme-btn {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--radius-md);
-  background: var(--color-surface-hover);
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-left: 2px;   /* centrado en la columna de 44px del menú contraído */
   border: 1px solid var(--color-border);
-  transition: opacity var(--duration-fast) var(--ease-standard);
-}
-.sidebar.collapsed .theme-switch {
-  display: none;
-}
-.theme-opt {
-  min-height: 30px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition:
     background var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-out);
 }
-.theme-opt:hover:not(.active) { color: var(--color-text); }
-.theme-opt.active {
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-weight: var(--weight-semibold);
-  box-shadow: var(--shadow-xs);
-}
-.theme-opt:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--focus-ring-color);
-}
-
-.theme-mini {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  min-height: 40px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
-}
-.sidebar.collapsed .theme-mini { display: flex; }
-.theme-mini:hover { background: var(--color-surface-hover); color: var(--color-text); }
-.theme-mini:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus-ring-color); }
-
+.theme-btn:hover { background: var(--color-surface-hover); color: var(--color-text); border-color: var(--color-border-strong); }
+.theme-btn:active { transform: scale(0.94); }
+.theme-btn:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus-ring-color); }
+.theme-ico-enter-active, .theme-ico-leave-active { transition: opacity 0.2s, transform 0.25s var(--ease-out); }
+.theme-ico-enter-from { opacity: 0; transform: rotate(-60deg) scale(0.6); }
+.theme-ico-leave-to   { opacity: 0; transform: rotate(60deg) scale(0.6); }
 </style>
 
 <!-- Estilos del tooltip, que se teletransporta al <body> (no puede ser scoped) -->
@@ -944,18 +896,15 @@ async function pedirCerrarSesion() {
   background: rgba(120, 169, 212, 0.16);
   color: #78A9D4;
 }
-:root[data-theme="dark"] .theme-switch {
-  background: #15191E;
-  border-color: #343A43;
-}
-:root[data-theme="dark"] .theme-opt.active {
-  background: #343A43;
-}
 :root[data-theme="dark"] .user-info,
 :root[data-theme="dark"] .logout,
-:root[data-theme="dark"] .theme-mini {
+:root[data-theme="dark"] .theme-btn {
   background: #292F36;
   border-color: #343A43;
+}
+:root[data-theme="dark"] .theme-btn:hover {
+  background: #343A43;
+  border-color: #414A53;
 }
 :root[data-theme="dark"] .logout {
   background: transparent;
@@ -965,6 +914,9 @@ async function pedirCerrarSesion() {
 :root[data-theme="dark"] .logout:hover {
   background: rgba(209, 75, 62, 0.14);
   border-color: rgba(232, 134, 124, 0.35);
+}
+:root[data-theme="dark"] .logo-mini {
+  color: #F2F4F1;
 }
 :root[data-theme="dark"] .logo-full img {
   filter: brightness(0) invert(0.95);
