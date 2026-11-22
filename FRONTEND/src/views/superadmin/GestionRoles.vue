@@ -177,26 +177,26 @@ onMounted(cargar)
 </script>
 
 <style scoped>
-.layout { display: flex; min-height: 100vh; background: #f6f7f9; }
+.layout { display: flex; min-height: 100vh; background: var(--th-surface-2, #f6f7f9); }
 .main { flex: 1; padding: 32px; position: relative; min-width: 0; }
-.info { background: #eef4fa; border: 1px solid #d6e4f0; color: #1f3a52; padding: 12px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 18px; }
-.card { background: white; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; }
+.info { background: var(--th-info-soft, #eef4fa); border: 1px solid var(--th-info-border, #d6e4f0); color: var(--th-heading, #1f3a52); padding: 12px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 18px; }
+.card { background: var(--th-surface, white); border: 1px solid var(--th-border, #e5e7eb); border-radius: 14px; overflow: hidden; }
 .tabla { width: 100%; border-collapse: collapse; }
-.tabla th, .tabla td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #f0f1f3; font-size: 14px; }
-.tabla th { color: #6b7280; font-weight: 600; font-size: 12px; text-transform: uppercase; background: #fafafa; }
+.tabla th, .tabla td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--th-border, #f0f1f3); font-size: 14px; }
+.tabla th { color: var(--th-text-muted, #6b7280); font-weight: 600; font-size: 12px; text-transform: uppercase; background: var(--th-surface, #fafafa); }
 .tabla tr:last-child td { border-bottom: none; }
-.nombre { font-weight: 600; color: #111827; }
+.nombre { font-weight: 600; color: var(--th-text, #111827); }
 .acc { text-align: right !important; white-space: nowrap; }
 .tag { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-.tag-base { background: #e0e7ff; color: #3730a3; }
-.tag-custom { background: #dcfce7; color: #15803d; }
-.mini { padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; font-size: 13px; cursor: pointer; margin-left: 6px; }
-.mini:hover:not(:disabled) { background: #f3f4f6; }
+.tag-base { background: var(--th-info-soft, #e0e7ff); color: var(--th-link, #3730a3); }
+.tag-custom { background: var(--th-success-soft, #dcfce7); color: var(--th-success, #15803d); }
+.mini { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--th-border, #e5e7eb); background: var(--th-surface, white); font-size: 13px; cursor: pointer; margin-left: 6px; }
+.mini:hover:not(:disabled) { background: var(--th-surface-3, #f3f4f6); }
 .mini:disabled { opacity: 0.4; cursor: not-allowed; }
-.mini-danger { color: #dc2626; border-color: #fecaca; }
-.mini-ok { color: #15803d; border-color: #bbf7d0; }
-.tag-on { background: #dcfce7; color: #15803d; }
-.tag-off { background: #fee2e2; color: #b91c1c; }
+.mini-danger { color: var(--th-danger, #dc2626); border-color: var(--th-danger-border, #fecaca); }
+.mini-ok { color: var(--th-success, #15803d); border-color: var(--th-success-border, #bbf7d0); }
+.tag-on { background: var(--th-success-soft, #dcfce7); color: var(--th-success, #15803d); }
+.tag-off { background: var(--th-danger-soft, #fee2e2); color: var(--th-danger, #b91c1c); }
 .fila-inactiva td { color: var(--color-text-muted); }
 .fila-inactiva .nombre { color: var(--color-text-muted); }
 @media (max-width: 720px) { .main { padding: 16px; } }

@@ -6,6 +6,17 @@
     <title>Texticode</title>
     <link rel="icon" type="image/jpeg" href="/img/LogoTexticodeMini.jpg" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Aplica el tema guardado antes de pintar (evita el destello blanco) -->
+    <script>
+      (function () {
+        try {
+          var modo = localStorage.getItem('texticode.theme');
+          var app = /^\/(admin|superadmin|operario|cliente)(\/|$)/.test(location.pathname);
+          var oscuro = modo === 'oscuro' || (modo === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = app && oscuro ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

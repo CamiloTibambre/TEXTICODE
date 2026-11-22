@@ -47,8 +47,46 @@
         </nav>
       </div>
 
-      <!-- Footer: usuario + cerrar sesión -->
+      <!-- Footer: tema + usuario + cerrar sesión -->
       <div class="sidebar-footer">
+        <!-- Selector de tema (expandido) -->
+        <div class="theme-switch" role="radiogroup" aria-label="Tema de color">
+          <button
+            v-for="op in opcionesTema"
+            :key="op.valor"
+            type="button"
+            role="radio"
+            class="theme-opt"
+            :class="{ active: modoTema === op.valor }"
+            :aria-checked="modoTema === op.valor"
+            :tabindex="collapsed ? -1 : 0"
+            @click="setModo(op.valor)"
+          >{{ op.label }}</button>
+        </div>
+
+        <!-- Selector de tema (contraído): un botón que rota entre modos -->
+        <button
+          type="button"
+          class="theme-mini"
+          :aria-label="`Tema: ${etiquetaTema}. Cambiar`"
+          :tabindex="collapsed ? 0 : -1"
+          @click="siguienteTema"
+          @mouseenter="mostrarTooltip($event, `Tema: ${etiquetaTema}`)"
+          @mouseleave="ocultarTooltip"
+          @focus="mostrarTooltip($event, `Tema: ${etiquetaTema}`)"
+          @blur="ocultarTooltip"
+        >
+          <svg v-if="modoTema === 'claro'" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/>
+          </svg>
+          <svg v-else-if="modoTema === 'oscuro'" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/>
+          </svg>
+          <svg v-else width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25m18 0A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25"/>
+          </svg>
+        </button>
+
         <component
           :is="perfilAccion ? 'button' : 'div'"
           :type="perfilAccion ? 'button' : undefined"
@@ -131,6 +169,7 @@ import { useAuthStore } from '../stores/auth'
 import { useSidebar } from '../composables/useSidebar'
 import { useConfirm } from '../composables/useConfirm'
 import PerfilDrawer from './PerfilDrawer.vue'
+import { useTheme } from '../composables/useTheme'
 
 const props = defineProps({
   rol: { type: String, required: true }
@@ -296,6 +335,20 @@ function ocultarTooltip() {
 watch(collapsed, ocultarTooltip)
 watch(() => route.path, ocultarTooltip)
 
+// ── TEMA (claro / oscuro / auto) ──
+const { modo: modoTema, setModo } = useTheme()
+const opcionesTema = [
+  { valor: 'claro',  label: 'Claro'  },
+  { valor: 'oscuro', label: 'Oscuro' },
+  { valor: 'auto',   label: 'Auto'   },
+]
+const etiquetaTema = computed(() => opcionesTema.find(o => o.valor === modoTema.value)?.label || '')
+function siguienteTema() {
+  const i = opcionesTema.findIndex(o => o.valor === modoTema.value)
+  setModo(opcionesTema[(i + 1) % opcionesTema.length].valor)
+  tooltip.text = `Tema: ${etiquetaTema.value}`
+}
+
 // ── MI PERFIL ──
 const perfilAccion  = computed(() => !!auth.idUsuario)
 const perfilAbierto = ref(false)
@@ -351,7 +404,7 @@ async function pedirCerrarSesion() {
   justify-content: space-between;
   gap: var(--space-4);
   padding: var(--space-5) var(--space-4);
-  background: rgba(249, 250, 251, 0.9);
+  background: rgba(var(--th-glass-rgb, 249, 250, 251), 0.9);
   backdrop-filter: blur(16px);
   overflow-y: auto;
   overflow-x: hidden;
@@ -485,8 +538,8 @@ async function pedirCerrarSesion() {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 1px solid rgba(31, 58, 82, 0.1);
-  border-top-color: rgba(31, 58, 82, 0.3);
+  border: 1px solid rgba(var(--th-brand-rgb, 31, 58, 82), 0.1);
+  border-top-color: rgba(var(--th-brand-rgb, 31, 58, 82), 0.3);
   animation: sidebarspinring 8s linear infinite;
   pointer-events: none;
 }
@@ -499,7 +552,7 @@ async function pedirCerrarSesion() {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: rgba(31, 58, 82, 0.65);
+  background: rgba(var(--th-brand-rgb, 31, 58, 82), 0.65);
   transform-origin: 0 0;
   animation: sidebarorbitspark 8s linear infinite;
 }
@@ -532,7 +585,7 @@ async function pedirCerrarSesion() {
   letter-spacing: 0.3px;
 }
 .badge-superadmin { background: var(--color-brand); color: var(--color-on-brand); }
-.badge-admin      { background: #e0e7ff; color: #3730a3; }
+.badge-admin      { background: var(--th-info-soft, #e0e7ff); color: var(--th-link, #3730a3); }
 .badge-operario   { background: var(--color-success-soft); color: var(--color-success); }
 .badge-cliente    { background: var(--color-warning-soft); color: var(--color-warning); }
 
@@ -550,7 +603,7 @@ async function pedirCerrarSesion() {
   top: 0;
   width: 4px;
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, #38bdf8, #2563eb);
+  background: linear-gradient(180deg, #38bdf8, var(--th-info-solid, #2563eb));
   box-shadow: 0 0 14px rgba(37, 99, 235, 0.3);
   transition:
     transform var(--duration-slow) var(--ease-out),
@@ -760,7 +813,7 @@ async function pedirCerrarSesion() {
 }
 .logout:hover {
   background: var(--color-danger-soft);
-  border-color: #fecaca;
+  border-color: var(--th-danger-border, #fecaca);
   color: var(--color-danger);
 }
 .logout:active .logout-icon { transform: translateX(-2px); }
@@ -777,6 +830,65 @@ async function pedirCerrarSesion() {
   transition: opacity var(--duration-fast) var(--ease-standard);
 }
 .sidebar.collapsed .logout-text { opacity: 0; }
+
+/* ═══════════ SELECTOR DE TEMA ═══════════ */
+.theme-switch {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+.sidebar.collapsed .theme-switch {
+  display: none;
+}
+.theme-opt {
+  min-height: 30px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+.theme-opt:hover:not(.active) { color: var(--color-text); }
+.theme-opt.active {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-xs);
+}
+.theme-opt:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--focus-ring-color);
+}
+
+.theme-mini {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+.sidebar.collapsed .theme-mini { display: flex; }
+.theme-mini:hover { background: var(--color-surface-hover); color: var(--color-text); }
+.theme-mini:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--focus-ring-color); }
+
 </style>
 
 <!-- Estilos del tooltip, que se teletransporta al <body> (no puede ser scoped) -->
@@ -800,5 +912,68 @@ async function pedirCerrarSesion() {
 .sb-tooltip.visible {
   opacity: 1;
   transform: translate(0, -50%);
+}
+
+/* ═══════════ MODO OSCURO (Grafito) ═══════════
+   Va en el bloque global: :root[data-theme] le gana en especificidad
+   a las reglas scoped del sidebar. */
+:root[data-theme="dark"] .sidebar-panel {
+  background: #23272E;
+}
+:root[data-theme="dark"] .sidebar-edge {
+  background: #343A43;
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="dark"] .menu-rail {
+  background: #B83A2E;
+  box-shadow: 0 0 12px rgba(184, 58, 46, 0.45);
+}
+:root[data-theme="dark"] .menu-item:hover:not(.active) {
+  background: rgba(52, 58, 67, 0.6);
+  box-shadow: none;
+}
+:root[data-theme="dark"] .menu-item.active {
+  background: #343A43;
+  color: #F2F4F1;
+  box-shadow: none;
+}
+:root[data-theme="dark"] .menu-item.active:focus-visible {
+  box-shadow: inset 0 0 0 2px #78A9D4;
+}
+:root[data-theme="dark"] .badge-admin {
+  background: rgba(120, 169, 212, 0.16);
+  color: #78A9D4;
+}
+:root[data-theme="dark"] .theme-switch {
+  background: #15191E;
+  border-color: #343A43;
+}
+:root[data-theme="dark"] .theme-opt.active {
+  background: #343A43;
+}
+:root[data-theme="dark"] .user-info,
+:root[data-theme="dark"] .logout,
+:root[data-theme="dark"] .theme-mini {
+  background: #292F36;
+  border-color: #343A43;
+}
+:root[data-theme="dark"] .logout {
+  background: transparent;
+  border-color: transparent;
+  color: #E8867C;
+}
+:root[data-theme="dark"] .logout:hover {
+  background: rgba(209, 75, 62, 0.14);
+  border-color: rgba(232, 134, 124, 0.35);
+}
+:root[data-theme="dark"] .logo-full img {
+  filter: brightness(0) invert(0.95);
+}
+:root[data-theme="dark"] .logo-ring {
+  border-color: rgba(242, 244, 241, 0.12);
+  border-top-color: rgba(242, 244, 241, 0.35);
+}
+:root[data-theme="dark"] .logo-spark {
+  background: rgba(242, 244, 241, 0.6);
 }
 </style>
