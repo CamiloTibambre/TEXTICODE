@@ -35,6 +35,7 @@ import AppSidebar from './components/AppSidebar.vue'
 import ToastHost from './components/base/ToastHost.vue'
 import ConfirmDialog from './components/base/ConfirmDialog.vue'
 import { useSidebar, prefiereMenosMovimiento } from './composables/useSidebar'
+import { useTheme } from './composables/useTheme'
 
 const route = useRoute()
 const { collapsed } = useSidebar()
@@ -44,6 +45,11 @@ const contentEl = ref(null)
 // El rol sale de la ruta, que ya fue validada por el guard del router.
 const rolSidebar     = computed(() => route.meta?.rol || '')
 const mostrarSidebar = computed(() => !!rolSidebar.value)
+
+// Modo oscuro: solo en las páginas de la app (con sidebar).
+// Landing, login y cambio de contraseña se quedan en claro.
+const { setPermitido } = useTheme()
+watch(mostrarSidebar, (v) => setPermitido(v), { immediate: true })
 
 // Al colapsar/expandir, el padding del contenido cambia de golpe (un solo
 // reflow) y luego deslizamos el contenido con transform para que el cambio
@@ -166,6 +172,19 @@ body {
     linear-gradient(90deg, rgba(148, 163, 184, 0.07) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(circle at center, rgba(255,255,255,0.8), transparent 90%);
+}
+
+/* ── MODO OSCURO: fondo profundo + cuadrícula decorativa ── */
+:root[data-theme="dark"] body {
+  background: #15191E;
+}
+:root[data-theme="dark"] .ambient-grid {
+  opacity: 1;
+  background-image:
+    linear-gradient(rgba(52, 62, 67, 0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 62, 67, 0.55) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: none;
 }
 
 @keyframes ambientFloat {

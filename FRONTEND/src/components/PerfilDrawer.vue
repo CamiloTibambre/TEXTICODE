@@ -351,8 +351,8 @@ async function guardar() {
   margin-top: var(--space-1);
   padding: 2px 10px;
   border-radius: var(--radius-full);
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--th-info-soft, #e0e7ff);
+  color: var(--th-link, #3730a3);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
 }
@@ -381,14 +381,14 @@ async function guardar() {
 .google-account__heading { display: flex; gap: var(--space-3); align-items: flex-start; }
 .google-account__heading h3 { margin: 0; font-size: var(--text-md); color: var(--color-text); }
 .google-account__heading p { margin: 3px 0 0; font-size: var(--text-sm); color: var(--color-text-muted); line-height: 1.45; }
-.google-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; background: white; border: 1px solid var(--color-border); color: #4285f4; font-weight: 800; }
+.google-mark { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; border-radius: 10px; background: var(--th-surface, white); border: 1px solid var(--color-border); color: #4285f4; font-weight: 800; }
 .google-mark img { width: 20px; height: 20px; display: block; }
 .google-mark--small { width: 24px; height: 24px; border-radius: 7px; }
 .google-mark--small img { width: 16px; height: 16px; }
 .google-account__loading { margin-top: var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); }
-.google-account__status { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-lg); }
-.google-account__status p { margin: 5px 0 0; color: #334155; font-size: var(--text-sm); overflow-wrap: anywhere; }
-.linked-badge { display: inline-flex; padding: 2px 8px; border-radius: var(--radius-full); background: #dcfce7; color: #166534; font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+.google-account__status { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); background: var(--th-success-soft, #f0fdf4); border: 1px solid var(--th-success-border, #bbf7d0); border-radius: var(--radius-lg); }
+.google-account__status p { margin: 5px 0 0; color: var(--th-text-2, #334155); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.linked-badge { display: inline-flex; padding: 2px 8px; border-radius: var(--radius-full); background: var(--th-success-soft, #dcfce7); color: var(--th-success, #166534); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
 .google-link-btn { width: 100%; justify-content: center; margin-top: var(--space-4); }
 
 </style>

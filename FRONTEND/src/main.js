@@ -7,6 +7,7 @@
 import './assets/tokens.css'      // sistema de diseño (variables)
 import './assets/components.css'  // botones, skeleton, utilidades
 import './assets/motion.css'      // animaciones globales
+import './assets/theme-dark.css'  // modo oscuro (paleta Grafito Industrial)
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'

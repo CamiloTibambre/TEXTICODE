@@ -1,0 +1,247 @@
+/* ═══════════════════════════════════════════════════════════════════
+   TEXTICODE — MODO OSCURO (Grafito Industrial)
+   Se activa con <html data-theme="dark"> (lo pone useTheme.js).
+
+   Paleta definitiva:
+     Grafito          #23272E  menú lateral
+     Tiza roja        #B83A2E  botones principales
+     Rojo hover       #D14B3E  interacciones
+     Fondo profundo   #15191E  fondo general
+     Superficie       #292F36  tarjetas y modales
+     Superficie hover #343A43  elementos activos
+     Texto principal  #F2F4F1  títulos y textos
+     Texto secundario #B6C0C8  descripciones
+     Azul suave       #78A9D4  enlaces
+     Bordes           #414A53  separadores
+     Cuadrícula       #343E43  líneas decorativas
+     Campos           #22282E  inputs y selects
+
+   Dos capas:
+   1. Los tokens de tokens.css (--color-*) se redefinen aquí.
+   2. Las vistas usan var(--th-xxx, #colorOriginal): en modo claro
+      --th-xxx no existe y se usa el color original; aquí se define.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* ── PALETA BASE ───────────────────────────────────────────────── */
+  --pal-grafito:        #23272E;
+  --pal-tiza:           #B83A2E;
+  --pal-tiza-hover:     #D14B3E;
+  --pal-fondo:          #15191E;
+  --pal-superficie:     #292F36;
+  --pal-superficie-hov: #343A43;
+  --pal-texto:          #F2F4F1;
+  --pal-texto-2:        #B6C0C8;
+  --pal-azul:           #78A9D4;
+  --pal-borde:          #414A53;
+  --pal-cuadricula:     #343E43;
+  --pal-campos:         #22282E;
+
+  /* ── TOKENS DE tokens.css ──────────────────────────────────────── */
+  --color-brand:          var(--pal-tiza);
+  --color-brand-hover:    var(--pal-tiza-hover);
+  --color-brand-active:   #9E3127;
+  --color-brand-soft:     rgba(184, 58, 46, 0.16);
+  --color-accent:         var(--pal-azul);
+  --color-accent-hover:   #8FB9DE;
+  --color-accent-soft:    rgba(120, 169, 212, 0.15);
+  --color-on-brand:       #ffffff;
+
+  --color-text:           var(--pal-texto);
+  --color-text-strong:    #ffffff;
+  --color-text-secondary: var(--pal-texto-2);
+  --color-text-muted:     #8D98A2;
+  --color-text-disabled:  #5F6B75;
+  --color-text-inverse:   var(--pal-fondo);
+
+  --color-bg:             var(--pal-fondo);
+  --color-bg-subtle:      #1B2026;
+  --color-surface:        var(--pal-superficie);
+  --color-surface-muted:  var(--pal-campos);
+  --color-surface-hover:  var(--pal-superficie-hov);
+  --color-surface-glass:  rgba(41, 47, 54, 0.88);
+  --color-border:         var(--pal-borde);
+  --color-border-strong:  #4C5661;
+  --color-overlay:        rgba(5, 7, 10, 0.65);
+
+  --color-success:        #7FCB97;
+  --color-success-solid:  #3F9B62;
+  --color-success-soft:   rgba(127, 203, 151, 0.14);
+  --color-danger:         #E8867C;
+  --color-danger-solid:   #C9473B;
+  --color-danger-soft:    rgba(209, 75, 62, 0.18);
+  --color-warning:        #E3B672;
+  --color-warning-solid:  #C98A2E;
+  --color-warning-soft:   rgba(227, 182, 114, 0.15);
+  --color-info:           var(--pal-azul);
+  --color-info-solid:     #4F86B8;
+  --color-info-soft:      rgba(120, 169, 212, 0.15);
+
+  --focus-ring-color:     var(--pal-azul);
+  --focus-ring:           0 0 0 3px rgba(120, 169, 212, 0.35);
+
+  --shadow-xs:    0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-sm:    0 2px 8px rgba(0, 0, 0, 0.30);
+  --shadow-md:    0 8px 24px rgba(0, 0, 0, 0.38);
+  --shadow-lg:    0 20px 48px rgba(0, 0, 0, 0.50);
+  --shadow-brand: 0 10px 24px rgba(184, 58, 46, 0.30);
+
+  /* ── TOKENS --th-* (colores que estaban fijos en las vistas) ───── */
+  --th-page:          transparent;          /* deja ver el fondo + cuadrícula */
+  --th-heading:       var(--pal-texto);
+  --th-text:          var(--pal-texto);
+  --th-text-2:        var(--pal-texto-2);
+  --th-text-muted:    #8D98A2;
+  --th-link:          var(--pal-azul);
+  --th-success:       #7FCB97;
+  --th-danger:        #E8867C;
+  --th-warning:       #E3B672;
+  --th-purple:        #B7A4EE;
+  --th-pink:          #EEA2C4;
+
+  --th-surface:       var(--pal-superficie);
+  --th-surface-2:     var(--pal-campos);
+  --th-surface-3:     var(--pal-superficie-hov);
+  --th-brand:         var(--pal-tiza);
+  --th-brand-2:       var(--pal-tiza-hover);
+  --th-brand-deep:    #9E3127;
+  --th-info-solid:    var(--pal-azul);
+  --th-success-solid: #6CC08A;
+  --th-danger-solid:  #E3897F;
+  --th-warning-solid: #D9A24E;
+  --th-purple-solid:  #9F86E6;
+
+  --th-success-soft:  rgba(127, 203, 151, 0.14);
+  --th-danger-soft:   rgba(209, 75, 62, 0.18);
+  --th-warning-soft:  rgba(227, 182, 114, 0.15);
+  --th-info-soft:     rgba(120, 169, 212, 0.15);
+  --th-purple-soft:   rgba(183, 164, 238, 0.15);
+  --th-pink-soft:     rgba(238, 162, 196, 0.15);
+
+  --th-border:        var(--pal-borde);
+  --th-border-strong: #4C5661;
+  --th-success-border: rgba(127, 203, 151, 0.35);
+  --th-danger-border:  rgba(232, 134, 124, 0.40);
+  --th-warning-border: rgba(227, 182, 114, 0.35);
+  --th-info-border:    rgba(120, 169, 212, 0.35);
+
+  --th-glass-rgb:     41, 47, 54;      /* rgba(255,255,255,x) → superficie */
+  --th-brand-rgb:     120, 169, 212;   /* tintes de marca → azul suave */
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BASE
+   ═══════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] body {
+  background: var(--pal-fondo);
+  color: var(--pal-texto);
+}
+
+:root[data-theme="dark"] ::selection { background: rgba(184, 58, 46, 0.45); color: #fff; }
+
+/* Scrollbars */
+:root[data-theme="dark"] * { scrollbar-color: #414A53 transparent; }
+:root[data-theme="dark"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+:root[data-theme="dark"] ::-webkit-scrollbar-track { background: transparent; }
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #414A53; border-radius: 999px; border: 2px solid var(--pal-fondo);
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #4C5661; }
+
+/* Campos nativos: inputs, selects y textareas con color "Campos" */
+:root[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea {
+  background-color: var(--pal-campos);
+  color: var(--pal-texto);
+  border-color: var(--pal-borde);
+}
+:root[data-theme="dark"] input::placeholder,
+:root[data-theme="dark"] textarea::placeholder { color: #7E8993; }
+:root[data-theme="dark"] select option { background: var(--pal-campos); color: var(--pal-texto); }
+:root[data-theme="dark"] input:-webkit-autofill {
+  -webkit-text-fill-color: var(--pal-texto);
+  box-shadow: 0 0 0 1000px var(--pal-campos) inset;
+}
+/* Campos que van "dentro" de otro contenedor (ej. filtro con ícono): sin doble fondo */
+:root[data-theme="dark"] .filtro-cliente-select { background-color: transparent; }
+
+/* Tablas */
+:root[data-theme="dark"] table { color: var(--pal-texto); }
+
+/* Imágenes/logos con fondo blanco: un poco más suaves */
+:root[data-theme="dark"] img { color-scheme: normal; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   FONDO DECORATIVO: cuadrícula #343E43, sin orbes de color
+   ═══════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] .bg-orbs .orb,
+:root[data-theme="dark"] .ambient-orb { display: none; }
+
+:root[data-theme="dark"] .bg-grid { display: none; } /* la cuadrícula global de App.vue la reemplaza */
+
+/* ═══════════════════════════════════════════════════════════════════
+   AJUSTES PUNTUALES PARA PARECERSE A LA REFERENCIA
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Producción: barras de avance azul / verde / salmón */
+:root[data-theme="dark"] .orden-progreso-fill                 { background: var(--pal-azul); }
+:root[data-theme="dark"] .orden-progreso-fill.fill-proceso    { background: var(--pal-azul); }
+:root[data-theme="dark"] .orden-progreso-fill.fill-completo   { background: #7FCB97; }
+:root[data-theme="dark"] .orden-progreso-fill.fill-retrasada  { background: #E3897F; }
+:root[data-theme="dark"] .orden-progreso-pct                  { color: var(--pal-azul); }
+:root[data-theme="dark"] .orden-progreso-bar                  { background: var(--pal-superficie-hov); }
+
+/* Tarjetas: borde suave y sin "brillo" blanco al pasar el mouse */
+:root[data-theme="dark"] .card-shimmer::after { opacity: 0.25; }
+
+/* KPIs: número en texto principal e ícono neutro (como la referencia);
+   las variantes de estado conservan su color */
+:root[data-theme="dark"] .kpi-card {
+  --kpi-color: var(--pal-texto);
+  --kpi-soft:  var(--pal-superficie-hov);
+}
+:root[data-theme="dark"] .kpi-card .kpi-card__icon { color: var(--pal-texto-2); }
+:root[data-theme="dark"] .kpi-card--active:not(.kpi-card--success):not(.kpi-card--info):not(.kpi-card--warning):not(.kpi-card--danger):not(.kpi-card--violet) {
+  border-color: #5A646E;
+  box-shadow: inset 0 0 0 1px #5A646E;
+}
+:root[data-theme="dark"] .kpi-card--success { --kpi-color: #7FCB97; --kpi-soft: rgba(127, 203, 151, 0.14); }
+:root[data-theme="dark"] .kpi-card--info    { --kpi-color: var(--pal-azul); --kpi-soft: rgba(120, 169, 212, 0.15); }
+:root[data-theme="dark"] .kpi-card--warning { --kpi-color: #E3B672; --kpi-soft: rgba(227, 182, 114, 0.15); }
+:root[data-theme="dark"] .kpi-card--danger  { --kpi-color: #E8867C; --kpi-soft: rgba(209, 75, 62, 0.18); }
+:root[data-theme="dark"] .kpi-card--violet  { --kpi-color: #B7A4EE; --kpi-soft: rgba(183, 164, 238, 0.15); }
+:root[data-theme="dark"] .kpi-card--success .kpi-card__icon,
+:root[data-theme="dark"] .kpi-card--info    .kpi-card__icon,
+:root[data-theme="dark"] .kpi-card--warning .kpi-card__icon,
+:root[data-theme="dark"] .kpi-card--danger  .kpi-card__icon,
+:root[data-theme="dark"] .kpi-card--violet  .kpi-card__icon { color: var(--kpi-color); }
+
+/* Variables de motion.css */
+:root[data-theme="dark"] {
+  --c-primary:      var(--pal-tiza);
+  --c-accent:       var(--pal-azul);
+  --c-accent2:      #8FB9DE;
+  --c-glow:         rgba(120, 169, 212, 0.25);
+  --surface-border: rgba(65, 74, 83, 0.8);
+  --surface-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+:root[data-theme="dark"] .glass-chip       { background: rgba(41, 47, 54, 0.75); border-color: var(--pal-borde); }
+:root[data-theme="dark"] .glass-chip:hover { background: rgba(52, 58, 67, 0.95); }
+:root[data-theme="dark"] :is(.card, .stat-card, .order-card, .task-card, .pedido-card, .info-card, .hist-card, .qs-card):hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.40), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+}
+
+/* Al cambiar de tema se apagan las transiciones un instante
+   para que todo cambie a la vez (sin "barrido" de colores). */
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
+/* Clientes: pastilla de comprobantes e ícono del comprobante en azul suave */
+:root[data-theme="dark"] .comp-count-badge,
+:root[data-theme="dark"] .comp-icon { color: var(--pal-azul); }

@@ -1,5 +1,5 @@
 <template>
-  <div style="display:flex;min-height:100vh;background:#f1f5f9;position:relative;overflow:hidden">
+  <div style="display:flex;min-height:100vh;background:var(--th-page, #f1f5f9);position:relative;overflow:hidden">
 
     <!-- FONDO DECORATIVO -->
     <div class="bg-orbs" aria-hidden="true">
@@ -40,7 +40,7 @@
                 :class="{ 'link-in': mounted }"
                 style="animation-delay: 300ms">
                 <div class="contact-row">
-                  <span class="icon" style="background:#eff6ff;color:#2563eb">
+                  <span class="icon" style="background:var(--th-info-soft, #eff6ff);color:var(--th-link, #2563eb)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M6.62 10.79C8.06 13.62 10.38 15.94 13.21 17.38L15.41 15.18C15.79 14.8 16.37 14.67 16.85 14.86C18.06 15.34 19.4 15.6 20.75 15.6C21.44 15.6 22 16.16 22 16.85V20.75C22 21.44 21.44 22 20.75 22C10.92 22 2 13.08 2 3.25C2 2.56 2.56 2 3.25 2H7.15C7.84 2 8.4 2.56 8.4 3.25C8.4 4.6 8.66 5.94 9.14 7.15C9.33 7.63 9.2 8.21 8.82 8.59L6.62 10.79Z"/>
                     </svg>
@@ -56,7 +56,7 @@
                 :class="{ 'link-in': mounted }"
                 style="animation-delay: 380ms">
                 <div class="contact-row">
-                  <span class="icon" style="background:#f0fdf4;color:#16a34a">
+                  <span class="icon" style="background:var(--th-success-soft, #f0fdf4);color:var(--th-success, #16a34a)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
                     </svg>
@@ -72,7 +72,7 @@
                 :class="{ 'link-in': mounted }"
                 style="animation-delay: 460ms">
                 <div class="contact-row">
-                  <span class="icon" style="background:#fdf4ff;color:#7c3aed">
+                  <span class="icon" style="background:var(--th-purple-soft, #fdf4ff);color:var(--th-purple, #7c3aed)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M3 5H21C21.5523 5 22 5.44772 22 6V18C22 18.5523 21.5523 19 21 19H3C2.44772 19 2 18.5523 2 18V6C2 5.44772 2.44772 5 3 5Z" stroke-linecap="round" stroke-linejoin="round"/>
                       <path d="M22 6L12 13L2 6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -89,7 +89,7 @@
                 :class="{ 'link-in': mounted }"
                 style="animation-delay: 540ms">
                 <div class="contact-row">
-                  <span class="icon" style="background:#fefce8;color:#b45309">
+                  <span class="icon" style="background:var(--th-warning-soft, #fefce8);color:var(--th-warning, #b45309)">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"/>
                       <path d="M12 6V12L16 14" stroke-linecap="round"/>
@@ -169,13 +169,13 @@ const faqs = [
 /* ── FONDO DECORATIVO ── */
 .bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
 .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.07; }
-.orb-1 { width: 600px; height: 600px; background: #1f3a52; top: -200px; right: -100px; animation: orbDrift1 18s ease-in-out infinite alternate; }
-.orb-2 { width: 400px; height: 400px; background: #2563eb; bottom: -100px; left: 10%; animation: orbDrift2 22s ease-in-out infinite alternate; }
-.orb-3 { width: 300px; height: 300px; background: #16a34a; top: 40%; right: 5%; animation: orbDrift3 15s ease-in-out infinite alternate; }
+.orb-1 { width: 600px; height: 600px; background: var(--th-brand, #1f3a52); top: -200px; right: -100px; animation: orbDrift1 18s ease-in-out infinite alternate; }
+.orb-2 { width: 400px; height: 400px; background: var(--th-info-solid, #2563eb); bottom: -100px; left: 10%; animation: orbDrift2 22s ease-in-out infinite alternate; }
+.orb-3 { width: 300px; height: 300px; background: var(--th-success-solid, #16a34a); top: 40%; right: 5%; animation: orbDrift3 15s ease-in-out infinite alternate; }
 @keyframes orbDrift1 { from { transform: translate(0,0) scale(1); } to { transform: translate(-60px,40px) scale(1.1); } }
 @keyframes orbDrift2 { from { transform: translate(0,0) scale(1); } to { transform: translate(40px,-50px) scale(1.15); } }
 @keyframes orbDrift3 { from { transform: translate(0,0) scale(1); } to { transform: translate(-30px,30px) scale(0.9); } }
-.bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(31,58,82,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(31,58,82,0.04) 1px, transparent 1px); background-size: 40px 40px; }
+.bg-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(var(--th-brand-rgb, 31, 58, 82), 0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--th-brand-rgb, 31, 58, 82), 0.04) 1px, transparent 1px); background-size: 40px 40px; }
 
 .main { flex: 1; padding: 28px 30px; overflow-y: auto; position: relative; z-index: 1; }
 
@@ -185,36 +185,36 @@ const faqs = [
 
 /* ── CARDS ── */
 .contact-section { display: grid; gap: 18px; }
-.info-card { background: white; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
+.info-card { background: var(--th-surface, white); border: 1px solid var(--th-border, #e2e8f0); border-radius: 18px; overflow: hidden; opacity: 0; transform: translateY(20px); transition: opacity 0.5s ease, transform 0.5s ease; }
 .info-card.card-visible { opacity: 1; transform: translateY(0); }
 
-.table-header-bar { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-bottom: 1px solid #f1f5f9; background: #f9fafb; font-size: 14px; font-weight: 600; color: #374151; }
-.table-header-bar svg { color: #1f3a52; flex-shrink: 0; }
+.table-header-bar { display: flex; align-items: center; gap: 8px; padding: 16px 20px; border-bottom: 1px solid var(--th-border, #f1f5f9); background: var(--th-surface-2, #f9fafb); font-size: 14px; font-weight: 600; color: var(--th-text-2, #374151); }
+.table-header-bar svg { color: var(--th-heading, #1f3a52); flex-shrink: 0; }
 .card-inner { padding: 20px; }
 
 /* ── CONTACTOS ── */
 .contact-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
-.contact-link { text-decoration: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px; color: #0f172a; display: block; opacity: 0; transform: translateY(10px); animation: itemReveal 0.4s ease both; transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; }
+.contact-link { text-decoration: none; background: var(--th-surface-2, #f8fafc); border: 1px solid var(--th-border, #e2e8f0); border-radius: 14px; padding: 14px; color: var(--th-text, #0f172a); display: block; opacity: 0; transform: translateY(10px); animation: itemReveal 0.4s ease both; transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s; }
 .contact-link.link-in { animation-play-state: running; }
-.contact-link:not(.static):hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: #c7d9f0; }
+.contact-link:not(.static):hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: var(--th-info-border, #c7d9f0); }
 .contact-link.static { cursor: default; }
 @keyframes itemReveal { to { opacity: 1; transform: translateY(0); } }
 
 .contact-row { display: flex; align-items: center; gap: 12px; }
 .contact-row .icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.contact-row strong { display: block; font-size: 13px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
-.contact-row .val { display: block; font-size: 12px; color: #64748b; }
+.contact-row strong { display: block; font-size: 13px; font-weight: 700; color: var(--th-text, #0f172a); margin-bottom: 2px; }
+.contact-row .val { display: block; font-size: 12px; color: var(--th-text-muted, #64748b); }
 
 /* ── FAQ ── */
 /* Dos columnas en escritorio para que las preguntas quepan sin tanto scroll */
 .faq-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 10px; }
-.faq-item { padding: 14px 16px; border-radius: 14px; background: #f8fafc; border: 1px solid #e2e8f0; opacity: 0; transform: translateX(-10px); animation: faqReveal 0.4s ease both; transition: background 0.2s, border-color 0.2s, transform 0.15s; }
-.faq-item:hover { background: #fff; border-color: #c7d9f0; transform: translateX(2px); }
+.faq-item { padding: 14px 16px; border-radius: 14px; background: var(--th-surface-2, #f8fafc); border: 1px solid var(--th-border, #e2e8f0); opacity: 0; transform: translateX(-10px); animation: faqReveal 0.4s ease both; transition: background 0.2s, border-color 0.2s, transform 0.15s; }
+.faq-item:hover { background: var(--th-surface, #fff); border-color: var(--th-info-border, #c7d9f0); transform: translateX(2px); }
 @keyframes faqReveal { to { opacity: 1; transform: translateX(0); } }
-.faq-question { font-weight: 700; font-size: 14px; margin-bottom: 5px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
-.faq-question::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #1f3a52; flex-shrink: 0; }
-.faq-answer { color: #475569; font-size: 13px; line-height: 1.6; padding-left: 14px; }
+.faq-question { font-weight: 700; font-size: 14px; margin-bottom: 5px; color: var(--th-text, #0f172a); display: flex; align-items: center; gap: 8px; }
+.faq-question::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--th-brand, #1f3a52); flex-shrink: 0; }
+.faq-answer { color: var(--th-text-2, #475569); font-size: 13px; line-height: 1.6; padding-left: 14px; }
 
 @media (max-width: 800px) {
   .main { padding: 20px 16px; }

@@ -33,7 +33,9 @@ describe(`RF-037 · Ver tendencia de rendimiento — integración real en AWS ($
     })
     const body = await res.json()
     if (res.status !== 200) throw new Error(`No se pudo iniciar sesión (${res.status}): ${body.error}`)
-    if (String(body.usuario.Rol).toLowerCase() !== 'admin') throw new Error('TEST_USUARIO debe ser un administrador de empresa.')
+    if (!['admin', 'administrador'].includes(String(body.usuario.Rol).toLowerCase())) {
+      throw new Error('TEST_USUARIO debe ser un administrador de empresa.')
+    }
     token = body.token
   })
 
