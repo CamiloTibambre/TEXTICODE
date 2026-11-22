@@ -67,14 +67,14 @@
       <div v-else class="table-box">
         <div class="table-header-bar">
           <h3>Mis Tareas</h3>
-          <span class="count-badge">{{ tareasFiltradas.length }} tarea{{ tareasFiltradas.length !== 1 ? 's' : '' }}</span>
+          <span class="count-badge">{{ totalTareas }} tarea{{ totalTareas !== 1 ? 's' : '' }}</span>
         </div>
 
         <div class="tasks-list">
           <TransitionGroup name="row">
             <div
               class="task-card"
-              v-for="(tarea, idx) in tareasFiltradas"
+              v-for="(tarea, idx) in tareas"
               :key="tarea.id"
               :class="{
                 'task-retrasada':  tarea.estado === 'retrasado',
@@ -89,7 +89,7 @@
                   <div class="task-badges">
                     <span class="task-id">OP-{{ String(tarea.id).padStart(3, '0') }}</span>
                     <span class="badge" :class="tarea.estado">
-                      <svg v-if="tarea.estado === 'en-proceso'" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
+                      <svg v-if="tarea.estado === 'pendiente'" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
                         <circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M8 12h8M12 8v8"/>
                       </svg>
                       <svg v-else-if="tarea.estado === 'completado'" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor">
@@ -130,8 +130,13 @@
                       <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>
                     </svg>
                     <div>
-                      <div class="meta-label">Material</div>
-                      <div class="meta-value">{{ tarea.material }}</div>
+                      <div class="meta-label">Materiales</div>
+                      <div class="materials-list">
+                        <span v-for="material in tarea.materiales" :key="material.id" class="material-chip">
+                          {{ material.nombre }}<template v-if="material.cantidad != null"> · {{ material.cantidad }}</template>
+                        </span>
+                        <span v-if="!tarea.materiales.length" class="meta-value">—</span>
+                      </div>
                     </div>
                   </div>
                   <div class="meta-item">
@@ -148,43 +153,30 @@
                       <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"/>
                     </svg>
                     <div>
-                      <div class="meta-label">Prendas</div>
-                      <div class="meta-value prendas-val">
-                        <strong>{{ tarea.realizadas }}</strong>
-                        <span class="prendas-sep">/</span>
-                        <span class="prendas-total">{{ tarea.cantidad }}</span>
-                      </div>
+                      <div class="meta-label">Producción asignada</div>
+                      <div class="meta-value prendas-val">Prendas a realizar: <strong>{{ tarea.cantidad }}</strong></div>
                     </div>
                   </div>
                 </div>
 
-                <div class="progress-section">
-                  <div class="progress-label">
-                    <span>Progreso</span>
-                    <span class="progress-pct">{{ tarea.progreso }}%</span>
-                  </div>
-                  <div class="progress-bar">
-                    <div
-                      class="progress-fill"
-                      :class="{
-                        'fill-completo':  tarea.progreso >= 100,
-                        'fill-retrasado': tarea.estado === 'retrasado'
-                      }"
-                      :style="{ width: tarea.progreso + '%' }"
-                    ></div>
-                  </div>
-                </div>
               </div>
             </div>
           </TransitionGroup>
 
-          <div v-if="tareasFiltradas.length === 0" class="empty-state">
+          <div v-if="tareas.length === 0" class="empty-state">
             <svg width="44" height="44" fill="none" viewBox="0 0 24 24" stroke-width="1.2" stroke="#d1d5db">
               <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
             </svg>
             <p>No tienes tareas asignadas.</p>
           </div>
         </div>
+        <BasePagination
+          v-model:pagina="pagina"
+          v-model:por-pagina="porPagina"
+          :total="totalTareas"
+          :opciones-tamano="[10]"
+          etiqueta="tareas"
+        />
       </div>
 
     </main>
@@ -195,24 +187,27 @@
 import PageHeader from '../../components/PageHeader.vue'
 import KpiCard from '../../components/KpiCard.vue'
 import SkeletonTable from '../../components/base/SkeletonTable.vue'
+import BasePagination from '../../components/base/BasePagination.vue'
 import { useToast } from '../../composables/useToast'
-
-const toast = useToast()
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
+const toast           = useToast()
 const auth            = useAuthStore()
 const authHeaders     = () => auth.authHeader()
 const busqueda        = ref('')
 const filtroEstado    = ref('')
 const filtroPrioridad = ref('')
 const tareas          = ref([])
+const totalTareas     = ref(0)
+const pagina          = ref(1)
+const porPagina       = ref(10)
+const resumen         = ref({ total: 0, pendientes: 0, completadas: 0, retrasadas: 0 })
 const cargando        = ref(true)
 const animVisible     = ref(false)
 const searchFocus     = ref(false)
-const titleChars      = 'Tareas Asignadas'.split('')
 
 const ICON_TOTAL = 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
 const ICON_PROC  = 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99'
@@ -220,41 +215,51 @@ const ICON_OK    = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 
 const ICON_WARN  = 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'
 
 const kpis = computed(() => [
-  { label: 'Total',       valor: tareas.value.length,                                       icono: ICON_TOTAL, tono: 'brand',   filtro: '' },
-  { label: 'En proceso',  valor: tareas.value.filter(t => t.estado === 'en-proceso').length, icono: ICON_PROC,  tono: 'info',    filtro: 'en-proceso' },
-  { label: 'Completadas', valor: tareas.value.filter(t => t.estado === 'completado').length, icono: ICON_OK,    tono: 'success', filtro: 'completado' },
-  { label: 'Retrasadas',  valor: tareas.value.filter(t => t.estado === 'retrasado').length,  icono: ICON_WARN,  tono: 'danger',  filtro: 'retrasado' },
+  { label: 'Total',       valor: resumen.value.total,       icono: ICON_TOTAL, tono: 'brand',   filtro: '' },
+  { label: 'Pendientes',  valor: resumen.value.pendientes,  icono: ICON_PROC,  tono: 'info',    filtro: 'pendiente' },
+  { label: 'Completadas', valor: resumen.value.completadas, icono: ICON_OK,    tono: 'success', filtro: 'completado' },
+  { label: 'Retrasadas',  valor: resumen.value.retrasadas,  icono: ICON_WARN,  tono: 'danger',  filtro: 'retrasado' },
 ])
 
-onMounted(async () => {
+async function cargarTareas() {
   if (!auth.idUsuario) {
     cargando.value = false
-    setTimeout(() => { animVisible.value = true }, 80)
     return
   }
 
+  cargando.value = true
   try {
-    const res  = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}`, { headers: authHeaders() })
-    const data = await res.json()
+    const query = new URLSearchParams({ page: pagina.value, limit: porPagina.value })
+    if (busqueda.value.trim()) query.set('search', busqueda.value.trim())
+    if (filtroEstado.value) query.set('estado', filtroEstado.value)
+    if (filtroPrioridad.value) query.set('prioridad', filtroPrioridad.value)
+    const res = await fetch(`${BASE}/orden-operario/operario/${auth.idUsuario}?${query}`, { headers: authHeaders() })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const payload = await res.json()
+    const data = payload.data || []
+    totalTareas.value = payload.pagination?.total || 0
+    resumen.value = payload.summary || resumen.value
 
     tareas.value = data.map(o => {
       const completada = o.Estado_Fase === 'Completada'
       const vencida = !completada && estaRetrasada(o.Fecha_Limite)
       return {
-  id:          o.Id_Orden_Operario,
-  nombre:      o.Descripcion_Fase || o.Descripcion_Orden,
-  producto:    o.Producto || o.Descripcion_Orden,
-  descripcion: `Fase ${o.Numero_Fase}: ${o.Descripcion_Fase || 'Sin descripción'}`,
-  cliente:     o.Cliente        || '—',
-  material:    o.NombreMaterial || '—',
-  entrega:     o.Fecha_Limite?.split('T')[0] || '—',
-  cantidad: o.Cuota ?? o.Cantidad ?? 0,
-  realizadas: completada ? (o.Cuota ?? o.Cantidad ?? 0) : Number(o.Cantidad_Realizada || 0),
-  estado: completada ? 'completado' : vencida ? 'retrasado' : 'en-proceso',
-  progreso: completada ? 100 : Math.min(100, Math.round((Number(o.Cantidad_Realizada || 0) / Math.max(1, Number(o.Cuota ?? o.Cantidad ?? 0))) * 100)),
-  prioridad: (o.Prioridad || 'Media').toLowerCase(),
-  vencida,
-}
+        id:          o.Id_Orden_Operario,
+        nombre:      o.Descripcion_Fase || o.Descripcion_Orden,
+        producto:    o.Producto || o.Descripcion_Orden,
+        descripcion: `Fase ${o.Numero_Fase}: ${o.Descripcion_Fase || 'Sin descripción'}`,
+        cliente:     o.Cliente || '—',
+        materiales:  Array.isArray(o.Materiales) ? o.Materiales.map(m => ({
+          id: m.Id_Material,
+          nombre: m.Nombre_Material,
+          cantidad: m.Cantidad_Usada,
+        })) : [],
+        entrega:     o.Fecha_Limite?.split('T')[0] || '—',
+        cantidad:    o.Cuota ?? o.Cantidad ?? 0,
+        estado:      completada ? 'completado' : vencida ? 'retrasado' : 'pendiente',
+        prioridad:   (o.Prioridad || 'Media').toLowerCase(),
+        vencida,
+      }
     }).sort(ordenarTareas)
   } catch (err) {
     console.error('Error cargando tareas:', err)
@@ -263,10 +268,27 @@ onMounted(async () => {
     cargando.value = false
     animVisible.value = true
   }
+}
+
+onMounted(cargarTareas)
+
+watch([pagina, porPagina], cargarTareas)
+watch([filtroEstado, filtroPrioridad], () => {
+  if (pagina.value !== 1) pagina.value = 1
+  else cargarTareas()
+})
+
+let searchTimer
+watch(busqueda, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    if (pagina.value !== 1) pagina.value = 1
+    else cargarTareas()
+  }, 300)
 })
 
 function ordenarTareas(a, b) {
-  const grupo = t => t.estado === 'retrasado' ? 0 : t.estado === 'en-proceso' ? 1 : 2
+  const grupo = t => t.estado === 'retrasado' ? 0 : t.estado === 'pendiente' ? 1 : 2
   const porEstado = grupo(a) - grupo(b)
   if (porEstado) return porEstado
   return new Date(a.entrega || '9999-12-31') - new Date(b.entrega || '9999-12-31')
@@ -281,20 +303,10 @@ function estaRetrasada(fecha) {
 }
 
 const estadoLabel = (estado) => ({
-  'en-proceso': 'En Proceso',
-  'completado': 'Completado',
+  'pendiente': 'Pendiente',
+  'completado': 'Completada',
   'retrasado': 'Retrasada',
 })[estado] || estado
-
-const tareasFiltradas = computed(() =>
-  tareas.value.filter(t => {
-    const q = busqueda.value.toLowerCase()
-    const b = !q || t.nombre.toLowerCase().includes(q) || t.descripcion.toLowerCase().includes(q)
-    const e = !filtroEstado.value    || t.estado    === filtroEstado.value
-    const p = !filtroPrioridad.value || t.prioridad === filtroPrioridad.value
-    return b && e && p
-  })
-)
 </script>
 
 <style scoped>
@@ -348,7 +360,7 @@ const tareasFiltradas = computed(() =>
 
 /* Banda lateral */
 .task-stripe { width: 5px; flex-shrink: 0; }
-.task-stripe.en-proceso { background: #2563eb; }
+.task-stripe.pendiente { background: #2563eb; }
 .task-stripe.completado { background: #16a34a; }
 .task-stripe.retrasado  { background: #dc2626; }
 
@@ -358,7 +370,7 @@ const tareasFiltradas = computed(() =>
 .task-id     { font-size: 13px; font-weight: 700; color: #1f3a52; }
 
 .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.badge.en-proceso { background: #dbeafe; color: #1d4ed8; }
+.badge.pendiente { background: #dbeafe; color: #1d4ed8; }
 .badge.completado  { background: #dcfce7; color: #15803d; }
 .badge.retrasado   { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 .badge.prioridad.alta  { background: #fee2e2; color: #991b1b; }
@@ -379,16 +391,8 @@ const tareasFiltradas = computed(() =>
 
 .prendas-val   { display: flex; align-items: baseline; gap: 3px; }
 .prendas-val strong { font-size: 16px; color: #1f3a52; }
-.prendas-sep   { color: var(--color-text-muted); font-size: 13px; }
-.prendas-total { font-size: 13px; color: var(--color-text-muted); }
-
-/* PROGRESS */
-.progress-label { display: flex; justify-content: space-between; font-size: 13px; color: #6b7280; margin-bottom: 6px; }
-.progress-pct   { font-weight: 600; color: #374151; }
-.progress-bar   { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
-.progress-fill  { height: 100%; background: #1f3a52; border-radius: 999px; transition: width 0.6s ease; }
-.progress-fill.fill-completo  { background: #16a34a; }
-.progress-fill.fill-retrasado { background: #dc2626; }
+.materials-list { display: flex; flex-wrap: wrap; gap: 5px; }
+.material-chip { display: inline-flex; padding: 3px 8px; border-radius: 999px; background: #eef2f6; color: #334155; font-size: 12px; font-weight: 600; }
 
 /* LOADING */
 @keyframes spin { to { transform: rotate(360deg); } }

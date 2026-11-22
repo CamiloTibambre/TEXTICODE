@@ -10,8 +10,7 @@ const Vacio = { template: '<div />' }
 
 export function crearRouterPrueba() {
   const rutas = ['/', '/login', '/cambiar-contrasena', '/admin/usuarios', '/superadmin/empresas',
-    '/operario/cuenta', '/cliente/cuenta', '/google-auth/callback',
-    '/admin/google-calendar', '/operario/google-calendar', '/cliente/google-calendar'].map(path => ({ path, component: Vacio }))
+    '/operario/cuenta', '/cliente/cuenta', '/google-auth/callback'].map(path => ({ path, component: Vacio }))
   rutas[1].name = 'Login'
   return createRouter({ history: createMemoryHistory(), routes: rutas })
 }

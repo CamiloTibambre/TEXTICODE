@@ -33,6 +33,7 @@ export const env = {
     .map(v => String(v || '').trim())
     .filter(Boolean),
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/google/callback',
+  googleTokenEncryptionKey: process.env.GOOGLE_TOKEN_ENCRYPTION_KEY || '',
   sendgridApiKey: process.env.SENDGRID_API_KEY || '',
   sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || '',
 }

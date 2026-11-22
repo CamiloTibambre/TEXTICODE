@@ -5,6 +5,20 @@ import { hasRole, requireRoles, requireSelfParamOrRoles } from '../middleware/ro
 
 const router = Router()
 
+function emitirFaseActualizada(empresaId, datos) {
+  if (process.env.NODE_ENV === 'test') return
+  import('../services/realtime.js')
+    .then(modulo => modulo.emitirFaseActualizada(empresaId, datos))
+    .catch(error => console.error('[realtime] No se pudo emitir el cambio de fase:', error.message))
+}
+
+function sincronizarCalendario(idOrden, empresaId) {
+  if (process.env.NODE_ENV === 'test') return
+  import('./googleCalendar.js')
+    .then(modulo => modulo.programarSincronizacionOrden(idOrden, empresaId))
+    .catch(error => console.error('[google/auto] No se pudo programar la fase:', error.message))
+}
+
 // Avisa al cliente por correo cuando su orden pasa a Completada.
 // Corre despues de responder y nunca rompe la peticion si el correo falla.
 async function notificarOrdenCompletada(idOrden, empresaId) {
@@ -143,6 +157,7 @@ router.post('/', requireRoles('admin'), async (req, res) => {
 
     await client.query('COMMIT')
     res.status(201).json(rows[0])
+    sincronizarCalendario(idOrden, empresaId)
   } catch (err) {
     await client.query('ROLLBACK')
     if (err.code === '23505') {
@@ -177,7 +192,34 @@ router.get('/orden/:idOrden', requireRoles('admin'), async (req, res) => {
 // GET fases asignadas a un operario en todas las ordenes
 router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin'), async (req, res) => {
   try {
-    const { rows } = await pool.query(`
+    const usaPaginacion = req.query.page != null || req.query.limit != null
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 10))
+    const search = String(req.query.search || '').trim()
+    const estado = String(req.query.estado || '').trim().toLowerCase()
+    const prioridad = String(req.query.prioridad || '').trim().toLowerCase()
+    const params = [req.params.idOperario, req.auth.empresaId]
+    const filtros = []
+
+    if (search) {
+      params.push(`%${search}%`)
+      filtros.push(`(
+        op."Producto" ILIKE $${params.length}
+        OR op."Descripcion" ILIKE $${params.length}
+        OR oo."Descripcion_Fase" ILIKE $${params.length}
+        OR CAST(op."Id_Orden" AS TEXT) ILIKE $${params.length}
+      )`)
+    }
+    if (prioridad) {
+      params.push(prioridad)
+      filtros.push(`LOWER(COALESCE(op."Prioridad", 'Media')) = $${params.length}`)
+    }
+    if (estado === 'completado') filtros.push(`oo."Estado_Fase" = 'Completada'`)
+    if (estado === 'pendiente') filtros.push(`oo."Estado_Fase" <> 'Completada' AND (op."Fecha_Limite" IS NULL OR op."Fecha_Limite"::date >= CURRENT_DATE)`)
+    if (estado === 'retrasado') filtros.push(`oo."Estado_Fase" <> 'Completada' AND op."Fecha_Limite"::date < CURRENT_DATE`)
+
+    const whereFiltros = filtros.length ? ` AND ${filtros.join(' AND ')}` : ''
+    const consultaBase = `
       SELECT
         oo.*,
         uop."Nombre_Completo" AS "Nombre_Operario",
@@ -191,7 +233,7 @@ router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin
         op."Fecha_Creacion",
         op."Id_Cliente",
         cli."Nombre_Completo" AS "Cliente",
-        m."Nombre_Material" AS "NombreMaterial",
+        materiales."Materiales",
         (op."Cantidad"::int / cnt.total) + CASE WHEN cnt.idx < op."Cantidad"::int % cnt.total THEN 1 ELSE 0 END AS "Cuota"
       FROM orden_operario oo
       INNER JOIN LATERAL (
@@ -205,12 +247,82 @@ router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin
       INNER JOIN usuario cli ON op."Id_Cliente" = cli."Id_Usuario"
       INNER JOIN usuario_empresa ue_op ON ue_op."Id_Usuario" = uop."Id_Usuario" AND ue_op."Id_Empresa" = oo."Id_Empresa"
       INNER JOIN usuario_empresa ue_cli ON ue_cli."Id_Usuario" = cli."Id_Usuario" AND ue_cli."Id_Empresa" = op."Id_Empresa"
-      INNER JOIN material m ON op."Id_Material" = m."Id_Material"
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          jsonb_agg(
+            jsonb_build_object(
+              'Id_Material', material_orden."Id_Material",
+              'Nombre_Material', material_orden."Nombre_Material",
+              'Cantidad_Usada', material_orden."Cantidad_Usada"
+            ) ORDER BY material_orden."Nombre_Material"
+          ),
+          '[]'::jsonb
+        ) AS "Materiales"
+        FROM (
+          SELECT DISTINCT ON (m2."Id_Material")
+            m2."Id_Material", m2."Nombre_Material", asociados."Cantidad_Usada"
+          FROM (
+            SELECT om."Id_Producto" AS "Id_Material", om."Cantidad_Usada"
+            FROM orden_material om
+            WHERE om."Id_Orden" = op."Id_Orden" AND om."Id_Empresa" = op."Id_Empresa"
+            UNION ALL
+            SELECT op."Id_Material", NULL
+            WHERE op."Id_Material" IS NOT NULL
+          ) asociados
+          INNER JOIN material m2
+            ON m2."Id_Material" = asociados."Id_Material"
+           AND m2."Id_Empresa" = op."Id_Empresa"
+          ORDER BY m2."Id_Material", asociados."Cantidad_Usada" NULLS LAST
+        ) material_orden
+      ) materiales ON TRUE
       WHERE oo."Id_Operario" = $1 AND oo."Id_Empresa" = $2
-        AND op."Id_Empresa" = $2 AND m."Id_Empresa" = $2
-      ORDER BY op."Fecha_Limite" ASC, oo."Numero_Fase" ASC
+        AND op."Id_Empresa" = $2${whereFiltros}`
+
+    if (!usaPaginacion) {
+      const { rows } = await pool.query(`${consultaBase}
+        ORDER BY op."Fecha_Limite" ASC NULLS LAST, oo."Numero_Fase" ASC
+      `, params)
+      return res.json(rows)
+    }
+
+    const countResult = await pool.query(`
+      SELECT COUNT(*)::int AS total
+      FROM orden_operario oo
+      INNER JOIN orden_produccion op
+        ON op."Id_Orden" = oo."Id_Orden" AND op."Id_Empresa" = oo."Id_Empresa"
+      WHERE oo."Id_Operario" = $1 AND oo."Id_Empresa" = $2${whereFiltros}
+    `, params)
+
+    const summaryResult = await pool.query(`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE oo."Estado_Fase" = 'Completada')::int AS completadas,
+        COUNT(*) FILTER (
+          WHERE oo."Estado_Fase" <> 'Completada'
+            AND (op."Fecha_Limite" IS NULL OR op."Fecha_Limite"::date >= CURRENT_DATE)
+        )::int AS pendientes,
+        COUNT(*) FILTER (
+          WHERE oo."Estado_Fase" <> 'Completada' AND op."Fecha_Limite"::date < CURRENT_DATE
+        )::int AS retrasadas
+      FROM orden_operario oo
+      INNER JOIN orden_produccion op
+        ON op."Id_Orden" = oo."Id_Orden" AND op."Id_Empresa" = oo."Id_Empresa"
+      WHERE oo."Id_Operario" = $1 AND oo."Id_Empresa" = $2
     `, [req.params.idOperario, req.auth.empresaId])
-    res.json(rows)
+
+    const offset = (page - 1) * limit
+    const dataParams = [...params, limit, offset]
+    const { rows } = await pool.query(`${consultaBase}
+      ORDER BY op."Fecha_Limite" ASC NULLS LAST, oo."Numero_Fase" ASC
+      LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
+    `, dataParams)
+    const total = countResult.rows[0].total
+
+    res.json({
+      data: rows,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+      summary: summaryResult.rows[0],
+    })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Error interno del servidor.' })
@@ -220,13 +332,49 @@ router.get('/operario/:idOperario', requireSelfParamOrRoles('idOperario', 'admin
 // GET historial persistente de fases completadas de un operario.
 router.get('/operario/:idOperario/historial', requireSelfParamOrRoles('idOperario', 'admin'), async (req, res) => {
   try {
-    const { rows } = await pool.query(`
+    const usaPaginacion = req.query.page != null || req.query.limit != null
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 10))
+    const search = String(req.query.search || '').trim()
+    const desde = String(req.query.desde || '').trim()
+    const hasta = String(req.query.hasta || '').trim()
+    const fechaValida = value => !value || /^\d{4}-\d{2}-\d{2}$/.test(value)
+    if (!fechaValida(desde) || !fechaValida(hasta)) {
+      return res.status(400).json({ error: 'Las fechas deben tener formato YYYY-MM-DD.' })
+    }
+
+    const params = [req.params.idOperario, req.auth.empresaId]
+    const filtros = []
+    if (search) {
+      params.push(`%${search}%`)
+      filtros.push(`(
+        op."Producto" ILIKE $${params.length}
+        OR op."Descripcion" ILIKE $${params.length}
+        OR oo."Descripcion_Fase" ILIKE $${params.length}
+        OR CAST(op."Id_Orden" AS TEXT) ILIKE $${params.length}
+      )`)
+    }
+    if (desde) {
+      params.push(desde)
+      filtros.push(`oo."Fecha_Completada"::date >= $${params.length}::date`)
+    }
+    if (hasta) {
+      params.push(hasta)
+      filtros.push(`oo."Fecha_Completada"::date <= $${params.length}::date`)
+    }
+    const whereFiltros = filtros.length ? ` AND ${filtros.join(' AND ')}` : ''
+    const consultaBase = `
       SELECT
         oo.*, uop."Nombre_Completo" AS "Nombre_Operario", op."Producto",
         op."Descripcion" AS "Descripcion_Orden", op."Cantidad",
         op."Unidades_Realizadas", op."Estado" AS "Estado_Orden", op."Prioridad",
-        op."Fecha_Limite", op."Id_Cliente", cli."Nombre_Completo" AS "Cliente",
-        m."Nombre_Material" AS "NombreMaterial",
+        op."Fecha_Limite", op."Fecha_Creacion", op."Id_Cliente",
+        cli."Nombre_Completo" AS "Cliente",
+        CASE
+          WHEN oo."Fecha_Completada" IS NULL OR op."Fecha_Limite" IS NULL THEN NULL
+          WHEN oo."Fecha_Completada"::date <= op."Fecha_Limite"::date THEN true
+          ELSE false
+        END AS "Completada_A_Tiempo",
         (op."Cantidad"::int / cnt.total) + CASE WHEN cnt.idx < op."Cantidad"::int % cnt.total THEN 1 ELSE 0 END AS "Cuota"
       FROM orden_operario oo
       INNER JOIN LATERAL (
@@ -240,13 +388,36 @@ router.get('/operario/:idOperario/historial', requireSelfParamOrRoles('idOperari
       INNER JOIN usuario cli ON op."Id_Cliente" = cli."Id_Usuario"
       INNER JOIN usuario_empresa ue_op ON ue_op."Id_Usuario" = uop."Id_Usuario" AND ue_op."Id_Empresa" = oo."Id_Empresa"
       INNER JOIN usuario_empresa ue_cli ON ue_cli."Id_Usuario" = cli."Id_Usuario" AND ue_cli."Id_Empresa" = op."Id_Empresa"
-      INNER JOIN material m ON op."Id_Material" = m."Id_Material"
       WHERE oo."Id_Operario" = $1 AND oo."Id_Empresa" = $2
-        AND op."Id_Empresa" = $2 AND m."Id_Empresa" = $2
-        AND oo."Estado_Fase" = 'Completada'
+        AND op."Id_Empresa" = $2
+        AND oo."Estado_Fase" = 'Completada'${whereFiltros}`
+
+    if (!usaPaginacion) {
+      const { rows } = await pool.query(`${consultaBase}
+        ORDER BY oo."Fecha_Completada" DESC NULLS LAST, oo."updated_at" DESC
+      `, params)
+      return res.json(rows)
+    }
+
+    const countResult = await pool.query(`
+      SELECT COUNT(*)::int AS total
+      FROM orden_operario oo
+      INNER JOIN orden_produccion op
+        ON op."Id_Orden" = oo."Id_Orden" AND op."Id_Empresa" = oo."Id_Empresa"
+      WHERE oo."Id_Operario" = $1 AND oo."Id_Empresa" = $2
+        AND oo."Estado_Fase" = 'Completada'${whereFiltros}
+    `, params)
+    const offset = (page - 1) * limit
+    const dataParams = [...params, limit, offset]
+    const { rows } = await pool.query(`${consultaBase}
       ORDER BY oo."Fecha_Completada" DESC NULLS LAST, oo."updated_at" DESC
-    `, [req.params.idOperario, req.auth.empresaId])
-    res.json(rows)
+      LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}
+    `, dataParams)
+    const total = countResult.rows[0].total
+    res.json({
+      data: rows,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Error interno del servidor.' })
@@ -360,6 +531,7 @@ router.delete('/:id', requireRoles('admin'), async (req, res) => {
 
     await client.query('COMMIT')
     res.json({ mensaje: 'Fase eliminada de la orden' })
+    sincronizarCalendario(rows[0].Id_Orden, empresaId)
   } catch (err) {
     await client.query('ROLLBACK')
     console.error(err)
@@ -454,6 +626,14 @@ router.patch('/:id/avance', async (req, res) => {
       cuota,
       orden: progresoOrden,
     })
+    emitirFaseActualizada(empresaId, {
+      idOrden: fase.Id_Orden,
+      idOrdenOperario: fase.Id_Orden_Operario,
+      idOperario: fase.Id_Operario,
+      numeroFase: fase.Numero_Fase,
+      estadoFase: updateFase.rows[0].Estado_Fase,
+      estadoOrden: progresoOrden.estado,
+    })
 
     if (progresoOrden.estado === 'Completada' && estadoPrevio !== 'Completada') {
       notificarOrdenCompletada(fase.Id_Orden, empresaId)
@@ -495,6 +675,10 @@ router.patch('/:id/completar', async (req, res) => {
       await client.query('ROLLBACK')
       return res.status(403).json({ error: 'No tienes permisos para completar esta fase.' })
     }
+    if (fase.Estado_Fase === 'Completada') {
+      await client.query('ROLLBACK')
+      return res.status(409).json({ error: 'Esta fase ya está completada.' })
+    }
 
     const cantidadTotal = Number(fase.Cantidad) || 0
 
@@ -533,7 +717,16 @@ router.patch('/:id/completar', async (req, res) => {
     res.json({
       mensaje: 'Fase completada',
       fase: updateFase.rows[0],
+      cuota,
       orden: progresoOrden,
+    })
+    emitirFaseActualizada(empresaId, {
+      idOrden: fase.Id_Orden,
+      idOrdenOperario: fase.Id_Orden_Operario,
+      idOperario: fase.Id_Operario,
+      numeroFase: fase.Numero_Fase,
+      estadoFase: 'Completada',
+      estadoOrden: progresoOrden.estado,
     })
 
     // Correo al cliente (no bloquea la respuesta)
