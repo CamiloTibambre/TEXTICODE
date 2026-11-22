@@ -25,6 +25,7 @@
     <!-- Capas globales: notificaciones y confirmaciones (useToast / useConfirm) -->
     <ToastHost />
     <ConfirmDialog />
+    <PrintHost />
   </div>
 </template>
 
@@ -34,6 +35,7 @@ import { RouterView, useRoute } from 'vue-router'
 import AppSidebar from './components/AppSidebar.vue'
 import ToastHost from './components/base/ToastHost.vue'
 import ConfirmDialog from './components/base/ConfirmDialog.vue'
+import PrintHost from './components/base/PrintHost.vue'
 import { useSidebar, prefiereMenosMovimiento } from './composables/useSidebar'
 import { useTheme } from './composables/useTheme'
 
@@ -108,7 +110,9 @@ body {
 .app-shell {
   position: relative;
   min-height: 100vh;
-  overflow-x: hidden;
+  /* clip (no hidden): recorta igual pero no crea un contenedor de scroll,
+     así position: sticky funciona dentro de las vistas */
+  overflow-x: clip;
 }
 
 /* Contenido: deja espacio al sidebar fijo */

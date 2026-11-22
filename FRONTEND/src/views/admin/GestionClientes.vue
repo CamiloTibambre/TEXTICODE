@@ -290,6 +290,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { getUsuarios, getComprobantes, getOrdenes } from '../../services/api.js'
+import { useImpresion } from '../../composables/useImpresion'
 import PageHeader from '../../components/PageHeader.vue'
 import KpiCard from '../../components/KpiCard.vue'
 import EmptyState from '../../components/base/EmptyState.vue'
@@ -298,6 +299,7 @@ import { usePagination } from '../../composables/usePagination'
 import { useToast } from '../../composables/useToast'
 
 const toast = useToast()
+const impresion = useImpresion()
 
 const busqueda = ref('')
 const ordenSeleccionada = ref(null)
@@ -451,6 +453,8 @@ function showToast(msg) {
 // ── DESCARGA PDF REAL ──
 async function descargarPDF(orden) {
   orden.descargando = true
+  // Animación de impresora: la descarga ocurre cuando la hoja termina de salir
+  const salida = impresion.iniciar({ numero: orden.numero, cliente: orden.cliente })
   try {
     // Cargar jsPDF si no existe
     if (!window.jspdf) {
@@ -670,10 +674,13 @@ async function descargarPDF(orden) {
     doc.text('Documento de uso oficial · TEXTICODE S.A.S.', ML, pH - 5)
     doc.text(`Generado el ${fechaHoy}`, MR, pH - 5, { align: 'right' })
 
+    await salida
     doc.save(`comprobante-${orden.numero}.pdf`)
+    impresion.terminar()
     showToast(`Comprobante ${orden.numero} descargado correctamente`)
   } catch (err) {
     console.error('Error generando PDF:', err)
+    impresion.fallar()
     showToast('Error al generar el PDF. Inténtalo de nuevo.')
   } finally {
     orden.descargando = false

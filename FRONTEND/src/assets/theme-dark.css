@@ -245,3 +245,97 @@ html.theme-switching *::after {
 /* Clientes: pastilla de comprobantes e ícono del comprobante en azul suave */
 :root[data-theme="dark"] .comp-count-badge,
 :root[data-theme="dark"] .comp-icon { color: var(--pal-azul); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPROBANTES DE ENTREGA: siempre en claro (son un documento "en papel")
+   Aplica al comprobante del cliente (Cuenta Personal) y al detalle que
+   abre el administrador en Gestión de Clientes.
+   `initial` anula las --th-* y cada var(--th-x, #color) vuelve a su color
+   original; los tokens --color-* y --pal-* se devuelven a los del claro.
+   ═══════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] .cp-wrap {
+  color-scheme: light;
+  color: #111827;
+  --th-border: initial;
+  --th-border-strong: initial;
+  --th-brand: initial;
+  --th-brand-2: initial;
+  --th-brand-deep: initial;
+  --th-brand-rgb: initial;
+  --th-danger: initial;
+  --th-danger-border: initial;
+  --th-danger-soft: initial;
+  --th-danger-solid: initial;
+  --th-glass-rgb: initial;
+  --th-heading: initial;
+  --th-info-border: initial;
+  --th-info-soft: initial;
+  --th-info-solid: initial;
+  --th-link: initial;
+  --th-page: initial;
+  --th-pink: initial;
+  --th-pink-soft: initial;
+  --th-purple: initial;
+  --th-purple-soft: initial;
+  --th-purple-solid: initial;
+  --th-success: initial;
+  --th-success-border: initial;
+  --th-success-soft: initial;
+  --th-success-solid: initial;
+  --th-surface: initial;
+  --th-surface-2: initial;
+  --th-surface-3: initial;
+  --th-text: initial;
+  --th-text-2: initial;
+  --th-text-muted: initial;
+  --th-warning: initial;
+  --th-warning-border: initial;
+  --th-warning-soft: initial;
+  --th-warning-solid: initial;
+
+  --pal-texto:           #111827;
+  --pal-texto-2:         #374151;
+  --pal-campos:          #F9FAFB;
+  --pal-borde:           #E5E7EB;
+  --pal-superficie:      #FFFFFF;
+  --pal-superficie-hov:  #F3F4F6;
+  --pal-fondo:           #F1F5F9;
+  --pal-azul:            #2D6A9F;
+
+  --color-brand:          #1f3a52;
+  --color-brand-hover:    #244b6a;
+  --color-brand-active:   #172c3e;
+  --color-brand-soft:     #e8eef4;
+  --color-accent:         #2d6a9f;
+  --color-accent-hover:   #255a88;
+  --color-accent-soft:    #e6f0f8;
+  --color-text:           #111827;
+  --color-text-strong:    #0f172a;
+  --color-text-secondary: #374151;
+  --color-text-muted:     #6b7280;
+  --color-text-disabled:  #9ca3af;
+  --color-text-inverse:   #ffffff;
+  --color-bg:             #f1f5f9;
+  --color-bg-subtle:      #f8fafc;
+  --color-surface:        #ffffff;
+  --color-surface-muted:  #f9fafb;
+  --color-surface-hover:  #f3f4f6;
+  --color-border:         #e5e7eb;
+  --color-border-strong:  #d1d5db;
+  --color-success:        #15803d;
+  --color-success-solid:  #16a34a;
+  --color-success-soft:   #dcfce7;
+  --color-danger:         #b91c1c;
+  --color-danger-solid:   #dc2626;
+  --color-danger-soft:    #fee2e2;
+  --color-warning:        #92400e;
+  --color-warning-solid:  #d97706;
+  --color-warning-soft:   #fef3c7;
+  --color-info:           #1d4ed8;
+  --color-info-solid:     #2563eb;
+  --color-info-soft:      #dbeafe;
+  --focus-ring-color:     #2563eb;
+  --shadow-xs:  0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm:  0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-brand: 0 12px 28px rgba(31, 58, 82, 0.25);
+}
