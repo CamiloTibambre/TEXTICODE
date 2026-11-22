@@ -1,0 +1,342 @@
+[
+  {
+    "id": "02-entorno",
+    "titulo": "Versiones y rama activa",
+    "pasos": [
+      {
+        "carpeta": ".",
+        "comando": "node --version"
+      },
+      {
+        "carpeta": ".",
+        "comando": "npm.cmd --version"
+      },
+      {
+        "carpeta": ".",
+        "comando": "git branch --show-current"
+      }
+    ]
+  },
+  {
+    "id": "03-archivos",
+    "titulo": "Archivos de pruebas por modulo",
+    "pasos": [
+      {
+        "carpeta": ".",
+        "comando": "dir /s /b BACKEND\\__tests__ FRONTEND\\tests"
+      }
+    ]
+  },
+  {
+    "id": "04-backend-instalado",
+    "titulo": "Dependencias de pruebas del BACKEND",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "npm.cmd ls jest supertest --depth=0"
+      }
+    ]
+  },
+  {
+    "id": "05-frontend-instalado",
+    "titulo": "Dependencias de pruebas del FRONTEND",
+    "pasos": [
+      {
+        "carpeta": "FRONTEND",
+        "comando": "npm.cmd ls jest jest-environment-jsdom @vue/test-utils @vue/vue3-jest babel-jest @babel/core @babel/preset-env --depth=0"
+      }
+    ]
+  },
+  {
+    "id": "06-configuracion",
+    "titulo": "Configuracion de Jest",
+    "pasos": [
+      {
+        "carpeta": ".",
+        "comando": "type BACKEND\\jest.config.js"
+      },
+      {
+        "carpeta": ".",
+        "comando": "type FRONTEND\\jest.config.cjs"
+      }
+    ]
+  },
+  {
+    "id": "RF-001",
+    "titulo": "RF-001 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-001"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-001"
+      }
+    ]
+  },
+  {
+    "id": "RF-002",
+    "titulo": "RF-002 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-002"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-002"
+      }
+    ]
+  },
+  {
+    "id": "RF-003",
+    "titulo": "RF-003 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-003"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-003"
+      }
+    ]
+  },
+  {
+    "id": "RF-004",
+    "titulo": "RF-004 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-004"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-004"
+      }
+    ]
+  },
+  {
+    "id": "RF-005",
+    "titulo": "RF-005 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-005"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-005"
+      }
+    ]
+  },
+  {
+    "id": "RF-006",
+    "titulo": "RF-006 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-006"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-006"
+      }
+    ]
+  },
+  {
+    "id": "RF-007",
+    "titulo": "RF-007 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-007"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-007"
+      }
+    ]
+  },
+  {
+    "id": "RF-044",
+    "titulo": "RF-044 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-044"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-044"
+      }
+    ]
+  },
+  {
+    "id": "RF-045",
+    "titulo": "RF-045 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-045"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-045"
+      }
+    ]
+  },
+  {
+    "id": "RF-046",
+    "titulo": "RF-046 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-046"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-046"
+      }
+    ]
+  },
+  {
+    "id": "RF-047",
+    "titulo": "RF-047 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-047"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-047"
+      }
+    ]
+  },
+  {
+    "id": "RF-055",
+    "titulo": "RF-055 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-055"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-055"
+      }
+    ]
+  },
+  {
+    "id": "RF-056",
+    "titulo": "RF-056 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-056"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-056"
+      }
+    ]
+  },
+  {
+    "id": "RF-057",
+    "titulo": "RF-057 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-057"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-057"
+      }
+    ]
+  },
+  {
+    "id": "RF-058",
+    "titulo": "RF-058 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-058"
+      }
+    ]
+  },
+  {
+    "id": "RF-059",
+    "titulo": "RF-059 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-059"
+      }
+    ]
+  },
+  {
+    "id": "RF-060",
+    "titulo": "RF-060 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-060"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-060"
+      }
+    ]
+  },
+  {
+    "id": "RF-061",
+    "titulo": "RF-061 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-061"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-061"
+      }
+    ]
+  },
+  {
+    "id": "RF-062",
+    "titulo": "RF-062 Ejecucion por requisito",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-062"
+      },
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false -t RF-062"
+      }
+    ]
+  },
+  {
+    "id": "resumen-backend",
+    "titulo": "Resumen completo BACKEND",
+    "pasos": [
+      {
+        "carpeta": "BACKEND",
+        "comando": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --silent --verbose=false --json --outputFile=../pruebas-jest/evidencias/resultados-backend.json"
+      }
+    ]
+  },
+  {
+    "id": "resumen-frontend",
+    "titulo": "Resumen completo FRONTEND",
+    "pasos": [
+      {
+        "carpeta": "FRONTEND",
+        "comando": "node node_modules/jest/bin/jest.js --runInBand --silent --verbose=false --json --outputFile=../pruebas-jest/evidencias/resultados-frontend.json"
+      }
+    ]
+  }
+]

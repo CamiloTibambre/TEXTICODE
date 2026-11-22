@@ -1,0 +1,137 @@
+﻿rf,capa,nombre,estado,ms,archivo
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 1 consulta su vinculación en su empresa,passed,663,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 2 consulta su vinculación en su empresa,passed,761,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 3 consulta su vinculación en su empresa,passed,501,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar informa cuenta sin vincular,passed,747,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 1 obtiene URL de vinculación y reautorización con consentimiento,passed,181,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 2 obtiene URL de vinculación y reautorización con consentimiento,passed,184,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 3 obtiene URL de vinculación y reautorización con consentimiento,passed,196,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 1 desvincula solo su cuenta y empresa,passed,519,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 2 desvincula solo su cuenta y empresa,passed,428,BACKEND\__tests__\calendar.test.js
+RF-044,B,RF-044 Vincular y desvincular Google Calendar el rol 3 desvincula solo su cuenta y empresa,passed,302,BACKEND\__tests__\calendar.test.js
+RF-045,B,RF-045 Sincronizar sin duplicar eventos POST según existencia previa del evento,passed,16,BACKEND\__tests__\calendar.test.js
+RF-045,B,RF-045 Sincronizar sin duplicar eventos PATCH según existencia previa del evento,passed,13,BACKEND\__tests__\calendar.test.js
+RF-045,B,RF-045 Sincronizar sin duplicar eventos el rol 1 filtra las órdenes por su empresa y alcance,passed,3,BACKEND\__tests__\calendar.test.js
+RF-045,B,RF-045 Sincronizar sin duplicar eventos el rol 2 filtra las órdenes por su empresa y alcance,passed,69,BACKEND\__tests__\calendar.test.js
+RF-045,B,RF-045 Sincronizar sin duplicar eventos el rol 3 filtra las órdenes por su empresa y alcance,passed,1,BACKEND\__tests__\calendar.test.js
+RF-045,B,RF-045 Sincronizar sin duplicar eventos rechaza sincronización sin cuenta vinculada,passed,62,BACKEND\__tests__\calendar.test.js
+RF-045,B,RF-045 Sincronizar sin duplicar eventos sincronización con cuenta vinculada registra total y última fecha,passed,418,BACKEND\__tests__\calendar.test.js
+RF-046,B,RF-046 Consultar próximos eventos el rol 1 recibe eventos y enlaces de Google,passed,123,BACKEND\__tests__\calendar.test.js
+RF-046,B,RF-046 Consultar próximos eventos el rol 2 recibe eventos y enlaces de Google,passed,82,BACKEND\__tests__\calendar.test.js
+RF-046,B,RF-046 Consultar próximos eventos el rol 3 recibe eventos y enlaces de Google,passed,238,BACKEND\__tests__\calendar.test.js
+RF-046,B,RF-046 Consultar próximos eventos devuelve lista vacía cuando no hay próximos eventos,passed,207,BACKEND\__tests__\calendar.test.js
+RF-047,B,RF-047 Administrar vinculaciones de usuarios el administrador lista usuarios de su empresa,passed,202,BACKEND\__tests__\calendar.test.js
+RF-047,B,RF-047 Administrar vinculaciones de usuarios el administrador desvincula la cuenta seleccionada dentro de su empresa,passed,222,BACKEND\__tests__\calendar.test.js
+RF-047,B,RF-047 Administrar vinculaciones de usuarios el rol 2 no puede desvincular a otros usuarios,passed,53,BACKEND\__tests__\calendar.test.js
+RF-047,B,RF-047 Administrar vinculaciones de usuarios el rol 3 no puede desvincular a otros usuarios,passed,86,BACKEND\__tests__\calendar.test.js
+RF-055,B,RF-055 Ver tareas asignadas consulta las fases propias con filtro por usuario y empresa,passed,53,BACKEND\__tests__\operario.test.js
+RF-055,B,RF-055 Ver tareas asignadas un operario no consulta las fases de otro,passed,32,BACKEND\__tests__\operario.test.js
+RF-056,B,"RF-056 devuelve producto, descripción, material y cliente",passed,37,BACKEND\__tests__\operario.test.js
+RF-057,B,RF-057 entrega la fecha límite y prioridad,passed,33,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance guarda 0 prendas y completa solo al alcanzar la cuota,passed,143,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance guarda 3 prendas y completa solo al alcanzar la cuota,passed,18,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance guarda 5 prendas y completa solo al alcanzar la cuota,passed,59,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance rechaza cantidad inválida o superior a la cuota -1,passed,23,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance rechaza cantidad inválida o superior a la cuota 1.5,passed,52,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance rechaza cantidad inválida o superior a la cuota abc,passed,29,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance rechaza cantidad inválida o superior a la cuota 6,passed,40,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance no permite modificar la fase de otro operario,passed,44,BACKEND\__tests__\operario.test.js
+RF-060,B,RF-060 Registrar avance no permite modificar una fase ya completada,passed,50,BACKEND\__tests__\operario.test.js
+RF-061,B,RF-061 Agregar nota opcional guarda nota opcional   Costura revisada  ,passed,31,BACKEND\__tests__\operario.test.js
+RF-061,B,RF-061 Agregar nota opcional guarda nota opcional ,passed,14,BACKEND\__tests__\operario.test.js
+RF-061,B,RF-061 Agregar nota opcional guarda nota opcional undefined,passed,36,BACKEND\__tests__\operario.test.js
+RF-062,B,RF-062 Consultar historial consulta fases completadas propias con fecha y nota,passed,18,BACKEND\__tests__\operario.test.js
+RF-062,B,RF-062 Consultar historial impide consultar historial de otro operario,passed,40,BACKEND\__tests__\operario.test.js
+RF-001,B,RF-001 Iniciar sesión acepta nombre de usuario y contraseña y devuelve un JWT verificable,passed,113,BACKEND\__tests__\autenticacion.test.js
+RF-001,B,RF-001 Iniciar sesión no devuelve contraseñas en la sesión,passed,43,BACKEND\__tests__\autenticacion.test.js
+RF-002,B,RF-002 Iniciar sesión con Google exige el nonce del navegador para generar la autorización,passed,31,BACKEND\__tests__\autenticacion.test.js
+RF-002,B,RF-002 Iniciar sesión con Google firma el nonce en state y solicita OAuth2 de Google,passed,31,BACKEND\__tests__\autenticacion.test.js
+RF-002,B,RF-002 Iniciar sesión con Google rechaza un token de Google destinado a otra aplicación,passed,39,BACKEND\__tests__\autenticacion.test.js
+RF-002,B,RF-002 Iniciar sesión con Google un token válido de Google abre la sesión del usuario registrado,passed,25,BACKEND\__tests__\autenticacion.test.js
+RF-003,B,"RF-003 Validar credenciales exige los campos obligatorios {""correo"":""usuario2""}",passed,18,BACKEND\__tests__\autenticacion.test.js
+RF-003,B,"RF-003 Validar credenciales exige los campos obligatorios {""contrasena"":""Texticode2026!""}",passed,16,BACKEND\__tests__\autenticacion.test.js
+RF-003,B,RF-003 Validar credenciales exige los campos obligatorios {},passed,24,BACKEND\__tests__\autenticacion.test.js
+RF-003,B,RF-003 Validar credenciales rechaza contraseña incorrecta con 401,passed,31,BACKEND\__tests__\autenticacion.test.js
+RF-003,B,RF-003 Validar credenciales no revela si la cuenta no existe,passed,30,BACKEND\__tests__\autenticacion.test.js
+RF-003,B,RF-003 Validar credenciales rechaza usuario inactivo aunque su contraseña sea correcta,passed,19,BACKEND\__tests__\autenticacion.test.js
+RF-004,B,RF-004 Rol de la sesión para redirigir entrega el rol real del usuario con Id_Rol 1,passed,37,BACKEND\__tests__\autenticacion.test.js
+RF-004,B,RF-004 Rol de la sesión para redirigir entrega el rol real del usuario con Id_Rol 2,passed,22,BACKEND\__tests__\autenticacion.test.js
+RF-004,B,RF-004 Rol de la sesión para redirigir entrega el rol real del usuario con Id_Rol 3,passed,48,BACKEND\__tests__\autenticacion.test.js
+RF-004,B,RF-004 Rol de la sesión para redirigir entrega el rol real del usuario con Id_Rol 4,passed,22,BACKEND\__tests__\autenticacion.test.js
+RF-005,B,RF-005 Control de acceso rechaza petición sin sesión,passed,39,BACKEND\__tests__\autenticacion.test.js
+RF-005,B,RF-005 Control de acceso rechaza un JWT alterado,passed,12,BACKEND\__tests__\autenticacion.test.js
+RF-005,B,RF-005 Control de acceso el rol 2 no administra vinculaciones de otros usuarios,passed,15,BACKEND\__tests__\autenticacion.test.js
+RF-005,B,RF-005 Control de acceso el rol 3 no administra vinculaciones de otros usuarios,passed,55,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña rechaza correo sin formato válido,passed,18,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña genera token con vencimiento de una hora y prepara correo con enlace,passed,20,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña correo inexistente recibe respuesta genérica sin envío,passed,13,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,"RF-006 Recuperar contraseña valida el enlace según los registros vigentes {""rows"":[]}",passed,18,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,"RF-006 Recuperar contraseña valida el enlace según los registros vigentes {""rows"":[{""id"":1}]}",passed,17,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña rechaza contraseña débil Ab#1,passed,20,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña rechaza contraseña débil texticode#2026,passed,15,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña rechaza contraseña débil Texticode#,passed,12,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña rechaza contraseña débil Texticode2026,passed,7,BACKEND\__tests__\autenticacion.test.js
+RF-006,B,RF-006 Recuperar contraseña guarda hash bcrypt y marca usado el token válido,passed,408,BACKEND\__tests__\autenticacion.test.js
+RF-007,B,RF-007 Cerrar sesión al descartar el token una nueva petición vuelve a exigir sesión,passed,22,BACKEND\__tests__\autenticacion.test.js
+RF-055,F,RF-055 consulta fases propias y muestra contadores por estado,passed,148,FRONTEND\tests\operario.spec.js
+RF-055,F,RF-055 muestra lista vacía cuando no hay tareas,passed,177,FRONTEND\tests\operario.spec.js
+RF-056,F,"RF-056 muestra producto, instrucciones, material y cliente",passed,166,FRONTEND\tests\operario.spec.js
+RF-057,F,RF-057 muestra prioridad Alta y fecha de entrega,passed,171,FRONTEND\tests\operario.spec.js
+RF-057,F,RF-057 muestra prioridad Media y fecha de entrega,passed,67,FRONTEND\tests\operario.spec.js
+RF-057,F,RF-057 muestra prioridad Baja y fecha de entrega,passed,100,FRONTEND\tests\operario.spec.js
+RF-057,F,RF-057 resalta tarea vencida,passed,50,FRONTEND\tests\operario.spec.js
+RF-058,F,RF-058 muestra estado en-proceso y porcentaje 40,passed,176,FRONTEND\tests\operario.spec.js
+RF-058,F,RF-058 muestra estado completado y porcentaje 100,passed,101,FRONTEND\tests\operario.spec.js
+RF-059,F,RF-059 busca por instrucciones de la fase,passed,124,FRONTEND\tests\operario.spec.js
+RF-059,F,RF-059 combina filtros de estado y prioridad,passed,115,FRONTEND\tests\operario.spec.js
+RF-059,F,RF-059 búsqueda sin coincidencias devuelve lista vacía,passed,55,FRONTEND\tests\operario.spec.js
+RF-060,F,RF-060 calcula el porcentaje antes de enviar avance parcial,passed,173,FRONTEND\tests\operario.spec.js
+RF-060,F,RF-060 completar la cuota quita la fase de activas y la agrega al historial,passed,165,FRONTEND\tests\operario.spec.js
+RF-060,F,RF-060 impide enviar cantidad inválida -1,passed,36,FRONTEND\tests\operario.spec.js
+RF-060,F,RF-060 impide enviar cantidad inválida 11,passed,100,FRONTEND\tests\operario.spec.js
+RF-060,F,RF-060 impide enviar cantidad inválida 1.5,passed,112,FRONTEND\tests\operario.spec.js
+RF-061,F,RF-061 envía la nota opcional Costura revisada,passed,136,FRONTEND\tests\operario.spec.js
+RF-061,F,RF-061 envía la nota opcional ,passed,89,FRONTEND\tests\operario.spec.js
+RF-062,F,RF-062 muestra fases completadas con fecha y nota en la pestaña historial,passed,92,FRONTEND\tests\operario.spec.js
+RF-062,F,RF-062 historial vacío se representa sin registros ficticios,passed,33,FRONTEND\tests\operario.spec.js
+RF-044,F,Google Calendar para Administrador RF-044 muestra el estado y correo vinculado,passed,60,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Administrador RF-044 permite iniciar vinculación o reautorización,passed,157,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Administrador RF-044 desvincula con confirmación y limpia próximos eventos,passed,91,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Administrador RF-044 cancelar conserva la vinculación,passed,69,FRONTEND\tests\calendar.spec.js
+RF-045,F,Google Calendar para Administrador RF-045 sincroniza y muestra cantidad de eventos,passed,113,FRONTEND\tests\calendar.spec.js
+RF-046,F,Google Calendar para Administrador RF-046 muestra próximos eventos con enlace para abrir en Google,passed,121,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Operario RF-044 muestra el estado y correo vinculado,passed,85,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Operario RF-044 permite iniciar vinculación o reautorización,passed,27,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Operario RF-044 desvincula con confirmación y limpia próximos eventos,passed,61,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Operario RF-044 cancelar conserva la vinculación,passed,37,FRONTEND\tests\calendar.spec.js
+RF-045,F,Google Calendar para Operario RF-045 sincroniza y muestra cantidad de eventos,passed,125,FRONTEND\tests\calendar.spec.js
+RF-046,F,Google Calendar para Operario RF-046 muestra próximos eventos con enlace para abrir en Google,passed,130,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Cliente RF-044 muestra el estado y correo vinculado,passed,150,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Cliente RF-044 permite iniciar vinculación o reautorización,passed,36,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Cliente RF-044 desvincula con confirmación y limpia próximos eventos,passed,96,FRONTEND\tests\calendar.spec.js
+RF-044,F,Google Calendar para Cliente RF-044 cancelar conserva la vinculación,passed,77,FRONTEND\tests\calendar.spec.js
+RF-045,F,Google Calendar para Cliente RF-045 sincroniza y muestra cantidad de eventos,passed,95,FRONTEND\tests\calendar.spec.js
+RF-046,F,Google Calendar para Cliente RF-046 muestra próximos eventos con enlace para abrir en Google,passed,58,FRONTEND\tests\calendar.spec.js
+RF-047,F,RF-047 administrador ve y desvincula usuarios seleccionados,passed,118,FRONTEND\tests\calendar.spec.js
+RF-047,F,RF-047 Operario no recibe administración de usuarios,passed,34,FRONTEND\tests\calendar.spec.js
+RF-047,F,RF-047 Cliente no recibe administración de usuarios,passed,33,FRONTEND\tests\calendar.spec.js
+RF-001,F,RF-001 permite mostrar y ocultar la contraseña,passed,46,FRONTEND\tests\autenticacion.spec.js
+RF-001,F,RF-001 envía las credenciales escritas y persiste la sesión,passed,117,FRONTEND\tests\autenticacion.spec.js
+RF-002,F,RF-002 guarda nonce del navegador al iniciar con Google,passed,28,FRONTEND\tests\autenticacion.spec.js
+RF-002,F,RF-002 acepta callback solo si coincide nonce true,passed,47,FRONTEND\tests\autenticacion.spec.js
+RF-002,F,RF-002 acepta callback solo si coincide nonce false,passed,16,FRONTEND\tests\autenticacion.spec.js
+RF-003,F,RF-003 exige ambos campos antes de llamar a la API,passed,140,FRONTEND\tests\autenticacion.spec.js
+RF-003,F,RF-003 muestra el error de credenciales de la API,passed,89,FRONTEND\tests\autenticacion.spec.js
+RF-004,F,RF-004 redirige superadmin a su panel,passed,25,FRONTEND\tests\autenticacion.spec.js
+RF-004,F,RF-004 redirige Administrador a su panel,passed,110,FRONTEND\tests\autenticacion.spec.js
+RF-004,F,RF-004 redirige Operario a su panel,passed,45,FRONTEND\tests\autenticacion.spec.js
+RF-004,F,RF-004 redirige Cliente a su panel,passed,117,FRONTEND\tests\autenticacion.spec.js
+RF-005,F,RF-005 devuelve al login a quien no tiene sesión,passed,10,FRONTEND\tests\autenticacion.spec.js
+RF-005,F,RF-005 un operario no accede al panel administrador,passed,8,FRONTEND\tests\autenticacion.spec.js
+RF-005,F,RF-005 un operario accede a sus tareas,passed,15,FRONTEND\tests\autenticacion.spec.js
+RF-006,F,RF-006 rechaza correo mal formado antes de solicitar recuperación,passed,52,FRONTEND\tests\autenticacion.spec.js
+RF-006,F,RF-006 solicita enlace de recuperación y muestra confirmación,passed,73,FRONTEND\tests\autenticacion.spec.js
+RF-006,F,RF-006 enlace vencido impide mostrar el formulario de cambio,passed,111,FRONTEND\tests\autenticacion.spec.js
+RF-006,F,RF-006 enlace válido exige contraseña segura y confirmación coincidente,passed,41,FRONTEND\tests\autenticacion.spec.js
+RF-007,F,RF-007 confirmación de cierre aceptada true,passed,123,FRONTEND\tests\autenticacion.spec.js
+RF-007,F,RF-007 confirmación de cierre aceptada false,passed,80,FRONTEND\tests\autenticacion.spec.js
