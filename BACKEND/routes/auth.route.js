@@ -5,6 +5,7 @@ import sgMail   from '@sendgrid/mail'
 import db       from '../db.js'
 import bcrypt   from 'bcryptjs'
 import { env } from '../config/env.js'
+import { esc, plantillaCorreo, boton, aviso } from '../services/emailTemplates.js'
 import { signAuthToken } from '../middleware/auth.js'
 import { getUserMemberships, processLogin, selectEmpresa } from '../services/auth.service.js'
 
@@ -272,63 +273,21 @@ router.post('/recuperar-contrasena', async (req, res) => {
       to:      usuario.Correo,
       from:    env.sendgridFromEmail,
       subject: 'Texticode — Cambiar contraseña',
-      html: `
-        <!DOCTYPE html>
-        <html lang="es">
-        <body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 16px;">
-            <tr><td align="center">
-              <table width="100%" style="max-width:520px;background:#fff;border-radius:16px;overflow:hidden;
-                box-shadow:0 4px 24px rgba(0,0,0,0.10);">
-                <tr>
-                  <td style="background:linear-gradient(135deg,#1f3a52,#2d6a9f);padding:32px;text-align:center;">
-                    <p style="margin:0;font-size:22px;font-weight:700;color:#fff;">Texticode</p>
-                    <p style="margin:6px 0 0;font-size:13px;color:rgba(255,255,255,0.7);">Sistema de gestión textil</p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:32px;">
-                    <div style="text-align:center;margin-bottom:20px;">
-                      <span style="font-size:40px;">🔐</span>
-                    </div>
-                    <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#0d1f2d;text-align:center;">
-                      Cambio de contraseña
-                    </h2>
-                    <p style="font-size:14px;color:#4b5563;text-align:center;line-height:1.6;">
-                      Hola <strong style="color:#1f3a52;">${usuario.Nombre_Completo}</strong>,
-                      recibimos una solicitud para cambiar tu contraseña en Texticode.
-                    </p>
-                    <div style="text-align:center;margin:24px 0;">
-                      <a href="${enlace}" style="display:inline-block;padding:14px 32px;
-                        background:linear-gradient(135deg,#1f3a52,#2d5478);
-                        color:#fff;text-decoration:none;border-radius:10px;
-                        font-size:15px;font-weight:600;">
-                        Cambiar contraseña
-                      </a>
-                    </div>
-                    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;">
-                      <p style="margin:0;font-size:12.5px;color:#92400e;text-align:center;">
-                        ⏱ Este enlace expira en <strong>1 hora</strong>.
-                      </p>
-                    </div>
-                    <p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:16px;">
-                      Si no solicitaste este cambio, ignora este correo.
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding:16px 32px 28px;text-align:center;border-top:1px solid #f3f4f6;">
-                    <p style="margin:0;font-size:11px;color:#c4c9d4;">
-                      Texticode © 2026 · Sistema de gestión textil · ADSO 2026
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td></tr>
-          </table>
-        </body>
-        </html>
-      `
+      html: plantillaCorreo({
+        marca:     'Texticode',
+        etiqueta:  'Seguridad de la cuenta',
+        preheader: 'Usa este enlace para crear una nueva contraseña. Vence en 1 hora.',
+        eyebrow:   'Cambio de contraseña',
+        tono:      'marca',
+        titulo:    'Crea una nueva contraseña',
+        intro:     `Hola <strong style="color:#111827;">${esc(usuario.Nombre_Completo)}</strong>, recibimos una solicitud para cambiar la contraseña de tu cuenta. Haz clic en el botón para crear una nueva.`,
+        cuerpo: `
+          ${boton('Cambiar contraseña', enlace)}
+          ${aviso('Por seguridad, este enlace <strong>vence en 1 hora</strong> y solo se puede usar una vez.', 'aviso')}
+          <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#94a3b8;">Si no solicitaste este cambio, ignora este correo: tu contraseña actual sigue funcionando.</p>
+        `,
+        motivo:    'Recibes este correo porque se pidió recuperar la contraseña de tu cuenta.',
+      }),
     })
     console.log('[recuperar-contrasena] sgMail.send() OK, status code:', sgResponse?.[0]?.statusCode)
 

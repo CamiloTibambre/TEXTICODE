@@ -1,5 +1,5 @@
 <template>
-  <div class="callback-page">
+  <div class="callback-page" :class="{ 'is-dark': esOscuro }">
     <div class="callback-card">
       <div class="google-mark">G</div>
       <h1>{{ title }}</h1>
@@ -12,10 +12,12 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useTheme } from '../composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const { esOscuro } = useTheme()   // misma preferencia que el login y la app
 const title = ref('Procesando Google OAuth...')
 const detail = ref('Estamos validando tu cuenta y preparando tu sesión segura.')
 
@@ -85,4 +87,23 @@ onMounted(() => {
 h1 { font-size: 24px; margin: 0 0 10px; }
 p { color: rgba(255,255,255,.78); line-height: 1.6; margin: 0; }
 @keyframes pulse { to { transform: translateY(-6px) scale(1.03); box-shadow: 0 16px 36px rgba(66,133,244,.35); } }
+
+/* ── MODO OSCURO — paleta Grafito Industrial ── */
+.callback-page.is-dark {
+  color-scheme: dark;
+  background:
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(184, 58, 46, 0.14), transparent 70%),
+    linear-gradient(rgba(52, 62, 67, 0.45) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(52, 62, 67, 0.45) 1px, transparent 1px) 0 0 / 32px 32px,
+    #15191E;
+}
+.is-dark .callback-card {
+  color: #F2F4F1;
+  background: #292F36;
+  border-color: #343A43;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+  backdrop-filter: none;
+}
+.is-dark p { color: #B6C0C8; }
+.is-dark .google-mark { box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35); }
 </style>

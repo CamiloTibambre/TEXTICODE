@@ -1,11 +1,15 @@
 // ═══════════════════════════════════════════════════════════════
-// useImpresion — animación de "impresora" al descargar comprobantes
+// useImpresion — animación de "impresora" en todas las descargas
 //
 //   const impresion = useImpresion()
-//   const salida = impresion.iniciar({ numero: 'ORD-0009', cliente: 'Restaurante Brasa' })
-//   ...generar el PDF...
+//   const salida = impresion.iniciar({
+//     tipo: 'comprobante',            // 'comprobante' | 'reporte' | 'excel'
+//     numero: 'ORD-0009',             // texto corto que va en la hoja
+//     detalle: 'Restaurante Brasa',   // segunda línea del mensaje
+//   })
+//   ...generar el archivo...
 //   await salida          // espera a que la hoja termine de salir
-//   doc.save(...)
+//   doc.save(...)         // o descargarArchivo(...)
 //   impresion.terminar()  // muestra "¡Listo!" y se cierra sola
 //   // si algo falla:   impresion.fallar()
 //
@@ -16,12 +20,14 @@ import { reactive, readonly } from 'vue'
 
 const DURACION_IMPRESION = 2600   // lo que tarda la hoja en salir
 const DURACION_LISTO     = 1100   // cuánto se ve el "¡Listo!"
+const TIPOS = ['comprobante', 'reporte', 'excel']
 
 const estado = reactive({
   visible: false,
   fase: 'imprimiendo',   // 'imprimiendo' | 'listo' | 'error'
+  tipo: 'comprobante',
   numero: '',
-  cliente: '',
+  detalle: '',
   ciclo: 0,              // cambia en cada impresión para reiniciar la animación
 })
 
@@ -30,10 +36,11 @@ let timerCierre = null
 const menosMovimiento = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-function iniciar({ numero = '', cliente = '' } = {}) {
+function iniciar({ tipo = 'comprobante', numero = '', detalle = '', cliente = '' } = {}) {
   clearTimeout(timerCierre)
+  estado.tipo    = TIPOS.includes(tipo) ? tipo : 'comprobante'
   estado.numero  = numero
-  estado.cliente = cliente
+  estado.detalle = detalle || cliente   // `cliente` se acepta por compatibilidad
   estado.fase    = 'imprimiendo'
   estado.ciclo++
   estado.visible = true

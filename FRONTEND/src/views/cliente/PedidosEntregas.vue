@@ -234,11 +234,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { getComprobantesPorCliente } from '../../services/api'
 import { useToast } from '../../composables/useToast'
+import { useImpresion } from '../../composables/useImpresion'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
-const auth                    = useAuthStore()
-const toast                   = useToast()
+const auth                     = useAuthStore()
+const toast                    = useToast()
+const impresion                = useImpresion()
+
 const comprobanteSeleccionado = ref(null)
 const busqueda                = ref('')
 const filtroEstado            = ref('')
@@ -425,10 +428,15 @@ onMounted(cargarOrdenes)
 async function descargarPDF(orden) {
   if (orden.estado !== 'Completada' || descargando.value[orden.id]) return
   descargando.value[orden.id] = true
+  // Animación de impresora: la descarga ocurre cuando la hoja termina de salir
+  const salida = impresion.iniciar({ tipo: 'comprobante', numero: orden.numero, detalle: orden.productos || orden.cliente })
   try {
     const doc = await generarComprobantePdf(orden)
+    await salida
     doc.save('orden-' + orden.id + '.pdf')
+    impresion.terminar()
   } catch (e) {
+    impresion.fallar()
     toast.error('No se pudo generar el PDF: ' + e.message)
   } finally {
     delete descargando.value[orden.id]

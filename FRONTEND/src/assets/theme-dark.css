@@ -248,12 +248,13 @@ html.theme-switching *::after {
 
 /* ═══════════════════════════════════════════════════════════════════
    COMPROBANTES DE ENTREGA: siempre en claro (son un documento "en papel")
-   Aplica al comprobante del cliente (Cuenta Personal) y al detalle que
-   abre el administrador en Gestión de Clientes.
+   .cp-wrap: comprobantes antiguos · .comprobante: ComprobanteEntrega.vue
+   (Pedidos y Entregas del cliente y Gestión de Clientes del administrador).
    `initial` anula las --th-* y cada var(--th-x, #color) vuelve a su color
    original; los tokens --color-* y --pal-* se devuelven a los del claro.
    ═══════════════════════════════════════════════════════════════════ */
-:root[data-theme="dark"] .cp-wrap {
+:root[data-theme="dark"] .cp-wrap,
+:root[data-theme="dark"] .comprobante {
   color-scheme: light;
   color: #111827;
   --th-border: initial;
