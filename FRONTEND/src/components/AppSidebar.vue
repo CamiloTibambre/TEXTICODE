@@ -1,8 +1,12 @@
 <template>
   <aside
     class="sidebar"
-    :class="{ collapsed, ready: listo }"
+    :class="{ collapsed: contraido, flotando: abiertoTemporal, ready: listo }"
     aria-label="Navegación principal"
+    @pointerenter="alEntrar"
+    @pointerleave="alSalir"
+    @focusin="alEnfocar"
+    @focusout="alDesenfocar"
   >
     <!-- Panel: siempre mide --sidebar-width; al colapsar se recorta con
          clip-path (sin animar width) y el texto se desvanece. -->
@@ -170,7 +174,48 @@ const props = defineProps({
 const route  = useRoute()
 const router = useRouter()
 const auth   = useAuthStore()
-const { collapsed, toggle } = useSidebar()
+const { collapsed, toggle: alternarFijo } = useSidebar()
+
+// ── EXPANSIÓN AL PASAR EL MOUSE ──
+// Si el menú está contraído, al pasar el mouse (o navegar con teclado)
+// se abre flotando sobre el contenido, sin moverlo; al salir vuelve a
+// contraerse. El estado guardado (contraído / expandido) no cambia.
+const hoverAbierto = ref(false)
+const abiertoTemporal = computed(() => collapsed.value && hoverAbierto.value)
+const contraido = computed(() => collapsed.value && !hoverAbierto.value)
+let timerHover = null
+
+function programarHover(valor, ms) {
+  clearTimeout(timerHover)
+  timerHover = setTimeout(() => { hoverAbierto.value = valor }, ms)
+}
+function alEntrar(e) {
+  if (e.pointerType && e.pointerType !== 'mouse') return   // en táctil, solo el botón
+  if (collapsed.value) programarHover(true, 120)
+}
+function alSalir(e) {
+  if (e.pointerType && e.pointerType !== 'mouse') return
+  // Si el foco sigue dentro (navegando con teclado), no se cierra
+  if (sidebarTieneFoco()) { clearTimeout(timerHover); return }
+  programarHover(false, 220)
+}
+function alEnfocar(e) {
+  if (collapsed.value && e.target?.matches?.(':focus-visible')) programarHover(true, 0)
+}
+function alDesenfocar(e) {
+  const aside = e.currentTarget
+  if (!aside.contains(e.relatedTarget) && !aside.matches(':hover')) programarHover(false, 120)
+}
+function sidebarTieneFoco() {
+  const el = document.activeElement
+  return !!el && !!el.closest?.('.sidebar') && el.matches?.(':focus-visible')
+}
+
+function toggle() {
+  clearTimeout(timerHover)
+  hoverAbierto.value = false
+  alternarFijo()
+}
 
 // ── ÍCONOS SVG ──
 const svg = (d, w = 1.5) => `<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke-width="${w}" stroke="currentColor">${d}</svg>`
@@ -193,20 +238,20 @@ const menuConfig = {
     label: 'Panel Superadmin',
     roleLabel: 'Superadmin',
     items: [
-      { to: '/superadmin/empresas', label: 'Gestión de Empresas', icon: iconEmpresas },
-      { to: '/superadmin/roles',    label: 'Gestión de Roles',    icon: iconRoles },
+      { to: '/superadmin/empresas', label: 'Empresas', icon: iconEmpresas },
+      { to: '/superadmin/roles',    label: 'Roles',    icon: iconRoles },
     ]
   },
   admin: {
     label: 'Panel Administrador',
     roleLabel: 'Administrador',
     items: [
-      { to: '/admin/usuarios',        label: 'Gestión de Usuarios',   icon: iconUsuarios   },
-      { to: '/admin/clientes',        label: 'Gestión de Clientes',   icon: iconClientes   },
-      { to: '/admin/inventario',      label: 'Gestión de Inventario', icon: iconInventario },
+      { to: '/admin/usuarios',        label: 'Usuarios',   icon: iconUsuarios   },
+      { to: '/admin/clientes',        label: 'Clientes',   icon: iconClientes   },
+      { to: '/admin/inventario',      label: 'Inventario', icon: iconInventario },
       { to: '/admin/reportes',        label: 'Reportes',              icon: iconReportes   },
-      { to: '/admin/produccion',      label: 'Gestión de Producción', icon: iconProduccion },
-      { to: '/admin/eficiencia',      label: 'Gestión de Operarios',  icon: iconEficiencia },
+      { to: '/admin/produccion',      label: 'Producción', icon: iconProduccion },
+      { to: '/admin/eficiencia',      label: 'Operarios',  icon: iconEficiencia },
     ]
   },
   operario: {
@@ -303,12 +348,12 @@ onBeforeUnmount(() => {
 const tooltip = reactive({ visible: false, text: '', top: 0, left: 0 })
 
 function mostrarTooltip(event, texto, siempre = false) {
-  if (!collapsed.value && !siempre) return
+  if (!contraido.value && !siempre) return
   const rect = event.currentTarget.getBoundingClientRect()
   // Con el menú contraído, el elemento sigue midiendo el ancho completo
   // (solo está recortado), así que el tooltip se ancla al borde visible.
   const recortado = !!event.currentTarget.closest('.sidebar-panel')
-  const bordeVisible = collapsed.value && recortado
+  const bordeVisible = contraido.value && recortado
     ? parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width-collapsed')) || 76
     : rect.right
   tooltip.text = texto
@@ -321,7 +366,8 @@ function ocultarTooltip() {
   tooltip.visible = false
 }
 
-watch(collapsed, ocultarTooltip)
+watch(contraido, ocultarTooltip)
+onBeforeUnmount(() => clearTimeout(timerHover))
 watch(() => route.path, ocultarTooltip)
 
 // ── TEMA (sol / luna) ──
@@ -375,6 +421,12 @@ async function pedirCerrarSesion() {
   z-index: var(--z-sidebar);
   pointer-events: none;
 }
+/* Abierto temporalmente (hover) sobre el contenido */
+.sidebar.flotando .sidebar-panel {
+  background: rgba(var(--th-glass-rgb, 249, 250, 251), 0.98);
+  box-shadow: 16px 0 48px rgba(15, 23, 42, 0.16);
+}
+
 .sidebar.collapsed {
   --clip-right: calc(var(--sidebar-width) - var(--sidebar-width-collapsed));
 }
@@ -868,6 +920,9 @@ async function pedirCerrarSesion() {
    a las reglas scoped del sidebar. */
 :root[data-theme="dark"] .sidebar-panel {
   background: #23272E;
+}
+:root[data-theme="dark"] .sidebar.flotando .sidebar-panel {
+  box-shadow: 16px 0 48px rgba(0, 0, 0, 0.5);
 }
 :root[data-theme="dark"] .sidebar-edge {
   background: #343A43;

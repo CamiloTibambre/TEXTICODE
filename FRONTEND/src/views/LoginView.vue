@@ -1,5 +1,15 @@
 <template>
-  <div class="login-page">
+  <div class="login-page" :class="{ 'is-dark': esOscuro }">
+
+    <!-- Tema: sol / luna (comparte la preferencia con la landing y la app) -->
+    <button type="button" class="theme-btn" @click="alternarTema"
+            :aria-label="esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+            :title="esOscuro ? 'Modo claro' : 'Modo oscuro'">
+      <Transition name="theme-ico" mode="out-in">
+        <svg v-if="esOscuro" key="sol" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>
+        <svg v-else key="luna" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"/></svg>
+      </Transition>
+    </button>
 
     <!-- ══ FONDO: tejido animado ══ -->
     <div class="bg-layer">
@@ -52,7 +62,24 @@
         </div>
         <div class="logo-ring ring-inner"></div>
         <div class="logo-glow"></div>
-        <img src="/img/LogoTexticode.png" alt="Texticode" class="logo-img">
+        <img v-if="!esOscuro" src="/img/LogoTexticode.png" alt="Texticode" class="logo-img">
+        <!-- En oscuro: ícono vectorial + nombre en blanco (el PNG tiene un halo que se ve borroso) -->
+        <div v-else class="logo-dark" role="img" aria-label="Texticode">
+          <svg viewBox="0 0 48 48" aria-hidden="true">
+            <defs>
+              <mask id="tx-mask-login">
+                <rect width="48" height="48" fill="#fff"/>
+                <circle cx="22" cy="22" r="13.2" fill="none" stroke="#000" stroke-width="1.6"/>
+                <circle cx="18.2" cy="18.2" r="2.5" fill="#000"/><circle cx="25.8" cy="18.2" r="2.5" fill="#000"/>
+                <circle cx="18.2" cy="25.8" r="2.5" fill="#000"/><circle cx="25.8" cy="25.8" r="2.5" fill="#000"/>
+                <path d="M31.4 26.5 43.6 32.1 38.2 34.2 43.6 39.6 41.1 41.8 36 36.4 33.7 40.5Z" fill="#000" stroke="#000" stroke-width="3.4" stroke-linejoin="round"/>
+              </mask>
+            </defs>
+            <circle cx="22" cy="22" r="18" fill="currentColor" mask="url(#tx-mask-login)"/>
+            <path d="M31.4 26.5 43.6 32.1 38.2 34.2 43.6 39.6 41.1 41.8 36 36.4 33.7 40.5Z" fill="currentColor" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"/>
+          </svg>
+          <span>TEXTICODE</span>
+        </div>
       </div>
 
       <h1 :class="{ visible: cardVisible }">Bienvenido</h1>
@@ -265,6 +292,7 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { getGoogleAuthUrl } from '../services/api'
+import { useTheme } from '../composables/useTheme'
 
 const email        = ref('')
 const password     = ref('')
@@ -292,6 +320,10 @@ const route  = useRoute()
 const router = useRouter()
 const auth   = useAuthStore()
 
+// ── Tema (sol / luna) ──
+const { esOscuro, setModo } = useTheme()
+function alternarTema() { setModo(esOscuro.value ? 'claro' : 'oscuro') }
+
 let ctx, animFrame
 
 function initFabric() {
@@ -313,7 +345,7 @@ function drawFabric(t) {
   for (let x = 0; x < W + spacing; x += spacing) {
     ctx.beginPath()
     const alpha = x % (spacing * 2) === 0 ? 0.065 : 0.04
-    ctx.strokeStyle = `rgba(45,106,159,${alpha})`
+    ctx.strokeStyle = esOscuro.value ? `rgba(92,106,116,${alpha * 1.7})` : `rgba(45,106,159,${alpha})`
     ctx.lineWidth = 0.9
     for (let y = 0; y <= H; y += 3) {
       const offset = Math.sin((y / 40) + (x / 60) + t * 0.35) * wave
@@ -324,7 +356,7 @@ function drawFabric(t) {
   for (let y = 0; y < H + spacing; y += spacing) {
     ctx.beginPath()
     const alpha = y % (spacing * 2) === 0 ? 0.045 : 0.025
-    ctx.strokeStyle = `rgba(31,58,82,${alpha})`
+    ctx.strokeStyle = esOscuro.value ? `rgba(72,84,94,${alpha * 1.9})` : `rgba(31,58,82,${alpha})`
     ctx.lineWidth = 0.75
     for (let x = 0; x <= W; x += 3) {
       const offset = Math.sin((x / 40) + (y / 60) + t * 0.28) * wave
@@ -337,7 +369,7 @@ function drawFabric(t) {
       const pulse = Math.sin(t * 0.65 + x * 0.04 + y * 0.04) * 0.5 + 0.5
       ctx.beginPath()
       ctx.arc(x, y, 1.0, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(45,106,159,${0.04 + pulse * 0.08})`
+      ctx.fillStyle = esOscuro.value ? `rgba(209,75,62,${0.03 + pulse * 0.1})` : `rgba(45,106,159,${0.04 + pulse * 0.08})`
       ctx.fill()
     }
   }
@@ -857,4 +889,112 @@ h1.visible { opacity: 1; transform: none; }
 .toast-leave-active { transition: all 0.25s ease; }
 .toast-enter-from   { opacity: 0; transform: translateX(-50%) translateY(12px); }
 .toast-leave-to     { opacity: 0; transform: translateX(-50%) translateY(4px); }
+
+/* ═══════════════════════════════════════════════════════════════
+   BOTÓN DE TEMA
+   ═══════════════════════════════════════════════════════════════ */
+.theme-btn {
+  position: fixed; top: 20px; right: 20px; z-index: 20;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.2s;
+}
+.theme-btn:hover  { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.theme-btn:active { transform: scale(0.92); }
+.theme-btn:focus-visible { outline: 2px solid #93c5fd; outline-offset: 3px; }
+.theme-ico-enter-active, .theme-ico-leave-active { transition: opacity 0.2s, transform 0.25s cubic-bezier(0.22, 1, 0.36, 1); }
+.theme-ico-enter-from { opacity: 0; transform: rotate(-60deg) scale(0.6); }
+.theme-ico-leave-to   { opacity: 0; transform: rotate(60deg) scale(0.6); }
+
+.logo-dark { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #F2F4F1; }
+.logo-dark svg  { width: 58px; height: 58px; }
+.logo-dark span { font-size: 19px; font-weight: 800; letter-spacing: 0.04em; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MODO OSCURO — paleta Grafito Industrial
+   ═══════════════════════════════════════════════════════════════ */
+.login-page.is-dark { color-scheme: dark; }
+.is-dark .bg-layer { background: #15191E; }
+.is-dark .bg-gradient {
+  background:
+    radial-gradient(ellipse 55% 45% at 50% 55%, rgba(184, 58, 46, 0.14) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 60% at 85% 20%, rgba(52, 62, 67, 0.35) 0%, transparent 60%);
+}
+.is-dark .orb { display: none; }
+.is-dark .bg-lines { opacity: 0.35; filter: grayscale(1); }
+
+.is-dark .login-card {
+  background: #292F36;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 0 0 1px #343A43;
+}
+.is-dark .card-top-border,
+.is-dark .progress-fill { background: linear-gradient(90deg, #8F2C23, #B83A2E, #D14B3E, #B83A2E, #8F2C23); background-size: 300% 100%; }
+.is-dark .ring-outer  { border-color: rgba(242, 244, 241, 0.08); border-top-color: rgba(209, 75, 62, 0.55); }
+.is-dark .ring-spark  { background: rgba(209, 75, 62, 0.9); box-shadow: 0 0 6px 1px rgba(209, 75, 62, 0.5); }
+.is-dark .logo-glow   { background: radial-gradient(ellipse, rgba(184, 58, 46, 0.22) 0%, transparent 70%); }
+
+.is-dark h1        { color: #F2F4F1; }
+.is-dark .subtitle { color: #B6C0C8; }
+.is-dark .form-group label         { color: #B6C0C8; }
+.is-dark .form-group.focused label { color: #F2F4F1; }
+.is-dark .form-group.has-error label { color: #E8867C; }
+
+.is-dark .input-wrap { background: #22282E; border-color: #414A53; }
+.is-dark .form-group.focused .input-wrap { background: #22282E; border-color: #78A9D4; box-shadow: 0 0 0 3px rgba(120, 169, 212, 0.2); }
+.is-dark .form-group.has-error .input-wrap { border-color: #E8867C; box-shadow: 0 0 0 3px rgba(232, 134, 124, 0.15); }
+.is-dark .input-icon,
+.is-dark .toggle-pass { color: #8D98A2; }
+.is-dark .form-group.focused .input-icon { color: #78A9D4; }
+.is-dark .toggle-pass:hover { color: #F2F4F1; }
+/* El recuadro (.input-wrap) ya marca el foco: sin contorno doble en el input */
+.input-wrap input:focus,
+.input-wrap input:focus-visible { outline: none; box-shadow: none; transform: none; }
+
+.is-dark .input-wrap input { color: #F2F4F1; }
+.is-dark .input-wrap input::placeholder { color: #6B7680; }
+.is-dark .input-wrap input:-webkit-autofill {
+  -webkit-text-fill-color: #F2F4F1;
+  box-shadow: 0 0 0 1000px #22282E inset;
+}
+
+.is-dark .error-msg { color: #E8867C; background: rgba(209, 75, 62, 0.14); border-color: rgba(232, 134, 124, 0.35); }
+.is-dark .forgot-link       { color: #78A9D4; }
+.is-dark .forgot-link:hover { color: #A6C8E6; text-decoration-color: #A6C8E6; }
+
+.is-dark .btn-login { background: #B83A2E; }
+.is-dark .btn-login:hover:not(:disabled) { background: #D14B3E; box-shadow: 0 8px 24px rgba(184, 58, 46, 0.4); }
+
+.is-dark .login-separator { color: #8D98A2; }
+.is-dark .login-separator::before,
+.is-dark .login-separator::after { background: #414A53; }
+.is-dark .btn-google { background: #22282E; color: #F2F4F1; border-color: #414A53; }
+.is-dark .btn-google:hover:not(:disabled) { border-color: #78A9D4; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3); }
+
+.is-dark .back-landing-btn { color: #B6C0C8; background: #22282E; border-color: #414A53; }
+.is-dark .back-landing-btn svg { color: #8D98A2; }
+.is-dark .back-landing-btn:hover { color: #F2F4F1; border-color: #78A9D4; background: #343A43; box-shadow: none; }
+.is-dark .back-landing-btn:hover svg { color: #F2F4F1; }
+.is-dark .card-footer { color: #8D98A2; }
+
+/* Modal "Recuperar contraseña" */
+.is-dark .modal-overlay { background: rgba(5, 7, 10, 0.72); }
+.is-dark .modal-card { background: #292F36; box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6), 0 0 0 1px #343A43; }
+.is-dark .modal-icon-ring { border-color: rgba(209, 75, 62, 0.3); }
+.is-dark .modal-icon,
+.is-dark .success-check { color: #D14B3E; }
+.is-dark .modal-title { color: #F2F4F1; }
+.is-dark .modal-subtitle,
+.is-dark .modal-hint { color: #B6C0C8; }
+.is-dark .modal-subtitle strong { color: #F2F4F1; }
+.is-dark .modal-cancel { border-color: #414A53; color: #B6C0C8; }
+.is-dark .modal-cancel:hover { border-color: #4C5661; color: #F2F4F1; background: #343A43; }
+
+/* Toast */
+.is-dark .toast { background: #343A43; border-color: #414A53; }
+.is-dark .toast.success { background: linear-gradient(135deg, #3F9B62, #2E7A4C); border-color: transparent; }
 </style>

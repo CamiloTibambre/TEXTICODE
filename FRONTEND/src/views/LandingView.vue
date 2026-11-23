@@ -377,7 +377,7 @@ const ordenesMaqueta = [
   { id: 'ORD-016', prio: 'Baja',  prioC: 'verde', est: 'En proceso', estC: 'azul',  prod: 'Polo bordado',       cli: 'Café La Molienda',   hechas: 0,  total: 200 },
 ]
 
-const procesos = ['Corte', 'Confección', 'Bordado', 'Estampado', 'Control de calidad', 'Empaque', 'Entrega']
+const procesos = ['Entregas a tiempo', 'Menos papeleo', 'Control total', 'Más productividad', 'Clientes tranquilos', 'Decisiones con datos', 'Cero planillas', 'Todo en tiempo real']
 
 // ── Declaración ───────────────────────────────────────────────
 const frase = 'Del rollo de tela a la entrega final, *todo* *tu* *taller* cabe en una sola pantalla. Sin planillas sueltas, sin llamadas para preguntar cómo va un pedido.'

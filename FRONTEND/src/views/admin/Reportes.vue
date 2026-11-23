@@ -190,8 +190,10 @@ import KpiCard from '../../components/KpiCard.vue'
 import EmptyState from '../../components/base/EmptyState.vue'
 import { crearDocumentoPdf, estiloPdf, fechaDocumento } from '../../services/documentoPdf'
 import { useToast } from '../../composables/useToast'
+import { useImpresion } from '../../composables/useImpresion'
 
 const toast = useToast()
+const impresion = useImpresion()
 const cargando = ref(true)
 const barrasListas = ref(false)
 const tipoFiltro = ref('')
@@ -597,12 +599,17 @@ async function generarDocPdf(reporte) {
 
 async function descargar(r) {
   r.downloading = true
+  // Animación de impresora: la descarga ocurre cuando la hoja termina de salir
+  const salida = impresion.iniciar({ tipo: 'reporte', numero: r.tipo, detalle: r.titulo })
   try {
     const doc = await generarDocPdf(r)
+    await salida
     doc.save(`${slugify(r.titulo)}.pdf`)
+    impresion.terminar()
     mostrarToast(`"${r.titulo}" descargado como PDF`, 'success')
   } catch (err) {
     console.error('Error PDF:', err)
+    impresion.fallar()
     mostrarToast(`Error al generar PDF: ${err.message}`, 'danger')
   } finally {
     r.downloading = false
@@ -627,6 +634,7 @@ async function verReporte(r) {
 
 async function exportarExcel(r) {
   r.exporting = true
+  const salida = impresion.iniciar({ tipo: 'excel', numero: r.tipo, detalle: `${slugify(r.titulo)}.xlsx` })
   try {
     const mesesN = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
     const hoy = new Date()
@@ -875,10 +883,13 @@ async function exportarExcel(r) {
     zip.file('docProps/app.xml', appXml)
 
     const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    await salida
     descargarArchivo(blob, `${slugify(r.titulo)}.xlsx`)
+    impresion.terminar()
     mostrarToast(`"${r.titulo}" exportado como Excel`, 'excel')
   } catch (err) {
     console.error(err)
+    impresion.fallar()
     mostrarToast('No se pudo exportar a Excel: ' + err.message, 'danger')
   } finally {
     r.exporting = false

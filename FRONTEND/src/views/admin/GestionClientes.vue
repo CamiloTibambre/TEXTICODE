@@ -352,7 +352,7 @@ function showToast(msg) {
 async function descargarPDF(orden) {
   if (orden.descargando) return
   orden.descargando = true
-  const salida = impresion.iniciar({ numero: orden.numero, cliente: orden.cliente })
+  const salida = impresion.iniciar({ tipo: 'comprobante', numero: orden.numero, detalle: orden.cliente })
   try {
     const doc = await generarComprobantePdf(orden)
     await salida

@@ -1,6 +1,7 @@
 <!--
   PrintHost — se monta UNA vez en App.vue. Muestra la animación de
-  "impresora" mientras se genera y descarga un comprobante (useImpresion).
+  "impresora" mientras se genera y descarga un archivo (useImpresion):
+  comprobantes, reportes en PDF y exportaciones a Excel.
 -->
 <template>
   <Teleport to="body">
@@ -23,13 +24,15 @@
 
             <!-- Comprobante saliendo -->
             <div class="printer__out">
-              <div class="paper">
+              <div class="paper" :class="`paper--${estado.tipo}`">
                 <div class="paper__head">
                   <span class="paper__logo"></span>
                   <span class="paper__brand">TEXTICODE</span>
                   <span class="paper__num">{{ estado.numero }}</span>
                 </div>
-                <div class="paper__body">
+
+                <!-- Comprobante -->
+                <div v-if="estado.tipo === 'comprobante'" class="paper__body">
                   <p class="paper__title">COMPROBANTE DE ENTREGA</p>
                   <div class="paper__row"><i style="width: 46%"></i><i style="width: 28%"></i></div>
                   <div class="paper__row"><i style="width: 60%"></i></div>
@@ -38,19 +41,34 @@
                   <div class="paper__row"><i style="width: 52%"></i><i style="width: 14%"></i></div>
                   <div class="paper__sign"><i></i><i></i></div>
                 </div>
-                <span class="paper__stamp">ENTREGADO</span>
+
+                <!-- Reporte PDF -->
+                <div v-else-if="estado.tipo === 'reporte'" class="paper__body">
+                  <p class="paper__title">REPORTE</p>
+                  <div class="paper__chart"><i v-for="(h, i) in [40, 70, 55, 90, 65, 80]" :key="i" :style="{ height: h + '%' }"></i></div>
+                  <div class="paper__table"></div>
+                  <div class="paper__row"><i style="width: 40%"></i><i style="width: 22%"></i><i style="width: 16%"></i></div>
+                  <div class="paper__row"><i style="width: 52%"></i><i style="width: 18%"></i><i style="width: 12%"></i></div>
+                  <div class="paper__row"><i style="width: 34%"></i><i style="width: 24%"></i><i style="width: 16%"></i></div>
+                </div>
+
+                <!-- Excel -->
+                <div v-else class="paper__body paper__body--grid">
+                  <div class="xls">
+                    <span v-for="n in 4" :key="'h' + n" class="xls__h"></span>
+                    <span v-for="n in 28" :key="n" class="xls__c" :class="{ 'xls__c--on': [2, 7, 9, 14, 19, 21, 26].includes(n) }"></span>
+                  </div>
+                </div>
+
+                <span class="paper__stamp">{{ sello }}</span>
               </div>
             </div>
           </div>
 
-          <p class="ph__title">
-            <template v-if="estado.fase === 'imprimiendo'">Imprimiendo comprobante…</template>
-            <template v-else-if="estado.fase === 'listo'">¡Listo! Descargando PDF</template>
-            <template v-else>No se pudo imprimir</template>
-          </p>
+          <p class="ph__title">{{ titulo }}</p>
           <p class="ph__sub">
             <template v-if="estado.fase === 'error'">Inténtalo de nuevo en un momento.</template>
-            <template v-else>{{ estado.numero }}<template v-if="estado.cliente"> · {{ estado.cliente }}</template></template>
+            <template v-else>{{ [estado.numero, estado.detalle].filter(Boolean).join(' · ') }}</template>
           </p>
           <div class="ph__progress"><i></i></div>
         </div>
@@ -60,8 +78,18 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useImpresion } from '../../composables/useImpresion'
 const { estado } = useImpresion()
+
+const TEXTOS = {
+  comprobante: { imprimiendo: 'Imprimiendo comprobante…', listo: '¡Listo! Descargando PDF',   error: 'No se pudo imprimir', sello: 'ENTREGADO' },
+  reporte:     { imprimiendo: 'Imprimiendo reporte…',     listo: '¡Listo! Descargando PDF',   error: 'No se pudo generar el reporte', sello: 'PDF' },
+  excel:       { imprimiendo: 'Exportando a Excel…',      listo: '¡Listo! Descargando Excel', error: 'No se pudo exportar', sello: 'XLSX' },
+}
+const textos = computed(() => TEXTOS[estado.tipo] || TEXTOS.comprobante)
+const titulo = computed(() => textos.value[estado.fase])
+const sello  = computed(() => textos.value.sello)
 </script>
 
 <style scoped>
@@ -276,6 +304,21 @@ const { estado } = useImpresion()
 .paper__sign  { display: flex; justify-content: space-between; margin-top: 14px; }
 .paper__sign i { width: 42%; height: 1px; background: #94a3b8; }
 
+/* Reporte: mini gráfica de barras */
+.paper__chart { display: flex; align-items: flex-end; gap: 4px; height: 34px; padding: 2px 0 4px; border-bottom: 1px solid #e2e8f0; margin-bottom: 4px; }
+.paper__chart i { flex: 1; border-radius: 2px 2px 0 0; background: #2d6a9f; }
+.paper__chart i:nth-child(4) { background: #1f3a52; }
+
+/* Excel: encabezado verde y cuadrícula de celdas */
+.paper--excel .paper__head { background: #1D6F42; }
+.paper--excel .paper__num  { color: #c6efce; }
+.paper__body--grid { padding: 6px; }
+.xls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: #d1d5db; border: 1px solid #d1d5db; }
+.xls__h { height: 9px; background: #1D6F42; }
+.xls__c { height: 11px; background: #fff; position: relative; }
+.xls__c::after { content: ''; position: absolute; left: 3px; top: 4px; height: 3px; width: 60%; border-radius: 1px; background: #cbd5e1; }
+.xls__c--on { background: #E2EFDA; }
+
 /* Sello al terminar */
 .paper__stamp {
   position: absolute;
@@ -292,6 +335,8 @@ const { estado } = useImpresion()
   opacity: 0;
 }
 .is-listo .paper__stamp { animation: sello 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) forwards; }
+.paper--reporte .paper__stamp { border-color: #1f3a52; color: #1f3a52; background: rgba(232, 238, 244, 0.9); }
+.paper--excel   .paper__stamp { border-color: #1D6F42; color: #1D6F42; background: rgba(226, 239, 218, 0.92); }
 @keyframes sello {
   to { opacity: 1; transform: rotate(-12deg) scale(1); }
 }
