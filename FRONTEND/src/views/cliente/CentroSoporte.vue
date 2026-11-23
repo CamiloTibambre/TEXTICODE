@@ -159,7 +159,7 @@ const faqs = [
   { id: 4, pregunta: '¿Por qué no veo comprobantes todavía?', respuesta: 'Se generan cuando la orden es completada.' },
   { id: 5, pregunta: '¿Cómo veo el progreso?', respuesta: 'En "Pedidos y Entregas" verás el estado en tiempo real.' },
   { id: 6, pregunta: '¿Cuándo se genera mi comprobante?', respuesta: 'Al crear tu orden y se descarga cuando esté entregada.' },
-  { id: 7, pregunta: '¿Puedo actualizar mis datos?', respuesta: 'Sí, desde "Cuenta Personal".' },
+  { id: 7, pregunta: '¿Puedo actualizar mis datos?', respuesta: 'Sí, desde "Ver mi perfil".' },
   { id: 8, pregunta: '¿Qué significa orden retrasada?', respuesta: 'Que la orden superó su fecha límite de entrega y está en seguimiento prioritario para completarse lo antes posible.' },
   { id: 9, pregunta: '¿Qué significa "Stock bajo" en mis materiales?', respuesta: 'Que queda menos del minimo acordado. El taller ya fue avisado y la estructura la estructura si afecta tu entrega.' }
 ]

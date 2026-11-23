@@ -25,12 +25,10 @@ const routes = [
   { path: '/superadmin/roles', name: 'SuperadminRoles', component: () => import('../views/superadmin/GestionRoles.vue'), meta: { rol: 'superadmin' } },
 
   // OPERARIO
-  { path: '/operario/cuenta',  name: 'OperarioCuenta',  component: () => import('../views/operario/CuentaPersonal.vue'),  meta: { rol: 'operario' } },
   { path: '/operario/tareas',  name: 'OperarioTareas',  component: () => import('../views/operario/TareasAsignadas.vue'), meta: { rol: 'operario' } },
   { path: '/operario/avances', name: 'OperarioAvances', component: () => import('../views/operario/ReportarAvances.vue'), meta: { rol: 'operario' } },
 
   // CLIENTE
-  { path: '/cliente/cuenta',   name: 'ClienteCuenta',   component: () => import('../views/cliente/CuentaPersonal.vue'),   meta: { rol: 'cliente' } },
   { path: '/cliente/pedidos',  name: 'ClientePedidos',  component: () => import('../views/cliente/PedidosEntregas.vue'),  meta: { rol: 'cliente' } },
   { path: '/cliente/soporte',  name: 'ClienteSoporte',  component: () => import('../views/cliente/CentroSoporte.vue'),    meta: { rol: 'cliente' } },
   { path: '/cliente/alertas', name: 'ClienteAlertas', component: () => import('../views/cliente/AlertasMateriales.vue'), meta: { rol: 'cliente' } },
@@ -72,8 +70,8 @@ router.beforeEach((to) => {
   if ((to.name === 'Login' || to.name === 'Landing') && auth.estaLogueado) {
     if (rol === 'superadmin') return { name: 'SuperadminEmpresas' }
     if (rol === 'admin')    return { name: 'AdminUsuarios' }
-    if (rol === 'operario') return { name: 'OperarioCuenta' }
-    if (rol === 'cliente')  return { name: 'ClienteCuenta' }
+    if (rol === 'operario') return { name: 'OperarioTareas' }
+    if (rol === 'cliente')  return { name: 'ClientePedidos' }
   }
 })
 

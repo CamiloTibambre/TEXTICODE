@@ -155,14 +155,14 @@
                   class="btn-pdf"
                   :class="{ 'btn-pdf-disabled': o.estado !== 'Completada' }"
                   :disabled="o.estado !== 'Completada' || descargando[o.id]"
-                  :title="o.estado !== 'Completada' ? 'Disponible cuando la orden esté completada' : 'Descargar comprobante en PDF'"
-                  @click="descargarPDF(o)"
+                  :title="o.estado !== 'Completada' ? 'Disponible cuando la orden esté completada' : 'Ver comprobante de entrega'"
+                  @click="comprobanteSeleccionado = o.comprobante"
                 >
                   <svg v-if="!descargando[o.id]" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
                   </svg>
                   <span v-else class="btn-pdf-spinner"></span>
-                  {{ descargando[o.id] ? 'Generando...' : 'Descargar PDF' }}
+                  {{ descargando[o.id] ? 'Generando...' : 'Ver comprobante' }}
                 </button>
               </div>
             </div>
@@ -171,20 +171,33 @@
       </div>
 
     </main>
+
+    <ComprobanteEntrega
+      :orden="comprobanteSeleccionado"
+      :descargando="descargando[comprobanteSeleccionado?.id]"
+      @cerrar="comprobanteSeleccionado = null"
+      @descargar="descargarPDF"
+    />
   </div>
 </template>
 
 <script setup>
+import ComprobanteEntrega from '../../components/ComprobanteEntrega.vue'
+import { generarComprobantePdf, numeroComprobante } from '../../services/comprobanteEntrega'
 import PageHeader from '../../components/PageHeader.vue'
 import KpiCard from '../../components/KpiCard.vue'
 import EmptyState from '../../components/base/EmptyState.vue'
 import SkeletonCard from '../../components/base/SkeletonCard.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '../../stores/auth'
+import { getComprobantesPorCliente } from '../../services/api'
+import { useToast } from '../../composables/useToast'
 
 const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 const auth         = useAuthStore()
+const toast        = useToast()
+const comprobanteSeleccionado = ref(null)
 const busqueda     = ref('')
 const filtroEstado = ref('')
 const pedidos      = ref([])
@@ -216,7 +229,11 @@ async function cargarOrdenes() {
   try {
     const res = await fetch(`${BASE}/ordenes/cliente/${auth.idUsuario}`, { headers: auth.authHeader() })
     if (!res.ok) throw new Error(`Error ${res.status}`)
-    const data = await res.json()
+    const [data, comprobantes] = await Promise.all([
+      res.json(),
+      getComprobantesPorCliente(auth.idUsuario).catch(() => []),
+    ])
+    const porOrden = new Map((Array.isArray(comprobantes) ? comprobantes : []).map(comp => [String(comp.Id_Orden), comp]))
 
     pedidos.value = data.map(o => {
       const realizadas = o.Unidades_Realizadas ?? 0
@@ -225,8 +242,24 @@ async function cargarOrdenes() {
       if (o.Estado === 'Completada') progreso = 100
       else if (cantidad > 0 && realizadas > 0) progreso = Math.min(100, Math.round((realizadas / cantidad) * 100))
 
+      const comp = porOrden.get(String(o.Id_Orden))
       return {
         id: o.Id_Orden,
+        comprobante: {
+          id: o.Id_Orden,
+          numero: numeroComprobante(o.Id_Orden, comp),
+          cliente: auth.usuario?.Nombre_Completo || o.Cliente,
+          clienteEmail: auth.usuario?.Correo,
+          clienteTel: auth.usuario?.Telefono,
+          productos: o.Producto || o.Descripcion || 'Sin nombre',
+          descripcion: o.Descripcion,
+          detalles: ['Prioridad: ' + (o.Prioridad || 'Media'), 'Material: ' + (o.NombreMaterial || '—'), 'Unidades realizadas: ' + realizadas],
+          cantidad,
+          observaciones: o.Observaciones,
+          fechaLimite: o.Fecha_Limite,
+          estado: o.Estado,
+          estadoClass: o.Estado === 'Completada' ? 'success' : 'danger',
+        },
         nombre:            o.Producto    || o.Descripcion || 'Sin nombre',
         descripcion:       o.Descripcion || '',
         cantidad, realizadas,
@@ -256,70 +289,16 @@ async function cargarOrdenes() {
 
 onMounted(cargarOrdenes)
 
-async function ensureJsPdf() {
-  if (window.jspdf?.jsPDF) return window.jspdf.jsPDF
-
-  await new Promise((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
-    s.onload = resolve
-    s.onerror = reject
-    document.head.appendChild(s)
-  })
-
-  return window.jspdf?.jsPDF
-}
-
-async function descargarPDF(o) {
-  if (o.estado !== 'Completada' || descargando.value[o.id]) return
-  descargando.value = { ...descargando.value, [o.id]: true }
+async function descargarPDF(orden) {
+  if (orden.estado !== 'Completada' || descargando.value[orden.id]) return
+  descargando.value[orden.id] = true
   try {
-    const jsPDF = await ensureJsPdf()
-    if (!jsPDF) throw new Error('No se pudo cargar el generador PDF')
-
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const rows = [
-      ['Orden', `#${o.id}`],
-      ['Producto', o.nombre],
-      ['Estado', o.estado],
-      ['Prioridad', o.prioridad],
-      ['Material', o.material],
-      ['Cantidad', o.cantidad],
-      ['Unidades realizadas', o.realizadas],
-      ['Fecha de entrega', o.fechaEntrega],
-    ]
-
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(18)
-    doc.text('TEXTICODE', 20, 22)
-    doc.setFontSize(14)
-    doc.text('Comprobante de entrega', 20, 34)
-
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.text('Documento generado desde el portal del cliente.', 20, 42)
-
-    let y = 56
-    rows.forEach(([label, value]) => {
-      doc.setFont('helvetica', 'bold')
-      doc.text(`${label}:`, 20, y)
-      doc.setFont('helvetica', 'normal')
-      doc.text(String(value ?? '-'), 70, y)
-      y += 9
-    })
-
-    if (o.descripcion) {
-      doc.setFont('helvetica', 'bold')
-      doc.text('Descripcion:', 20, y + 4)
-      doc.setFont('helvetica', 'normal')
-      doc.text(doc.splitTextToSize(o.descripcion, 165), 20, y + 12)
-    }
-
-    doc.save(`orden-${o.id}.pdf`)
+    const doc = await generarComprobantePdf(orden)
+    doc.save('orden-' + orden.id + '.pdf')
   } catch (e) {
-    errorMsg.value = `No se pudo generar el PDF: ${e.message}`
+    toast.error('No se pudo generar el PDF: ' + e.message)
   } finally {
-    descargando.value = { ...descargando.value, [o.id]: false }
+    delete descargando.value[orden.id]
   }
 }
 

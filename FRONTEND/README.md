@@ -95,8 +95,8 @@ Luego abre **https://localhost:5173** en tu navegador.
 | Rol      | Panel que ve                                         |
 |----------|------------------------------------------------------|
 | Admin    | Usuarios, Clientes, Inventario, Reportes, Producción |
-| Operario | Cuenta Personal, Tareas Asignadas, Reportar Avances  |
-| Cliente  | Cuenta Personal, Pedidos y Entregas, Centro Soporte  |
+| Operario | Tareas Asignadas, Reportar Avances                   |
+| Cliente  | Pedidos y Entregas, Centro Soporte, Alertas de Materiales |
 
 ---
 
