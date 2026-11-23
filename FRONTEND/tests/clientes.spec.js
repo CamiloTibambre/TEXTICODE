@@ -96,10 +96,10 @@ describe('RF-017 · Ver detalle del comprobante', () => {
     wrapper.vm.verDetalle(wrapper.vm.comprobantesDeCliente(3)[0])
     await wrapper.vm.$nextTick()
 
-    const modal = wrapper.find('.modal')
+    const modal = wrapper.find('.comprobante')
     expect(modal.exists()).toBe(true)
     const texto = modal.text()
-    for (const dato of ['N.° 0012', 'Carla Cliente', 'carla@demo.com', '20/11/2026', 'Camisa polo', '150', 'Completada', 'Entregar en caja', 'Entregado por']) {
+    for (const dato of ['N.º 0012', 'Carla Cliente', 'carla@demo.com', 'Fecha límite de entrega', new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'UTC' }).format(new Date('2026-11-20')), 'Camisa polo', '150', 'Completada', 'Entregar en caja', 'Entregado por']) {
       expect(texto).toContain(dato)
     }
   })
@@ -111,10 +111,13 @@ describe('RF-018 · Descargar comprobante en PDF', () => {
     const llamadas = { texto: [], guardado: null }
     window.jspdf = {
       jsPDF: function () {
-        return new Proxy({ internal: { pageSize: { width: 210, height: 297 } } }, {
+        return new Proxy({ internal: { pageSize: { width: 210, height: 297 }, getNumberOfPages: () => 1 } }, {
           get(obj, prop) {
+            if (prop === 'then') return undefined
             if (prop in obj) return obj[prop]
             if (prop === 'text') return (t) => llamadas.texto.push(String(t))
+            if (prop === 'splitTextToSize') return (t) => [String(t)]
+            if (prop === 'getTextWidth') return (t) => String(t).length * 2
             if (prop === 'save') return (nombre) => { llamadas.guardado = nombre }
             return () => {}
           },
@@ -134,6 +137,8 @@ describe('RF-018 · Descargar comprobante en PDF', () => {
     const texto = pdf.texto.join(' | ')
     expect(texto).toContain('Carla Cliente')
     expect(texto).toContain('Camisa polo')
+    expect(texto).toContain('ORD-0040')
+    expect(texto).toContain('Entregado por')
     expect(orden.descargando).toBe(false)
   })
 })

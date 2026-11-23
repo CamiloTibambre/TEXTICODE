@@ -176,9 +176,10 @@ describe('RF-026 · Eliminar orden de producción', () => {
 describe('RF-027 · Ver detalle de la orden', () => {
   test('muestra avance, cliente, material principal, dificultad, fechas, descripción, fases con operario y materiales', async () => {
     const { wrapper } = await montar()
-    wrapper.vm.abrirVista(wrapper.vm.ordenes.find(o => o.Id_Orden === 40))
-    await wrapper.vm.$nextTick()
+    await wrapper.get('button[aria-label="Ver detalle de la orden 40"]').trigger('click')
     const texto = document.body.textContent
+    const barraFases = document.body.querySelector('.view-body [role="progressbar"]')
+    expect(barraFases.getAttribute('aria-valuetext')).toBe('1 de 2 fases completadas')
 
     expect(wrapper.vm.pctOrden(wrapper.vm.ordenVista)).toBe(40)              // 60 de 150 prendas
     for (const dato of ['ORD-040', 'Carla Cliente', 'Tela Oxford azul', 'Alta', '20/12/2099', '1/11/2026', 'Camisa polo',
@@ -192,10 +193,30 @@ describe('RF-027 · Ver detalle de la orden', () => {
 describe('RF-028 · Ver tareas asignadas a operarios', () => {
   test('cada tarjeta muestra número, producto, cliente, estado, prioridad, fecha límite, fases y avance en prendas', async () => {
     const { wrapper } = await montar()
-    const tarjeta = wrapper.findAll('.orden-card').find(c => c.text().includes('ORD-040')).text()
+    const tarjeta = wrapper.findAll('.orden-card').find(c => c.text().includes('ORD-040'))
+    expect(tarjeta.get('[role="progressbar"]').attributes('aria-valuetext')).toBe('1 de 2 fases completadas')
     for (const dato of ['ORD-040', 'Camisa polo', 'Carla Cliente', 'En Proceso', 'Alta', 'Vence: 20/12/2099', 'Fases a realizar: 2', '60 de 150 prendas', '40%']) {
-      expect(tarjeta).toContain(dato)
+      expect(tarjeta.text()).toContain(dato)
     }
+  })
+
+  test('muestra un segmento por fase compartida y distingue la actual de las pendientes', async () => {
+    api.getFasesDeOrden.mockImplementation(async id => id === 40 ? [
+      ...FASES_40,
+      { ...FASES_40[0], Id_Orden_Operario: 13, Estado_Fase: 'Pendiente' },
+      { ...FASES_40[1], Id_Orden_Operario: 14, Numero_Fase: 3, Estado_Fase: 'Completada' },
+    ] : [])
+
+    const { wrapper } = await montar()
+    const tarjeta = wrapper.findAll('.orden-card').find(c => c.text().includes('ORD-040'))
+    const barra = tarjeta.get('[role="progressbar"]')
+    expect(barra.attributes('aria-valuetext')).toBe('1 de 3 fases completadas')
+    expect(barra.findAll('span').map(segmento => segmento.attributes('title'))).toEqual([
+      'Fase 1 · Corte: actual',
+      'Fase 2 · Costura: pendiente',
+      'Fase 3 · Costura: completada',
+    ])
+    expect(wrapper.findAll('.orden-card [role="progressbar"]')).toHaveLength(1)
   })
 })
 

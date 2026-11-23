@@ -361,8 +361,8 @@ function getRuta(usuario) {
 
   if (rol === 'superadmin')                                      return '/superadmin/empresas'
   if (idRol === 1 || rol === 'administrador' || rol === 'admin') return '/admin/usuarios'
-  if (idRol === 2 || rol === 'operario')                         return '/operario/cuenta'
-  if (idRol === 3 || rol === 'cliente')                          return '/cliente/cuenta'
+  if (idRol === 2 || rol === 'operario')                         return '/operario/tareas'
+  if (idRol === 3 || rol === 'cliente')                          return '/cliente/pedidos'
   return '/'
 }
 

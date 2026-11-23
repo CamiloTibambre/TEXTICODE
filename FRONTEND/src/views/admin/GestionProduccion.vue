@@ -111,10 +111,13 @@
               <h3 class="orden-titulo">{{ o.Producto || o.Descripcion }}</h3>
               <p class="orden-cliente">{{ o.Cliente || '—' }}</p>
 
-              <p v-if="o.fasesExtra && o.fasesExtra.length" class="orden-fases-info">
-                <span class="orden-fases-label">Fases a realizar:</span>
-                {{ o.fasesExtra.length }}
-              </p>
+              <div v-if="o.fasesExtra?.length" class="orden-fases">
+                <p class="orden-fases-info">
+                  <span class="orden-fases-label">Fases a realizar:</span>
+                  {{ o.fasesExtra.length }}
+                </p>
+                <ProgresoFases :asignaciones="o.fasesExtra" />
+              </div>
 
               <div class="orden-vence">Vence: {{ formatFechaCorta(o.Fecha_Limite) }}</div>
 
@@ -374,6 +377,7 @@
 
             <div class="view-section">
               <span class="view-section-title">Fases y operarios</span>
+              <ProgresoFases :asignaciones="ordenVista?.fasesExtra" />
               <div v-if="ordenVista?.fasesExtra && ordenVista.fasesExtra.length" class="view-fases-list">
                 <div v-for="f in ordenVista.fasesExtra" :key="f.Id_Orden_Operario" class="view-fase-card">
                   <div class="view-fase-top">
@@ -429,6 +433,7 @@ import {
 import { useAuthStore } from '../../stores/auth'
 import PageHeader from '../../components/PageHeader.vue'
 import KpiCard from '../../components/KpiCard.vue'
+import ProgresoFases from '../../components/ProgresoFases.vue'
 import EmptyState from '../../components/base/EmptyState.vue'
 import BaseModal from '../../components/base/BaseModal.vue'
 import BaseDrawer from '../../components/base/BaseDrawer.vue'
@@ -992,7 +997,8 @@ async function solicitarEliminar(o) {
 .orden-cliente { font-size: 13px; color: var(--th-text-muted, #6b7280); margin: 0 0 12px; }
 
 .chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.orden-fases-info { font-size: 13px; color: var(--th-text-muted, #6b7280); margin: 0 0 12px; }
+.orden-fases { margin-bottom: 12px; }
+.orden-fases-info { font-size: 13px; color: var(--th-text-muted, #6b7280); margin: 0 0 4px; }
 .orden-fases-label { color: var(--th-text-muted, #6b7280); margin-right: 4px; }
 .chip-mat  { font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 999px; background: var(--th-surface-3, #f1f5f9); color: var(--th-text-2, #475569); border: 1px solid var(--th-border, #e2e8f0); white-space: nowrap; }
 .chip-mat-qty { color: var(--color-text-muted); font-weight: 400; }

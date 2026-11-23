@@ -27,15 +27,17 @@ const EFICIENCIA = [{ Nombre_Completo: 'Oscar Operario', rendimiento: 'Alto', pr
 
 let pdf, zip
 function jsPDFSimulado() {
-  pdf = { textos: [], guardado: null }
+  pdf = { textos: [], coloresFondo: [], paginas: 1, guardado: null }
   window.jspdf = {
     jsPDF: function () {
-      return new Proxy({ internal: { pageSize: { width: 210, height: 297 }, getNumberOfPages: () => 1 } }, {
+      return new Proxy({ internal: { pageSize: { width: 210, height: 297 }, getNumberOfPages: () => pdf.paginas } }, {
         get(obj, prop) {
           if (prop in obj) return obj[prop]
           if (prop === 'then') return undefined          // el documento no es una promesa
           if (prop === 'text') return t => pdf.textos.push([].concat(t).join(' '))
           if (prop === 'splitTextToSize') return t => [t]
+          if (prop === 'addPage') return () => { pdf.paginas += 1 }
+          if (prop === 'setFillColor') return color => pdf.coloresFondo.push(color)
           if (prop === 'save') return nombre => { pdf.guardado = nombre }
           if (prop === 'output') return () => 'blob:vista-previa'
           return () => {}
@@ -149,6 +151,17 @@ describe('RF-043 · Visualizar y exportar reportes', () => {
     expect(texto).toContain('ORD-0001')
     expect(texto).toContain('Prenda 8')
     expect(texto).toContain('Completada')
+  })
+
+  test('repite el encabezado de marca y tabla al paginar el PDF', async () => {
+    api.getOrdenes.mockResolvedValue(Array.from({ length: 65 }, (_, i) => o(i + 1, '11', 'Completada')))
+    const { wrapper } = await montar()
+    await wrapper.vm.descargar(reporte(wrapper.vm, 'Reporte de Pedidos Mensuales'))
+    expect(pdf.paginas).toBeGreaterThan(1)
+    expect(pdf.coloresFondo).toEqual(Array(pdf.paginas).fill('#f1f5f9'))
+    expect(pdf.textos.filter(texto => texto === 'REPORTE DE PEDIDOS MENSUALES')).toHaveLength(pdf.paginas)
+    expect(pdf.textos).toContain('Prenda 65')
+    expect(pdf.textos).toContain('Página ' + pdf.paginas + ' de ' + pdf.paginas)
   })
 
   test('exporta a Excel (.xlsx) con encabezados y datos del reporte', async () => {
