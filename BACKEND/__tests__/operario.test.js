@@ -1,5 +1,5 @@
 import { beforeEach, describe, test, expect } from '@jest/globals'
-import { db, sesion, preparar } from './helpers/app.js'
+import { db, sesion, preparar } from './helpers/appCamilo.js'
 
 const fase = { Id_Orden_Operario: 10, Id_Operario: 2, Id_Orden: 20, Numero_Fase: 1, Estado_Fase: 'Pendiente', Cantidad: 10, Cantidad_Realizada: 0, Producto: 'Camisas', Descripcion_Fase: 'Coser mangas', Cliente: 'Cliente prueba', NombreMaterial: 'Algodón', Fecha_Limite: '2026-12-31', Prioridad: 'Alta' }
 beforeEach(() => preparar(() => ({ rows: [fase] })))

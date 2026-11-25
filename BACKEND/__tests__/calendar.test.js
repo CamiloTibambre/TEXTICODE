@@ -1,16 +1,17 @@
 import { jest, beforeEach, afterEach, describe, test, expect } from '@jest/globals'
-import { db, sesion, preparar, usuario, google, respuestaGoogle } from './helpers/app.js'
+import { db, sesion, preparar, usuario, google, respuestaGoogle } from './helpers/appCamilo.js'
 
 const vinculacion = { Google_Email: 'calendar@example.test', Access_Token: 'falso', Refresh_Token: 'falso', Expiry_Date: Date.now() + 3600000, Sync_Enabled: true, Calendar_Id: 'primary' }
 beforeEach(() => preparar(() => ({ rows: [vinculacion] })))
 afterEach(() => jest.restoreAllMocks())
 
 describe('RF-044 Vincular y desvincular Google Calendar', () => {
-  test.each([1, 2, 3])('el rol %i consulta su vinculación en su empresa', async rol => {
+  test.each([1, 2, 3])('el rol %i consulta su propia vinculación', async rol => {
     const r = await sesion('get', '/api/google/status', rol)
     expect(r.status).toBe(200)
     expect(r.body).toMatchObject({ connected: true, profile: { email: vinculacion.Google_Email } })
-    expect(db.query.mock.calls.at(-1)[1]).toEqual([rol, 7])
+    // La vinculación de Google es por usuario (una cuenta de Google por persona)
+    expect(db.query.mock.calls.at(-1)[1]).toEqual([rol])
   })
   test('informa cuenta sin vincular', async () => {
     preparar(() => ({ rows: [] }))
@@ -22,10 +23,10 @@ describe('RF-044 Vincular y desvincular Google Calendar', () => {
     expect(r.status).toBe(200)
     expect(new URL(r.body.url).searchParams.get('prompt')).toBe('consent')
   })
-  test.each([1, 2, 3])('el rol %i desvincula solo su cuenta y empresa', async rol => {
+  test.each([1, 2, 3])('el rol %i desvincula solo su propia cuenta', async rol => {
     const r = await sesion('delete', '/api/google/unlink', rol)
     expect(r.status).toBe(200)
-    expect(db.query.mock.calls.at(-1)).toEqual([expect.stringContaining('DELETE FROM google_calendar_tokens'), [rol, 7]])
+    expect(db.query.mock.calls.at(-1)).toEqual([expect.stringContaining('DELETE FROM google_calendar_tokens'), [rol]])
   })
 })
 describe('RF-045 Sincronizar sin duplicar eventos', () => {
